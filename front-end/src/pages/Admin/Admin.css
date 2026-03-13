@@ -1,0 +1,654 @@
+.admin-dashboard {
+	padding: 2rem;
+	max-width: 1400px;
+	margin: 0 auto;
+}
+
+.admin-header {
+	margin-bottom: 2rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.admin-header h1 {
+	color: #fff;
+	font-size: 2rem;
+	margin-bottom: 0.5rem;
+}
+
+.admin-header p {
+	color: #9ca3af;
+	font-size: 1rem;
+}
+
+.logout-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.75rem 1.5rem;
+	background: #ef4444;
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	font-size: 1rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.logout-btn:hover {
+	background: #dc2626;
+	transform: translateY(-1px);
+}
+
+.logout-btn:active {
+	transform: translateY(0);
+}
+
+/* Statistics Cards */
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 1.5rem;
+	margin-bottom: 2rem;
+}
+
+.stat-card {
+	background: #1f2937;
+	padding: 1.5rem;
+	border-radius: 0.75rem;
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	border: 1px solid #374151;
+}
+
+.stat-icon {
+	width: 3rem;
+	height: 3rem;
+	border-radius: 0.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+}
+
+.stat-icon.users {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-icon.active {
+	background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-icon.posts {
+	background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-icon.pending {
+	background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.stat-info h3 {
+	color: #fff;
+	font-size: 1.75rem;
+	font-weight: 700;
+	margin: 0;
+}
+
+.stat-info p {
+	color: #9ca3af;
+	font-size: 0.875rem;
+	margin: 0;
+}
+
+/* Tabs */
+.admin-tabs {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 2rem;
+	border-bottom: 2px solid #374151;
+}
+
+.tab-btn {
+	background: none;
+	border: none;
+	color: #9ca3af;
+	padding: 1rem 1.5rem;
+	font-size: 1rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	transition: all 0.3s;
+}
+
+.tab-btn:hover {
+	color: #fff;
+}
+
+.tab-btn.active {
+	color: #2563eb;
+	border-bottom-color: #2563eb;
+}
+
+/* Search Section */
+.search-section {
+	margin-bottom: 2rem;
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.search-bar {
+	background: #1f2937;
+	border: 1px solid #374151;
+	border-radius: 0.5rem;
+	padding: 0.75rem 1rem;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex: 1;
+	min-width: 300px;
+}
+
+.search-bar svg {
+	color: #9ca3af;
+}
+
+.search-bar input {
+	background: none;
+	border: none;
+	outline: none;
+	color: #fff;
+	font-size: 1rem;
+	width: 100%;
+}
+
+.search-bar input::placeholder {
+	color: #6b7280;
+}
+
+/* Filter Buttons */
+.filter-buttons {
+	display: flex;
+	gap: 0.5rem;
+	background: #1f2937;
+	padding: 0.375rem;
+	border-radius: 0.5rem;
+	border: 1px solid #374151;
+}
+
+.filter-btn {
+	background: none;
+	border: none;
+	color: #9ca3af;
+	padding: 0.5rem 1rem;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.filter-btn:hover {
+	color: #fff;
+	background: #374151;
+}
+
+.filter-btn.active {
+	background: #2563eb;
+	color: #fff;
+}
+
+/* Users Table */
+.users-table-container {
+	background: #1f2937;
+	border-radius: 0.75rem;
+	overflow: hidden;
+	border: 1px solid #374151;
+}
+
+.admin-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.admin-table thead {
+	background: #111827;
+}
+
+.admin-table th {
+	color: #9ca3af;
+	text-align: left;
+	padding: 1rem;
+	font-weight: 600;
+	font-size: 0.875rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.admin-table td {
+	color: #fff;
+	padding: 1rem;
+	border-top: 1px solid #374151;
+}
+
+.user-info-cell {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.user-avatar-small {
+	width: 2rem;
+	height: 2rem;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 600;
+	font-size: 0.875rem;
+}
+
+.status-badge {
+	padding: 0.25rem 0.75rem;
+	border-radius: 9999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: capitalize;
+}
+
+.status-badge.active {
+	background: #10b98133;
+	color: #10b981;
+}
+
+.status-badge.suspended {
+	background: #ef444433;
+	color: #ef4444;
+}
+
+.status-badge.approved {
+	background: #10b98133;
+	color: #10b981;
+}
+
+.status-badge.pending {
+	background: #f59e0b33;
+	color: #f59e0b;
+}
+
+.status-badge.rejected {
+	background: #ef444433;
+	color: #ef4444;
+}
+
+.status-badge.blocked {
+	background: #ef444433;
+	color: #ef4444;
+}
+
+.trust-score {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.trust-bar {
+	width: 60px;
+	height: 8px;
+	background: #374151;
+	border-radius: 9999px;
+	overflow: hidden;
+}
+
+.trust-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+	transition: width 0.3s;
+}
+
+.action-buttons {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.action-btn {
+	background: none;
+	border: 1px solid #374151;
+	color: #9ca3af;
+	padding: 0.5rem;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	transition: all 0.2s;
+	font-size: 0.875rem;
+}
+
+.action-btn:hover {
+	border-color: #4b5563;
+	color: #fff;
+}
+
+.action-btn.suspend {
+	border-color: #dc2626;
+	color: #dc2626;
+}
+
+.action-btn.suspend:hover {
+	background: #dc262620;
+}
+
+.action-btn.activate {
+	border-color: #10b981;
+	color: #10b981;
+}
+
+.action-btn.activate:hover {
+	background: #10b98120;
+}
+
+.action-btn.delete {
+	border-color: #ef4444;
+	color: #ef4444;
+}
+
+.action-btn.delete:hover {
+	background: #ef444420;
+}
+
+.action-btn.approve {
+	border-color: #10b981;
+	color: #10b981;
+}
+
+.action-btn.approve:hover {
+	background: #10b98120;
+}
+
+.action-btn.reject {
+	border-color: #f59e0b;
+	color: #f59e0b;
+}
+
+.action-btn.reject:hover {
+	background: #f59e0b20;
+}
+
+/* Posts Grid */
+.posts-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+	gap: 1.5rem;
+}
+
+.admin-post-card {
+	background: #1f2937;
+	border: 1px solid #374151;
+	border-radius: 0.75rem;
+	padding: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.post-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+}
+
+.post-user {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.post-user .user-name {
+	color: #fff;
+	font-weight: 600;
+	margin: 0;
+}
+
+.post-user .post-date {
+	color: #9ca3af;
+	font-size: 0.875rem;
+	margin: 0;
+}
+
+.post-content p {
+	color: #d1d5db;
+	line-height: 1.6;
+	margin: 0;
+}
+
+.post-image {
+	margin-top: 0.75rem;
+	border-radius: 0.5rem;
+	overflow: hidden;
+}
+
+.post-image img {
+	width: 100%;
+	height: 200px;
+	object-fit: cover;
+}
+
+.post-stats {
+	display: flex;
+	gap: 1rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid #374151;
+	color: #9ca3af;
+	font-size: 0.875rem;
+}
+
+.post-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+/* View Posts Button */
+.action-btn.view {
+	border-color: #2563eb;
+	color: #2563eb;
+}
+
+.action-btn.view:hover {
+	background: #2563eb20;
+}
+
+/* Posts Filter Info */
+.posts-section {
+	width: 100%;
+}
+
+.posts-filter-info {
+	background: #1f2937;
+	border: 1px solid #374151;
+	border-radius: 0.75rem;
+	padding: 1rem 1.5rem;
+	margin-bottom: 1.5rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+.filter-user-info {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: #9ca3af;
+}
+
+.filter-user-info strong {
+	color: #fff;
+}
+
+.clear-filter-btn {
+	background: #ef4444;
+	border: none;
+	color: #fff;
+	padding: 0.5rem 1rem;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.clear-filter-btn:hover {
+	background: #dc2626;
+}
+
+/* No Posts Message */
+.no-posts-message {
+	text-align: center;
+	padding: 3rem;
+	color: #9ca3af;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.no-posts-message svg {
+	opacity: 0.5;
+}
+
+.no-posts-message p {
+	font-size: 1.125rem;
+	margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.admin-dashboard {
+		padding: 1rem;
+	}
+
+	.stats-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.admin-tabs {
+		flex-direction: column;
+	}
+
+	.users-table-container {
+		overflow-x: auto;
+	}
+
+	.admin-table {
+		min-width: 800px;
+	}
+
+	.posts-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.posts-filter-info {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
+
+/* Pagination Styles */
+.pagination {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 2rem;
+	padding: 1rem 0;
+}
+
+.pagination-btn {
+	padding: 0.5rem 1rem;
+	background: #374151;
+	color: #fff;
+	border: none;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+	background: #4b5563;
+	transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+	background: #1f2937;
+	color: #6b7280;
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.pagination-numbers {
+	display: flex;
+	gap: 0.25rem;
+}
+
+.pagination-number {
+	min-width: 2.5rem;
+	padding: 0.5rem 0.75rem;
+	background: #374151;
+	color: #fff;
+	border: none;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.pagination-number:hover {
+	background: #4b5563;
+}
+
+.pagination-number.active {
+	background: #3b82f6;
+	color: #fff;
+}
+
+.pagination-number.active:hover {
+	background: #2563eb;
+}
+
+@media (max-width: 768px) {
+	.pagination {
+		gap: 0.25rem;
+	}
+
+	.pagination-btn {
+		padding: 0.375rem 0.75rem;
+		font-size: 0.75rem;
+	}
+
+	.pagination-number {
+		min-width: 2rem;
+		padding: 0.375rem 0.5rem;
+		font-size: 0.75rem;
+	}
+}
