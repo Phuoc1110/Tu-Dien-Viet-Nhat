@@ -59,6 +59,16 @@ const HomePage = () => {
 		history.push(`/search?keyword=${encodeURIComponent(searchInput.trim())}`);
 	};
 
+	const handleOpenProfile = () => {
+		const currentUserId = user?.account?.id;
+		if (!currentUserId) {
+			history.push("/login");
+			return;
+		}
+
+		history.push(`/profile/${currentUserId}`);
+	};
+
 	return (
 		<div className="dictionary-home">
 			<div className="home-bg-glow glow-1" />
@@ -99,7 +109,7 @@ const HomePage = () => {
 
 					<div className="hero-actions">
 						{isAuthenticated ? (
-							<button type="button" onClick={() => history.push("/profile")}>Mở hồ sơ học tập</button>
+							<button type="button" onClick={handleOpenProfile}>Mở hồ sơ học tập</button>
 						) : (
 							<>
 								<button type="button" onClick={() => history.push("/login")}>Đăng nhập</button>

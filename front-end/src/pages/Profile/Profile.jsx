@@ -1,823 +1,534 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
-	Calendar,
-	X,
-	MessageSquare,
-	UserX,
-	AlertCircle,
-	Home,
-	UserPlus,
-	UserCheck,
+  Calendar,
+  Mail,
+  Shield,
+  Activity,
+  User,
+  Lock,
+  Edit2,
+  Home,
+  UserCircle,
+  Eye,
+  EyeOff,
+  Check,
+  AlertCircle,
 } from "lucide-react";
-import Post from "../../components/Post/Post";
 import "./Profile.css";
 import { UserContext } from "../../Context/UserProvider";
 import { useParams, useHistory } from "react-router-dom";
 import {
-	GetAllPost,
-	HandleGetLikePost,
-	GetLikedPostsByUserId,
-} from "../../services/apiService";
-import { GetAllUser, UpdateProfileService } from "../../services/userService";
-import {
-	search as searchService,
-	sendFriendRequest,
-	cancelFriendRequest,
-	sendAddFriend,
-} from "../../services/socialService";
-import { toast } from "react-toastify";
-import { io } from "socket.io-client";
+  GetAllUser,
+  UpdateProfileService,
+  resetPassword,
+} from "../../services/userService";
+
+const TABS = [
+  { key: "general", label: "Giới thiệu chung", icon: User },
+  { key: "activity", label: "Hoạt động", icon: Activity },
+  { key: "security", label: "Bảo mật", icon: Lock },
+];
 
 const Profile = () => {
-	const [activeTab, setActiveTab] = useState("posts");
-	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-	const [socket, setSocket] = useState(null);
-	const { user } = useContext(UserContext);
-	const { id } = useParams();
-	const history = useHistory();
-	const [friendshipStatus, setFriendshipStatus] = useState("none");
-	const [profileData, setProfileData] = useState({
-		fullName: "",
-		username: "",
-		bio: "",
-		joinDate: "",
-		posts: 0,
-		profilePicture: null,
-	});
+  const { user } = useContext(UserContext);
+  const { id } = useParams();
+  const history = useHistory();
 
-	const [editForm, setEditForm] = useState({
-		fullName: "",
-		bio: "",
-		profilePicture: null,
-		fileImage: null,
-	});
+  const [activeTab, setActiveTab] = useState("general");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [editFileImage, setEditFileImage] = useState(null);
 
-	const [avatarPreview, setAvatarPreview] = useState(null);
-	const [userPosts, setUserPosts] = useState([]);
-	const [likedPosts, setLikedPosts] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
-	const [isSaving, setIsSaving] = useState(false);
+  const [isEditingGeneral, setIsEditingGeneral] = useState(false);
+  const [generalForm, setGeneralForm] = useState({ username: "" });
+  const [generalMsg, setGeneralMsg] = useState({ type: "", text: "" });
 
-	const formatTimeAgo = (dateString) => {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffMs = now - date;
-		const diffMinutes = Math.floor(diffMs / (1000 * 60));
-		const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-		if (diffMinutes < 1) return "Just now";
-		if (diffMinutes < 60) return `${diffMinutes}m ago`;
-		if (diffHours < 24) return `${diffHours}h ago`;
-		return date.toLocaleString("en-US", { day: "numeric", month: "short" });
-	};
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [passwordMsg, setPasswordMsg] = useState({ type: "", text: "" });
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
-	useEffect(() => {
-		if (!user || !user.token) {
-			return;
-		}
+  const [profileData, setProfileData] = useState({
+    id: "",
+    fullName: "",
+    username: "",
+    email: "",
+    role: "user",
+    status: "active",
+    joinDate: "",
+    profilePicture: null,
+  });
 
-		const newSocket = io(`${process.env.REACT_APP_API_URL}`, {
-			extraHeaders: {
-				Authorization: `Bearer ${user.token}`,
-			},
-		});
+  const targetProfileId = useMemo(() => {
+    if (id) return id;
+    if (user?.account?.id) return `${user.account.id}`;
+    return "";
+  }, [id, user?.account?.id]);
 
-		newSocket.on("connect", () => {});
+  const isMyProfile =
+    `${user?.account?.id || ""}` === `${profileData.id || ""}`;
 
-		newSocket.on("postUpdated", (updatedPost) => {
-			setUserPosts((prev) =>
-				prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
-			);
-		});
+  const mapUserToProfile = (rawUser) => {
+    const emailPrefix = rawUser?.email ? rawUser.email.split("@")[0] : "user";
+    const displayName = rawUser?.username || rawUser?.fullName || emailPrefix;
+    return {
+      id: rawUser?.id,
+      fullName: displayName,
+      username: rawUser?.username ? `@${rawUser.username}` : `@${emailPrefix}`,
+      email: rawUser?.email || "",
+      role: rawUser?.role || "user",
+      status: rawUser?.status || "active",
+      joinDate: rawUser?.createdAt
+        ? new Date(rawUser.createdAt).toLocaleString("vi-VN", {
+            month: "long",
+            year: "numeric",
+          })
+        : "",
+      profilePicture:
+        rawUser?.avatarUrl || rawUser?.profilePicture || rawUser?.avatar || null,
+    };
+  };
 
-		newSocket.on("postDeleted", (postToDelete) => {
-			setUserPosts((prev) => prev.filter((p) => p.id !== postToDelete.id));
-		});
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!targetProfileId) {
+        setError("Không tìm thấy người dùng để hiển thị hồ sơ.");
+        return;
+      }
+      setLoading(true);
+      setError("");
+      try {
+        const res = await GetAllUser(targetProfileId);
+        if (res && res.errCode === 0 && res.user) {
+          const mapped = mapUserToProfile(res.user);
+          setProfileData(mapped);
+          setGeneralForm({ username: res.user.username || mapped.fullName });
+        } else {
+          setError("Không tìm thấy hồ sơ người dùng.");
+        }
+      } catch (e) {
+        console.error("Profile fetch error:", e);
+        setError("Lỗi mạng khi tải hồ sơ.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [targetProfileId]);
 
-		newSocket.on("connect_error", (err) => {
-			console.error("Connection error:", err.message);
-		});
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAvatarPreview(ev.target.result);
+      setEditFileImage(file);
+    };
+    reader.readAsDataURL(file);
+  };
 
-		newSocket.on("disconnect", (reason) => {});
+  const handleSaveGeneral = async () => {
+    const username = generalForm.username.trim();
+    if (!username) {
+      setGeneralMsg({ type: "error", text: "Username không được để trống." });
+      return;
+    }
+    setIsSaving(true);
+    setGeneralMsg({ type: "", text: "" });
+    try {
+      const fd = new FormData();
+      fd.append("id", user?.account?.id || targetProfileId);
+      fd.append("username", username);
+      fd.append("fullName", username);
+      if (avatarPreview && editFileImage) fd.append("image", editFileImage);
+      const res = await UpdateProfileService(fd);
+      if (res && res.errCode === 0) {
+        const mapped = mapUserToProfile(res.user || {});
+        setProfileData((prev) => ({ ...prev, ...mapped }));
+        setAvatarPreview(null);
+        setEditFileImage(null);
+        setIsEditingGeneral(false);
+        setGeneralMsg({ type: "success", text: "Cập nhật hồ sơ thành công!" });
+      } else if (res && res.errCode === -2) {
+        history.push("/login");
+      } else {
+        setGeneralMsg({
+          type: "error",
+          text: res?.errMessage || "Cập nhật hồ sơ thất bại.",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      setGeneralMsg({ type: "error", text: "Có lỗi xảy ra khi cập nhật." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-		setSocket(newSocket);
+  const handleCancelGeneral = () => {
+    setIsEditingGeneral(false);
+    setAvatarPreview(null);
+    setEditFileImage(null);
+    setGeneralForm({ username: profileData.username.replace(/^@/, "") });
+    setGeneralMsg({ type: "", text: "" });
+  };
 
-		return () => {
-			newSocket.disconnect();
-		};
-	}, [user]);
+  const handleSavePassword = async () => {
+    const { newPassword, confirmPassword } = passwordForm;
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordMsg({ type: "error", text: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: "error", text: "Xác nhận mật khẩu không khớp." });
+      return;
+    }
+    setIsSavingPassword(true);
+    setPasswordMsg({ type: "", text: "" });
+    try {
+      const res = await resetPassword(profileData.email, newPassword);
+      if (res && res.errCode === 0) {
+        setPasswordMsg({ type: "success", text: "Đổi mật khẩu thành công!" });
+        setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      } else {
+        setPasswordMsg({
+          type: "error",
+          text: res?.errMessage || res?.message || "Đổi mật khẩu thất bại.",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      setPasswordMsg({ type: "error", text: "Có lỗi xảy ra khi đổi mật khẩu." });
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
-	useEffect(() => {
-		const fetchLikedPosts = async () => {
-			if (activeTab === "likes" && id) {
-				try {
-					const res = await GetLikedPostsByUserId(id);
-					if (res && res.errCode === 0) {
-						const formattedPosts = await Promise.all(
-							res.posts.map(async (post) => {
-								const likeRes = await HandleGetLikePost(post.id);
-								const likesCount =
-									likeRes && likeRes.errCode === 0 ? likeRes.likes.length : 0;
-								const isLiked =
-									likeRes && likeRes.errCode === 0
-										? likeRes.likes.some((l) => l.userId === user?.account?.id)
-										: false;
-								return {
-									id: post.id,
-									User: {
-										id: post.User.id,
-										fullName: post.User.fullName,
-										username:
-											post.User.username ||
-											(post.User.email
-												? `@${post.User.email.split("@")[0]}`
-												: ""),
-										profilePicture: post.User.profilePicture || null,
-									},
-									content: post.content,
-									images: post.imageUrl,
-									likes: likesCount,
-									islikedbyUser: isLiked,
-									comments: [],
-									shares: 0,
-									timestamp: post.updatedAt || post.createdAt,
-									formatTimeAgo,
-								};
-							})
-						);
-						setLikedPosts(formattedPosts);
-					}
-				} catch (e) {
-					console.error("Error fetching liked posts", e);
-				}
-			}
-		};
-		fetchLikedPosts();
-	}, [activeTab, id, user?.account?.id]);
+  if (loading) {
+    return (
+      <div className="profile-state-screen">
+        <UserCircle size={48} className="profile-state-icon" />
+        <p>Đang tải hồ sơ...</p>
+      </div>
+    );
+  }
 
-	useEffect(() => {
-		const fetchProfile = async () => {
-			if (!id) {
-				setError("User ID is required");
-				return;
-			}
-			setLoading(true);
-			setError(null);
-			try {
-				// Always fetch user data directly from user API to get the latest profile info
-				const userRes = await GetAllUser(id);
-				if (userRes && userRes.errCode === 0 && userRes.user) {
-					const u = userRes.user;
-					const joinDate = u.createdAt
-						? new Date(u.createdAt).toLocaleString("en-US", {
-								month: "long",
-								year: "numeric",
-						  })
-						: "";
-					const mappedProfile = {
-						id: u.id,
-						fullName: u.fullName || "",
-						username:
-							u.username || (u.email ? `@${u.email.split("@")[0]}` : ""),
-						bio: u.bio || "",
-						joinDate,
-						posts: 0, // Will be updated when we fetch posts
-						profilePicture: u.profilePicture || u.avatar || null,
-					};
-					setProfileData(mappedProfile);
-					setEditForm({
-						id: mappedProfile.id,
-						fullName: mappedProfile.fullName,
-						bio: mappedProfile.bio,
-						profilePicture: mappedProfile.profilePicture,
-					});
+  if (error) {
+    return (
+      <div className="profile-state-screen">
+        <Home size={48} className="profile-state-icon" />
+        <p>{error}</p>
+        <button onClick={() => history.push("/")}>Về trang chủ</button>
+      </div>
+    );
+  }
 
-					// Fetch friendship status if viewing another user's profile
-					if (user?.account?.id && u.id !== user.account.id) {
-						try {
-							const searchRes = await searchService(
-								u.fullName,
-								user.account.id
-							);
-							if (searchRes && searchRes.errCode === 0 && searchRes.people) {
-								const person = searchRes.people.find((p) => p.id === u.id);
-								if (person) {
-									setFriendshipStatus(person.friendshipStatus || "none");
-								}
-							}
-						} catch (err) {
-							console.error("Failed to fetch friendship status", err);
-						}
-					}
+  const avatarSrc = avatarPreview || profileData.profilePicture;
 
-					// Now fetch posts separately
-					const res = await GetAllPost(id);
-					if (res && res.errCode === 0) {
-						const hasPosts = Array.isArray(res.post) && res.post.length > 0;
-						if (hasPosts) {
-							// Update posts count
-							setProfileData((prev) => ({
-								...prev,
-								posts: res.post.length,
-							}));
+  return (
+    <div className="profile-page">
+      {/* ── Sidebar ── */}
+      <aside className="profile-sidebar">
+        <div className="sidebar-avatar-block">
+          <div className="sidebar-avatar">
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="avatar" />
+            ) : (
+              <span>{profileData.fullName?.[0]?.toUpperCase() || "U"}</span>
+            )}
+            {isMyProfile && isEditingGeneral && (
+              <label className="avatar-edit-btn" title="Đổi ảnh">
+                <Edit2 size={13} />
+                <input type="file" accept="image/*" onChange={handleAvatarChange} />
+              </label>
+            )}
+          </div>
+          <p className="sidebar-username">{profileData.username}</p>
+        </div>
 
-							const formattedPosts = await Promise.all(
-								res.post.map(async (post) => {
-									const likeRes = await HandleGetLikePost(post.id);
-									const likesCount =
-										likeRes && likeRes.errCode === 0 ? likeRes.likes.length : 0;
-									const isLiked =
-										likeRes && likeRes.errCode === 0
-											? likeRes.likes.some(
-													(l) => l.userId === user?.account?.id
-											  )
-											: false;
-									return {
-										id: post.id,
-										User: {
-											id: u.id,
-											fullName: mappedProfile.fullName,
-											username: mappedProfile.username,
-											profilePicture: mappedProfile.profilePicture || null,
-										},
-										content: post.content,
-										images: post.imageUrl,
-										videoUrl: post.videoUrl || null,
-										likes: likesCount,
-										islikedbyUser: isLiked,
-										comments: [],
-										shares: 0,
-										timestamp: post.updatedAt || post.createdAt,
-										formatTimeAgo,
-									};
-								})
-							);
-							setUserPosts(formattedPosts);
-						} else {
-							setUserPosts([]);
-						}
-					} else {
-						setUserPosts([]);
-					}
-				} else {
-					setError(
-						"User not found. This user might not exist or has been deleted."
-					);
-				}
-			} catch (e) {
-				console.error("Profile fetch error:", e);
-				setError("Network error. Please check your connection and try again.");
-			} finally {
-				setLoading(false);
-			}
-		};
-		fetchProfile();
-	}, [id, user?.account?.id]);
+        <nav className="sidebar-nav">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                className={`sidebar-tab${activeTab === tab.key ? " active" : ""}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
 
-	const handleAddFriend = async () => {
-		if (!user || !user.isAuthenticated) {
-			toast.error("Please log in to add friends");
-			return;
-		}
-		const res = await sendAddFriend(user.account.id, id);
-		if (res && res.errCode === 0) {
-			toast.success("Friend request sent");
-			if (socket) {
-				socket.emit("sendFriendRequest", {
-					data: user.account,
-					toUserId: id,
-					friendshipStatus: "they_sent_request",
-				});
-			}
-			setFriendshipStatus("you_sent_request");
-		} else {
-			toast.error(res?.errMessage || "Failed to send request");
-		}
-	};
+      {/* ── Main panel ── */}
+      <main className="profile-main">
+        {/* ════ Giới thiệu chung ════ */}
+        {activeTab === "general" && (
+          <section className="profile-section">
+            <div className="section-header">
+              <h2>Thông tin cá nhân</h2>
+              {isMyProfile && !isEditingGeneral && (
+                <button
+                  className="icon-btn"
+                  title="Chỉnh sửa"
+                  onClick={() => setIsEditingGeneral(true)}
+                >
+                  <Edit2 size={16} />
+                </button>
+              )}
+            </div>
+            <hr className="section-divider" />
 
-	const handleCancelFriendRequest = async () => {
-		const res = await cancelFriendRequest(user.account.id, id);
-		if (res && res.errCode === 0) {
-			toast.success(
-				friendshipStatus === "friends" ? "Unfriended" : "Request canceled"
-			);
-			if (socket) {
-				socket.emit("sendFriendRequest", {
-					toUserId: id,
-					friendshipStatus: "none",
-				});
-			}
-			setFriendshipStatus("none");
-		} else {
-			toast.error(res?.errMessage || "Failed to cancel request");
-		}
-	};
+            {generalMsg.text && (
+              <div className={`profile-msg ${generalMsg.type}`}>
+                {generalMsg.type === "success" ? (
+                  <Check size={15} />
+                ) : (
+                  <AlertCircle size={15} />
+                )}
+                <span>{generalMsg.text}</span>
+              </div>
+            )}
 
-	const handleRespondFriendRequest = async (status) => {
-		const res = await sendFriendRequest(user.account.id, id, status);
-		if (res && res.errCode === 0) {
-			toast.success(
-				`Friend request ${status === "accepted" ? "accepted" : "declined"}`
-			);
-			const newStatus = status === "accepted" ? "friends" : "none";
-			if (socket) {
-				socket.emit("sendFriendRequest", {
-					data: user.account,
-					toUserId: id,
-					friendshipStatus: newStatus,
-				});
-			}
-			setFriendshipStatus(newStatus);
-		} else {
-			toast.error(res?.errMessage || "Failed to update request");
-		}
-	};
+            <div className="info-group">
+              <div className="info-group-header">
+                <User size={16} />
+                <span>Thông tin cơ bản</span>
+              </div>
 
-	const handleEditProfile = () => {
-		setEditForm({
-			fullName: profileData.fullName,
-			bio: profileData.bio,
-			profilePicture: profileData.profilePicture,
-		});
-		setAvatarPreview(null);
-		setIsEditModalOpen(true);
-	};
+              <div className="info-row">
+                <span className="info-label">Username</span>
+                {isEditingGeneral ? (
+                  <input
+                    className="info-input"
+                    type="text"
+                    value={generalForm.username}
+                    onChange={(e) =>
+                      setGeneralForm((p) => ({ ...p, username: e.target.value }))
+                    }
+                    placeholder="Nhập username"
+                  />
+                ) : (
+                  <span className="info-value">{profileData.username}</span>
+                )}
+              </div>
 
-	const handleSaveProfile = async () => {
-		setIsSaving(true);
-		try {
-			// Prepare the data to send to the API
-			const profileUpdateData = new FormData();
-			profileUpdateData.append("id", user?.account?.id || id);
-			profileUpdateData.append("fullName", editForm.fullName.trim());
-			profileUpdateData.append("bio", editForm.bio.trim());
-			if (avatarPreview) {
-				profileUpdateData.append("image", editForm.fileImage);
-			}
-			// Validate that we have a valid user ID
-			if (!profileUpdateData.get("id")) {
-				alert(
-					"Cannot update profile: User ID is missing. Please try logging in again."
-				);
-				return;
-			}
+              <div className="info-row">
+                <span className="info-label">Trình độ</span>
+                <span className="info-badge badge-level">
+                  {profileData.role === "admin" ? "Admin" : "N5"}
+                </span>
+              </div>
 
-			const response = await UpdateProfileService(profileUpdateData);
+              <div className="info-row">
+                <span className="info-label">Quốc gia</span>
+                <span className="info-value info-country">Viet Nam</span>
+              </div>
+            </div>
 
-			// Check if the response indicates an authentication error
-			if (response && response.errCode === -2) {
-				alert("Your session has expired. Please log in again.");
-				window.location.href = "/login";
-				return;
-			}
+            <div className="info-group">
+              <div className="info-group-header">
+                <Shield size={16} />
+                <span>Thông tin chi tiết</span>
+              </div>
 
-			if (response && response.errCode === 0) {
-				// Close the modal first
-				setIsEditModalOpen(false);
-				setAvatarPreview(null);
+              <div className="info-row">
+                <span className="info-label">Vai trò</span>
+                <span
+                  className={`info-badge ${
+                    profileData.role === "admin" ? "badge-admin" : "badge-user"
+                  }`}
+                >
+                  {profileData.role === "admin" ? "Quản trị viên" : "Người dùng"}
+                </span>
+              </div>
 
-				// Reload the page to reflect all changes
-				window.location.reload();
-			} else {
-				// Handle API error
-				const errorMessage =
-					response?.errMessage || response?.message || "Unknown error occurred";
-				console.error("Failed to update profile:", errorMessage);
-				alert(`Failed to update profile: ${errorMessage}`);
-			}
-		} catch (error) {
-			console.error("Error updating profile:", error);
+              <div className="info-row">
+                <span className="info-label">Trạng thái</span>
+                <span
+                  className={`info-badge ${
+                    profileData.status === "active" ? "badge-active" : "badge-banned"
+                  }`}
+                >
+                  {profileData.status === "active" ? "Hoạt động" : "Bị khóa"}
+                </span>
+              </div>
 
-			if (error.response?.data?.errCode === -2) {
-				alert("Your session has expired. Please log in again.");
-				window.location.href = "/login";
-			} else {
-				const errorMessage =
-					error.response?.data?.errMessage ||
-					error.response?.data?.message ||
-					error.message ||
-					"An error occurred while updating profile";
-				alert(`Error: ${errorMessage}`);
-			}
-		} finally {
-			setIsSaving(false);
-		}
-	};
+              <div className="info-row">
+                <span className="info-label">Ngày tham gia</span>
+                <span className="info-value info-date">
+                  <Calendar size={13} />
+                  {profileData.joinDate || "—"}
+                </span>
+              </div>
+            </div>
 
-	const handleUpdatePost = (updatedPost) => {
-		if (socket) {
-			socket.emit("updatePost", updatedPost);
-		}
-		setUserPosts((prev) =>
-			prev.map((post) => (post.id === updatedPost.id ? updatedPost : post))
-		);
-		setLikedPosts((prev) =>
-			prev.map((post) => (post.id === updatedPost.id ? updatedPost : post))
-		);
-	};
-	const handleDeletePost = (postToDelete) => {
-		if (socket) {
-			socket.emit("deletePost", postToDelete);
-		}
-		setUserPosts((prev) => prev.filter((post) => post.id !== postToDelete.id));
-		setLikedPosts((prev) => prev.filter((post) => post.id !== postToDelete.id));
-	};
-	const handleAvatarChange = (e) => {
-		const file = e.target.files[0];
-		const checkfileFormat = file?.type.startsWith("image/");
-		if (!checkfileFormat) {
-			alert("Please select a valid image file (jpg, png, etc.)");
-			return;
-		}
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				const imageUrl = e.target.result;
-				setAvatarPreview(imageUrl);
-				setEditForm((prev) => ({
-					...prev,
-					profilePicture: imageUrl,
-					fileImage: file,
-				}));
-			};
-			reader.readAsDataURL(file);
-		}
-	};
+            <div className="info-group">
+              <div className="info-group-header">
+                <Mail size={16} />
+                <span>Thông tin liên hệ</span>
+              </div>
 
-	const handleRemoveAvatar = () => {
-		setAvatarPreview(null);
-		setEditForm((prev) => ({
-			...prev,
-			profilePicture: null,
-			fileImage: null,
-		}));
-	};
+              <div className="info-row">
+                <span className="info-label">Email</span>
+                <span className="info-value">{profileData.email || "—"}</span>
+              </div>
+            </div>
 
-	const ErrorState = ({ error }) => {
-		const getErrorDetails = (errorMsg) => {
-			if (errorMsg.includes("not found") || errorMsg.includes("not exist")) {
-				return {
-					icon: UserX,
-					title: "User Not Found",
-					message: "This user doesn't exist or may have been deleted.",
-					action: "Go Back to Home",
-					actionFn: () => history.push("/"),
-				};
-			}
-			if (
-				errorMsg.includes("Network error") ||
-				errorMsg.includes("connection")
-			) {
-				return {
-					icon: AlertCircle,
-					title: "Connection Error",
-					message: "Please check your internet connection and try again.",
-					action: "Retry",
-					actionFn: () => window.location.reload(),
-				};
-			}
-			return {
-				icon: AlertCircle,
-				title: "Something went wrong",
-				message: errorMsg || "An unexpected error occurred.",
-				action: "Go Back to Home",
-				actionFn: () => history.push("/"),
-			};
-		};
+            {isMyProfile && isEditingGeneral && (
+              <div className="edit-actions">
+                <button className="btn-cancel" onClick={handleCancelGeneral}>
+                  Hủy
+                </button>
+                <button
+                  className="btn-save"
+                  onClick={handleSaveGeneral}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
-		const {
-			icon: ErrorIcon,
-			title,
-			message,
-			action,
-			actionFn,
-		} = getErrorDetails(error);
+        {/* ════ Hoạt động ════ */}
+        {activeTab === "activity" && (
+          <section className="profile-section">
+            <div className="section-header">
+              <h2>Hoạt động</h2>
+            </div>
+            <hr className="section-divider" />
 
-		return (
-			<div className="error-state">
-				<div className="error-content">
-					<ErrorIcon size={64} className="error-icon" />
-					<h2 className="error-title">{title}</h2>
-					<p className="error-message">{message}</p>
-					<button className="error-action-btn" onClick={actionFn}>
-						<Home size={16} />
-						{action}
-					</button>
-				</div>
-			</div>
-		);
-	};
+            <div className="info-group">
+              <div className="info-group-header">
+                <Activity size={16} />
+                <span>Các bình luận gần đây</span>
+              </div>
+              <div className="activity-empty">
+                <Activity size={36} />
+                <p>Chưa có hoạt động nào.</p>
+                <span>Các bình luận và tương tác của bạn sẽ hiển thị ở đây.</span>
+              </div>
+            </div>
+          </section>
+        )}
 
-	const renderPosts = () => {
-		if (userPosts.length === 0) {
-			return (
-				<div className="no-posts">
-					<MessageSquare size={48} className="no-posts-icon" />
-					<h3>No posts yet</h3>
-					<p>When you share posts, they'll appear here.</p>
-				</div>
-			);
-		}
+        {/* ════ Bảo mật ════ */}
+        {activeTab === "security" && (
+          <section className="profile-section">
+            <div className="section-header">
+              <h2>Bảo mật</h2>
+            </div>
+            <hr className="section-divider" />
 
-		return (
-			<div className="profile-posts">
-				{userPosts.map((post) => (
-					<Post
-						key={post.id}
-						post={{ ...post, formatTimeAgo }}
-						onUpdatePost={handleUpdatePost}
-						onDeletePost={handleDeletePost}
-					/>
-				))}
-			</div>
-		);
-	};
+            {isMyProfile ? (
+              <div className="info-group">
+                <div className="info-group-header">
+                  <Lock size={16} />
+                  <span>Đổi mật khẩu</span>
+                </div>
 
-	const renderTabContent = () => {
-		switch (activeTab) {
-			case "posts":
-				return renderPosts();
-			case "media":
-				return (
-					<div className="no-posts">
-						<MessageSquare size={48} className="no-posts-icon" />
-						<h3>No media yet</h3>
-						<p>Photos and videos shared will appear here.</p>
-					</div>
-				);
-			case "likes":
-				if (likedPosts.length === 0) {
-					return (
-						<div className="no-posts">
-							<MessageSquare size={48} className="no-posts-icon" />
-							<h3>No liked posts</h3>
-							<p>Liked posts will appear here.</p>
-						</div>
-					);
-				}
-				return (
-					<div className="profile-posts">
-						{likedPosts.map((post) => (
-							<Post
-								key={post.id}
-								post={{ ...post, formatTimeAgo }}
-								onUpdatePost={handleUpdatePost}
-								onDeletePost={handleDeletePost}
-							/>
-						))}
-					</div>
-				);
-			default:
-				return renderPosts();
-		}
-	};
+                {passwordMsg.text && (
+                  <div className={`profile-msg ${passwordMsg.type}`}>
+                    {passwordMsg.type === "success" ? (
+                      <Check size={15} />
+                    ) : (
+                      <AlertCircle size={15} />
+                    )}
+                    <span>{passwordMsg.text}</span>
+                  </div>
+                )}
 
-	return (
-		<div className="profile-container">
-			{/* Profile Header - Only show if no error */}
-			{!error && (
-				<>
-					<div className="profile-header">
-						<div className="cover-photo"></div>
-						<div className="profile-info">
-							<div
-								className="profile-avatar"
-								style={{
-									backgroundImage: profileData.profilePicture
-										? `url(${profileData.profilePicture})`
-										: "none",
-									backgroundSize: "cover",
-									backgroundPosition: "center",
-								}}
-							></div>
-							<div className="profile-details">
-								<h1 className="profile-name">{profileData.fullName}</h1>
-								<p className="profile-username">{profileData.username}</p>
-								<p className="profile-bio">{profileData.bio}</p>
+                <div className="info-row stacked">
+                  <label className="info-label">Mật khẩu mới</label>
+                  <div className="password-input-wrap">
+                    <input
+                      className="info-input"
+                      type={showPasswords.new ? "text" : "password"}
+                      value={passwordForm.newPassword}
+                      onChange={(e) =>
+                        setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
+                      }
+                      placeholder="Tối thiểu 6 ký tự"
+                    />
+                    <button
+                      className="password-eye"
+                      type="button"
+                      onClick={() =>
+                        setShowPasswords((p) => ({ ...p, new: !p.new }))
+                      }
+                    >
+                      {showPasswords.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
 
-								<div className="profile-meta">
-									<div className="meta-item">
-										<Calendar size={16} className="meta-icon" />
-										<span>Joined {profileData.joinDate}</span>
-									</div>
-								</div>
+                <div className="info-row stacked">
+                  <label className="info-label">Xác nhận mật khẩu mới</label>
+                  <div className="password-input-wrap">
+                    <input
+                      className="info-input"
+                      type={showPasswords.confirm ? "text" : "password"}
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordForm((p) => ({
+                          ...p,
+                          confirmPassword: e.target.value,
+                        }))
+                      }
+                      placeholder="Nhập lại mật khẩu mới"
+                    />
+                    <button
+                      className="password-eye"
+                      type="button"
+                      onClick={() =>
+                        setShowPasswords((p) => ({ ...p, confirm: !p.confirm }))
+                      }
+                    >
+                      {showPasswords.confirm ? (
+                        <EyeOff size={16} />
+                      ) : (
+                        <Eye size={16} />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-								<div className="profile-actions">
-									{user?.account?.id?.toString() === id?.toString() ? (
-										<button
-											className="edit-profile-btn"
-											onClick={handleEditProfile}
-										>
-											Edit Profile
-										</button>
-									) : (
-										<>
-											{friendshipStatus === "none" && (
-												<button
-													className="action-btn primary"
-													onClick={handleAddFriend}
-												>
-													<UserPlus size={18} />
-													Add Friend
-												</button>
-											)}
-											{friendshipStatus === "you_sent_request" && (
-												<button
-													className="action-btn danger"
-													onClick={handleCancelFriendRequest}
-												>
-													<X size={18} />
-													Cancel Request
-												</button>
-											)}
-											{friendshipStatus === "they_sent_request" && (
-												<>
-													<button
-														className="action-btn success"
-														onClick={() =>
-															handleRespondFriendRequest("accepted")
-														}
-													>
-														<UserCheck size={18} />
-														Accept
-													</button>
-													<button
-														className="action-btn danger"
-														onClick={() => handleRespondFriendRequest("reject")}
-													>
-														<UserX size={18} />
-														Decline
-													</button>
-												</>
-											)}
-											{friendshipStatus === "friends" && (
-												<button
-													className="action-btn danger"
-													onClick={handleCancelFriendRequest}
-												>
-													<UserX size={18} />
-													Unfriend
-												</button>
-											)}
-										</>
-									)}
-								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* Profile Tabs - Only show if no error */}
-					<div className="profile-tabs">
-						<button
-							className={`tab-button ${activeTab === "posts" ? "active" : ""}`}
-							onClick={() => setActiveTab("posts")}
-						>
-							Posts
-						</button>
-						<button
-							className={`tab-button ${activeTab === "media" ? "active" : ""}`}
-							onClick={() => setActiveTab("media")}
-						>
-							Media
-						</button>
-						<button
-							className={`tab-button ${activeTab === "likes" ? "active" : ""}`}
-							onClick={() => setActiveTab("likes")}
-						>
-							Likes
-						</button>
-					</div>
-				</>
-			)}
-
-			{/* Tab Content */}
-			{loading ? (
-				<div className="no-posts">
-					<MessageSquare size={48} className="no-posts-icon" />
-					<h3>Loading...</h3>
-				</div>
-			) : error ? (
-				<ErrorState error={error} />
-			) : (
-				renderTabContent()
-			)}
-
-			{/* Edit Profile Modal */}
-			{isEditModalOpen && (
-				<div
-					className="edit-modal-overlay"
-					onClick={() => setIsEditModalOpen(false)}
-				>
-					<div
-						className="edit-modal-content"
-						onClick={(e) => e.stopPropagation()}
-					>
-						<div className="edit-modal-header">
-							<h2 className="edit-modal-title">Edit Profile</h2>
-							<button
-								className="close-btn"
-								onClick={() => setIsEditModalOpen(false)}
-							>
-								<X size={24} />
-							</button>
-						</div>
-
-						<div className="edit-modal-body">
-							<form className="edit-form">
-								<div className="form-group">
-									<label className="form-label">Profile Picture</label>
-									<div className="avatar-upload-section">
-										<div
-											className="avatar-preview"
-											style={{
-												backgroundImage:
-													avatarPreview || editForm.profilePicture
-														? `url(${avatarPreview || editForm.profilePicture})`
-														: "none",
-												backgroundSize: "cover",
-												backgroundPosition: "center",
-											}}
-										>
-											{!avatarPreview && !editForm.profilePicture && (
-												<span className="avatar-placeholder">No Image</span>
-											)}
-										</div>
-										<div className="avatar-controls">
-											<input
-												type="file"
-												id="avatar-upload"
-												accept="image/*"
-												onChange={handleAvatarChange}
-												className="avatar-input"
-											/>
-											<label htmlFor="avatar-upload" className="upload-btn">
-												Choose Image
-											</label>
-											{(avatarPreview || editForm.profilePicture) && (
-												<button
-													type="button"
-													onClick={handleRemoveAvatar}
-													className="remove-avatar-btn"
-												>
-													Remove
-												</button>
-											)}
-										</div>
-									</div>
-								</div>
-
-								<div className="form-group">
-									<label className="form-label">Name</label>
-									<input
-										type="text"
-										className="form-input"
-										value={editForm.fullName}
-										onChange={(e) =>
-											setEditForm((prev) => ({
-												...prev,
-												fullName: e.target.value,
-											}))
-										}
-										placeholder="Your Name"
-									/>
-								</div>
-
-								<div className="form-group">
-									<label className="form-label">Bio</label>
-									<textarea
-										className="form-textarea"
-										value={editForm.bio}
-										onChange={(e) =>
-											setEditForm((prev) => ({ ...prev, bio: e.target.value }))
-										}
-										placeholder="Tell us about yourself"
-										maxLength={160}
-									/>
-								</div>
-							</form>
-						</div>
-
-						<div className="edit-modal-footer">
-							<button
-								className="cancel-btn"
-								onClick={() => setIsEditModalOpen(false)}
-								disabled={isSaving}
-							>
-								Cancel
-							</button>
-							<button
-								className="save-btn"
-								onClick={handleSaveProfile}
-								disabled={isSaving}
-							>
-								{isSaving ? "Saving..." : "Save Changes"}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-		</div>
-	);
+                <div className="edit-actions">
+                  <button
+                    className="btn-save"
+                    onClick={handleSavePassword}
+                    disabled={isSavingPassword}
+                  >
+                    {isSavingPassword ? "Đang lưu..." : "Cập nhật mật khẩu"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="activity-empty">
+                <Lock size={36} />
+                <p>Chỉ chủ sở hữu mới có thể xem trang này.</p>
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
+  );
 };
 
 export default Profile;
