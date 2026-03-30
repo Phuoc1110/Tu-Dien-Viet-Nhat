@@ -16,6 +16,10 @@
 	"license": "ISC",
 	"description": "",
 	"dependencies": {
+		"@babel/core": "^7.12.10",
+		"@babel/node": "^7.12.10",
+		"@babel/preset-env": "^7.12.10",
+		"@vitalets/google-translate-api": "^9.2.1",
 		"axios": "^1.7.7",
 		"bcryptjs": "^2.4.3",
 		"body-parser": "^1.20.3",
@@ -24,6 +28,7 @@
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
 		"crypto-js": "^4.2.0",
+		"csv-parser": "^3.2.0",
 		"dotenv": "^16.4.5",
 		"express": "^4.21.0",
 		"express-session": "^1.18.1",
@@ -42,9 +47,7 @@
 		"sequelize": "^6.37.3",
 		"sequelize-cli": "^6.6.2",
 		"socket.io": "^4.8.1",
-		"@babel/core": "^7.12.10",
-		"@babel/node": "^7.12.10",
-		"@babel/preset-env": "^7.12.10"
+		"wanakana": "^5.3.1"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.12.10",

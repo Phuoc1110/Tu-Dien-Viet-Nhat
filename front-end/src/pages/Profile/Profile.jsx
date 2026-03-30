@@ -42,7 +42,7 @@ const Profile = () => {
   const [editFileImage, setEditFileImage] = useState(null);
 
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
-  const [generalForm, setGeneralForm] = useState({ username: "" });
+  const [generalForm, setGeneralForm] = useState({ username: "", country: "", level: "" });
   const [generalMsg, setGeneralMsg] = useState({ type: "", text: "" });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -67,6 +67,8 @@ const Profile = () => {
     status: "active",
     joinDate: "",
     profilePicture: null,
+    country: "",
+    level: "N5",
   });
 
   const targetProfileId = useMemo(() => {
@@ -96,6 +98,8 @@ const Profile = () => {
         : "",
       profilePicture:
         rawUser?.avatarUrl || rawUser?.profilePicture || rawUser?.avatar || null,
+      country: rawUser?.country || "",
+      level: rawUser?.level || "N5",
     };
   };
 
@@ -112,7 +116,11 @@ const Profile = () => {
         if (res && res.errCode === 0 && res.user) {
           const mapped = mapUserToProfile(res.user);
           setProfileData(mapped);
-          setGeneralForm({ username: res.user.username || mapped.fullName });
+          setGeneralForm({
+            username: res.user.username || mapped.fullName,
+            country: res.user.country || "",
+            level: res.user.level || "N5",
+          });
         } else {
           setError("Không tìm thấy hồ sơ người dùng.");
         }
@@ -150,6 +158,8 @@ const Profile = () => {
       fd.append("id", user?.account?.id || targetProfileId);
       fd.append("username", username);
       fd.append("fullName", username);
+      fd.append("country", generalForm.country || "");
+      fd.append("level", generalForm.level || "N5");
       if (avatarPreview && editFileImage) fd.append("image", editFileImage);
       const res = await UpdateProfileService(fd);
       if (res && res.errCode === 0) {
@@ -179,7 +189,11 @@ const Profile = () => {
     setIsEditingGeneral(false);
     setAvatarPreview(null);
     setEditFileImage(null);
-    setGeneralForm({ username: profileData.username.replace(/^@/, "") });
+    setGeneralForm({
+      username: profileData.username.replace(/^@/, ""),
+      country: profileData.country || "",
+      level: profileData.level || "N5",
+    });
     setGeneralMsg({ type: "", text: "" });
   };
 
@@ -328,14 +342,42 @@ const Profile = () => {
 
               <div className="info-row">
                 <span className="info-label">Trình độ</span>
-                <span className="info-badge badge-level">
-                  {profileData.role === "admin" ? "Admin" : "N5"}
-                </span>
+                {isEditingGeneral ? (
+                  <select
+                    className="info-input"
+                    value={generalForm.level}
+                    onChange={(e) =>
+                      setGeneralForm((p) => ({ ...p, level: e.target.value }))
+                    }
+                  >
+                    {["N5", "N4", "N3", "N2", "N1"].map((lvl) => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="info-badge badge-level">
+                    {profileData.role === "admin" ? "Admin" : (profileData.level || "N5")}
+                  </span>
+                )}
               </div>
 
               <div className="info-row">
                 <span className="info-label">Quốc gia</span>
-                <span className="info-value info-country">Viet Nam</span>
+                {isEditingGeneral ? (
+                  <input
+                    className="info-input"
+                    type="text"
+                    value={generalForm.country}
+                    onChange={(e) =>
+                      setGeneralForm((p) => ({ ...p, country: e.target.value }))
+                    }
+                    placeholder="Nhập quốc gia"
+                  />
+                ) : (
+                  <span className="info-value info-country">
+                    {profileData.country || "—"}
+                  </span>
+                )}
               </div>
             </div>
 

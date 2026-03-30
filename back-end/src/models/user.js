@@ -55,6 +55,16 @@ module.exports = (sequelize, DataTypes) => {
 				type: DataTypes.ENUM("active", "banned", "suspended"),
 				defaultValue: "active",
 			},
+			country: {
+				type: DataTypes.STRING(100),
+				allowNull: true,
+				defaultValue: null,
+			},
+			level: {
+				type: DataTypes.ENUM("N5", "N4", "N3", "N2", "N1"),
+				allowNull: true,
+				defaultValue: "N5",
+			},
 		},
 		{
 			sequelize,

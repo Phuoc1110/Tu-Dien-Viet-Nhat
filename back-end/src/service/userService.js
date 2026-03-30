@@ -319,6 +319,14 @@ let updateUserProfile = (data, fileImage) => {
 					updateFields.avatarUrl = fileImage.path;
 				}
 
+				if (data.country !== undefined) {
+					updateFields.country = data.country || null;
+				}
+
+				if (data.level !== undefined) {
+					updateFields.level = data.level || null;
+				}
+
 				// Update the user with only the specified fields
 				await db.User.update(updateFields, {
 					where: { id: data.id },
