@@ -28,6 +28,10 @@ let initWebRoutes = (app) => {
 	router.post("/api/reset-otp/verify", verifyResetOTP);
 	router.post("/api/reset-password", resetPassword);
 	router.get("/api/dictionary/search", dictionaryController.HandleSearchWords);
+	router.get(
+		"/api/dictionary/kanji/search",
+		dictionaryController.HandleSearchKanjis
+	);
 
 	return app.use("/", router);
 };

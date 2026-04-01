@@ -30,6 +30,37 @@ let HandleSearchWords = async (req, res) => {
 	}
 };
 
+let HandleSearchKanjis = async (req, res) => {
+	try {
+		let query = req.query.q || req.query.keyword || "";
+		let limit = req.query.limit || 30;
+
+		if (!query || !query.trim()) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing query",
+				kanjis: [],
+			});
+		}
+
+		let kanjis = await dictionaryService.searchKanjis(query, limit);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			kanjis,
+		});
+	} catch (e) {
+		console.error("HandleSearchKanjis error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			kanjis: [],
+		});
+	}
+};
+
 module.exports = {
 	HandleSearchWords,
+	HandleSearchKanjis,
 };
