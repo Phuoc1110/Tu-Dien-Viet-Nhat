@@ -38,9 +38,10 @@ const Navbar = ({ title = "HomePage" }) => {
 	};
 
 	const handleSearch = (e) => {
-		e.preventDefault();
-		if (searchValue.trim()) {
-			history.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+		if (e.key === "Enter") {
+			if (searchValue.trim()) {
+				history.push(`/dictionary?q=${searchValue.trim()}`);
+			}
 		}
 	};
 
@@ -73,11 +74,11 @@ const Navbar = ({ title = "HomePage" }) => {
 					<div className="brand-logo">
 						<img src={logo} alt="SocialHub Logo" className="logo-image" />
 					</div>
-					<span className="brand-name">KIDSOCIAL</span>
+					<span className="brand-name">MAZII</span>
 				</div>
 
 				{/* Search Bar */}
-				<form className="navbar-search" onSubmit={handleSearch}>
+				{/* <form className="navbar-search" onSubmit={handleSearch}>
 					<div className="search-container">
 						<Search size={18} className="search-icon" />
 						<input
@@ -88,7 +89,7 @@ const Navbar = ({ title = "HomePage" }) => {
 							className="search-input"
 						/>
 					</div>
-				</form>
+				</form> */}
 
 				{/* Right Actions */}
 				{user && user.isAuthenticated ? (
@@ -241,14 +242,14 @@ const Navbar = ({ title = "HomePage" }) => {
 									<div className="dropdown-divider"></div>
 									<a
 										href={`/profile/${user.account.id}`}
-										className="dropdown-item"
+										className="dropdown-item-1"
 									>
 										<Settings size={16} />
 										<span>Profile</span>
 									</a>
 									<div
 										onClick={handleLogout}
-										className="dropdown-item logout"
+										className="dropdown-item-1 logout"
 										style={{ cursor: "pointer" }}
 									>
 										<LogOut size={16} />

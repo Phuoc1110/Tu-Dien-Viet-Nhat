@@ -3,6 +3,7 @@ import { Switch, Route, Redirect } from "react-router-dom";
 import HomePage from "../pages/Home/HomePage";
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
+import DictionaryPage from "../pages/Dictionary/DictionaryPage";
 import PrivateRoutes from "./PrivateRoutes";
 import Profile from "../pages/Profile/Profile";
 import { UserContext } from "../Context/UserProvider";
@@ -18,6 +19,10 @@ const ClientRoute = () => {
 				</Route>
 				<Route path="/login" component={Login} />
 				<Route path="/register" component={Register} />
+				<Route path="/dictionary" component={DictionaryPage} />
+				<Route path="/search-word">
+					<Redirect to="/" />
+				</Route>
 				<Route path="/profile" exact>
 					{user?.isAuthenticated && user?.account?.id ? (
 						<Redirect to={`/profile/${user.account.id}`} />

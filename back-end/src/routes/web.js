@@ -1,5 +1,6 @@
 import express from "express";
 import userController from "../controllers/userController";
+import dictionaryController from "../controllers/dictionaryController";
 import { checkUserJWT } from "../middleware/JWT_Action";
 import {
 	sendResetOTP,
@@ -26,6 +27,7 @@ let initWebRoutes = (app) => {
 	router.post("/api/reset-otp/send", sendResetOTP);
 	router.post("/api/reset-otp/verify", verifyResetOTP);
 	router.post("/api/reset-password", resetPassword);
+	router.get("/api/dictionary/search", dictionaryController.HandleSearchWords);
 
 	return app.use("/", router);
 };

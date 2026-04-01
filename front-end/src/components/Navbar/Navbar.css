@@ -269,7 +269,7 @@
   margin: 0.5rem 0;
 }
 
-.dropdown-item {
+.dropdown-item-1 {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -280,15 +280,15 @@
   font-size: 0.875rem;
 }
 
-.dropdown-item:hover {
+.dropdown-item-1:hover {
   background-color: #374151;
 }
 
-.dropdown-item.logout {
+.dropdown-item-1.logout {
   color: #ef4444;
 }
 
-.dropdown-item.logout:hover {
+.dropdown-item-1.logout:hover {
   background-color: rgba(239, 68, 68, 0.1);
 }
 
@@ -333,7 +333,7 @@
   }
 }
 
-.dropdown-item.logout:hover {
+.dropdown-item-1.logout:hover {
   background-color: rgba(239, 68, 68, 0.1);
 }
 
