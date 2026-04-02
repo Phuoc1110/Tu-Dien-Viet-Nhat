@@ -2,7 +2,6 @@
 /vendor
 .idea/
 /.idea
-
 .env
 __tests__
 testUtils
@@ -11,6 +10,7 @@ jest.setup.cjs
 jesthtmlreporter.config.json
 src/config/connectDB.js
 src/models/index.js
+src/script/
 
 # undo
 #  npx sequelize-cli db:migrate:undo --name migrations-shares.js
