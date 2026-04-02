@@ -60,7 +60,38 @@ let HandleSearchKanjis = async (req, res) => {
 	}
 };
 
+let HandleSearchSentences = async (req, res) => {
+	try {
+		let query = req.query.q || req.query.keyword || "";
+		let limit = req.query.limit || 20;
+
+		if (!query || !query.trim()) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing query",
+				sentences: [],
+			});
+		}
+
+		let sentences = await dictionaryService.searchSentences(query, limit);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			sentences,
+		});
+	} catch (e) {
+		console.error("HandleSearchSentences error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			sentences: [],
+		});
+	}
+};
+
 module.exports = {
 	HandleSearchWords,
 	HandleSearchKanjis,
+	HandleSearchSentences,
 };

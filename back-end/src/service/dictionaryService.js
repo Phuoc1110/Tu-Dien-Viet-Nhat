@@ -30,6 +30,13 @@ let searchWords = (query, limit = 30) => {
 						required: false,
 						limit: 2,
 					},
+					{
+						model: db.Example,
+						as: "examples",
+						attributes: ["id", "japaneseSentence", "vietnameseTranslation"],
+						required: false,
+						limit: 3,
+					},
 				],
 				order: [
 					["isCommon", "DESC"],
@@ -102,7 +109,63 @@ let searchKanjis = (query, limit = 30) => {
 	});
 };
 
+let searchSentences = (query, limit = 20) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const keyword = (query || "").trim();
+			const safeLimit = Number.isFinite(+limit)
+				? Math.max(1, Math.min(+limit, 100))
+				: 20;
+
+			if (!keyword) {
+				resolve([]);
+				return;
+			}
+
+			const examples = await db.Example.findAll({
+				where: {
+					[Op.or]: [
+						{ japaneseSentence: { [Op.like]: `%${keyword}%` } },
+						{ vietnameseTranslation: { [Op.like]: `%${keyword}%` } },
+					],
+				},
+				include: [
+					{
+						model: db.Word,
+						as: "word",
+						attributes: ["id", "word", "reading", "romaji"],
+						required: false,
+					},
+				],
+				order: [["id", "DESC"]],
+				// Pull a larger candidate set, then dedupe by sentence content.
+				limit: Math.min(safeLimit * 5, 500),
+			});
+
+			const seen = new Set();
+			const uniqueExamples = [];
+
+			for (const item of examples) {
+				const key = `${item.japaneseSentence}__${item.vietnameseTranslation}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					uniqueExamples.push(item);
+				}
+
+				if (uniqueExamples.length >= safeLimit) {
+					break;
+				}
+			}
+
+			resolve(uniqueExamples);
+		} catch (e) {
+			reject(e);
+		}
+	});
+};
+
 module.exports = {
 	searchWords,
 	searchKanjis,
+	searchSentences,
 };

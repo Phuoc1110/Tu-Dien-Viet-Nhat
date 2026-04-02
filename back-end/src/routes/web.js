@@ -32,6 +32,10 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/kanji/search",
 		dictionaryController.HandleSearchKanjis
 	);
+	router.get(
+		"/api/dictionary/sentence/search",
+		dictionaryController.HandleSearchSentences
+	);
 
 	return app.use("/", router);
 };

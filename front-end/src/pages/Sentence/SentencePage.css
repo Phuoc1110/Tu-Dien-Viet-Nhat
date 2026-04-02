@@ -1,0 +1,60 @@
+@import "../Dictionary/DictionaryPage.css";
+
+.sentence-results {
+	margin-top: 14px;
+}
+
+.sentence-card {
+	background: #ffffff;
+	border: 1px solid #d8e0ea;
+	border-radius: 12px;
+	overflow-y: scroll;
+    max-height: 70vh;
+}
+
+.sentence-card h2 {
+	margin: 0;
+	padding: 14px 16px;
+	font-size: 2rem;
+	font-weight: 700;
+	color: #0f172a;
+	border-bottom: 1px solid #e5eaf0;
+}
+
+.sentence-card h2 span {
+	color: #2563eb;
+}
+
+.sentence-item {
+	padding: 14px 16px;
+	border-bottom: 1px solid #e5eaf0;
+}
+
+.sentence-item:last-child {
+	border-bottom: none;
+}
+
+.sentence-jp {
+	margin: 0;
+	font-size: 1.7rem;
+	color: #0f172a;
+	font-weight: 700;
+}
+
+.sentence-vi {
+	margin: 8px 0 0;
+	font-size: 1.3rem;
+	color: #111827;
+}
+
+.sentence-word {
+	display: inline-block;
+	margin-top: 6px;
+	color: #64748b;
+}
+
+.sentence-error {
+	margin: 0;
+	padding: 14px 16px;
+	color: #991b1b;
+}

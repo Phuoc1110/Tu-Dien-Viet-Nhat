@@ -5,6 +5,7 @@ import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 import DictionaryPage from "../pages/Dictionary/DictionaryPage";
 import KanjiPage from "../pages/Kanji/KanjiPage";
+import SentencePage from "../pages/Sentence/SentencePage";
 import PrivateRoutes from "./PrivateRoutes";
 import Profile from "../pages/Profile/Profile";
 import { UserContext } from "../Context/UserProvider";
@@ -22,6 +23,7 @@ const ClientRoute = () => {
 				<Route path="/register" component={Register} />
 				<Route path="/dictionary" component={DictionaryPage} />
 				<Route path="/kanji" component={KanjiPage} />
+				<Route path="/sentence" component={SentencePage} />
 				<Route path="/search-word">
 					<Redirect to="/" />
 				</Route>

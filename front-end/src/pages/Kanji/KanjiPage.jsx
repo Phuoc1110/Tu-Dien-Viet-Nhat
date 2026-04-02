@@ -18,6 +18,46 @@ const KanjiPage = () => {
 	const searchWrapRef = useRef(null);
 	const [activeKanji, setActiveKanji] = useState(null);
 
+	const normalizeStrokePaths = (value) => {
+		if (!value) return [];
+
+		if (Array.isArray(value)) {
+			return value
+				.map((item, index) => {
+					if (typeof item === "string") {
+						return { d: item, order: index + 1 };
+					}
+					if (item && typeof item === "object") {
+						return {
+							d: item.d || item.path || "",
+							order: item.order || index + 1,
+						};
+					}
+					return null;
+				})
+				.filter((item) => item && item.d);
+		}
+
+		if (typeof value === "string") {
+			try {
+				return normalizeStrokePaths(JSON.parse(value));
+			} catch (e) {
+				return [];
+			}
+		}
+
+		if (typeof value === "object" && Array.isArray(value.paths)) {
+			return normalizeStrokePaths(value.paths);
+		}
+
+		return [];
+	};
+
+	const strokePaths = useMemo(
+		() => normalizeStrokePaths(kanjiDetail?.strokePaths),
+		[kanjiDetail]
+	);
+
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
 		return params.get("q") || params.get("keyword") || "";
@@ -149,6 +189,64 @@ const KanjiPage = () => {
 		);
 	};
 
+	const renderStrokeOrder = () => {
+		if (!kanjiDetail) return null;
+
+		if (!strokePaths.length) {
+			return (
+				<div className="detail-section">
+					<h3>Thứ tự nét</h3>
+					<p className="stroke-empty">
+						Chưa có dữ liệu nét vẽ cho kanji này. Bạn cần nạp `strokePaths` vào
+						database để hiển thị thứ tự viết.
+					</p>
+				</div>
+			);
+		}
+
+		return (
+			<div className="detail-section">
+				<h3>Thứ tự nét</h3>
+				<div className="stroke-preview-box">
+					<svg viewBox="0 0 109 109" className="stroke-preview-svg" aria-label="Kanji stroke preview">
+						<rect x="0" y="0" width="109" height="109" fill="#f8fafc" />
+						<path d="M54.5 0V109" stroke="#dbe4ef" strokeWidth="1" />
+						<path d="M0 54.5H109" stroke="#dbe4ef" strokeWidth="1" />
+						{strokePaths.map((item, index) => (
+							<path
+								key={`stroke-preview-${index}`}
+								d={item.d}
+								fill="none"
+								stroke="#2563eb"
+								strokeWidth="3"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								opacity={Math.max(0.35, (index + 1) / strokePaths.length)}
+							/>
+						))}
+					</svg>
+				</div>
+				<div className="stroke-order-list">
+					{strokePaths.map((item, index) => (
+						<div className="stroke-order-item" key={`stroke-order-${index}`}>
+							<span className="stroke-order-index">Nét {item.order || index + 1}</span>
+							<svg viewBox="0 0 109 109" className="stroke-order-svg" aria-hidden="true">
+								<path
+									d={item.d}
+									fill="none"
+									stroke="#1d4ed8"
+									strokeWidth="4"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+							</svg>
+						</div>
+					))}
+				</div>
+			</div>
+		);
+	};
+
 	return (
 		<div className="mazii-home">
 			<div className="mazii-shell">
@@ -173,9 +271,11 @@ const KanjiPage = () => {
 							Từ vựng
 						</button>
 						<button className="tab-active">Hán tự</button>
-						<button>Mẫu câu</button>
+						<button onClick={() => history.push(`/sentence?q=${searchInput}`)}>
+							Mẫu câu
+						</button>
 						<button>Ngữ pháp</button>
-						<button>Nhật - Nhật</button>
+						{/* <button>Nhật - Nhật</button> */}
 					</div>
 					{isDropdownOpen && searchInput.trim() && (
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
@@ -212,6 +312,7 @@ const KanjiPage = () => {
 									<h3>Nghĩa</h3>
 									<p>{kanjiDetail.meaning}</p>
 								</div>
+								{renderStrokeOrder()}
 							</div>
 						)}
 					</div>

@@ -168,9 +168,11 @@ const DictionaryPage = () => {
 						<button onClick={() => history.push(`/kanji?q=${keyword}`)}>
 							Hán tự
 						</button>
-						<button>Mẫu câu</button>
+						<button onClick={() => history.push(`/sentence?q=${keyword}`)}>
+							Mẫu câu
+						</button>
 						<button>Ngữ pháp</button>
-						<button>Nhật - Nhật</button>
+						{/* <button>Nhật - Nhật</button> */}
 					</div>
 					{isDropdownOpen && searchInput.trim() && (
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
@@ -207,6 +209,20 @@ const DictionaryPage = () => {
 												<li key={meaning.id}>
 													{meaning.partOfSpeech ? `${meaning.partOfSpeech}: ` : ""}
 													{meaning.definition}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+
+								{wordDetail.examples && wordDetail.examples.length > 0 && (
+									<div className="detail-section">
+										<h3>Ví dụ</h3>
+										<ul>
+											{wordDetail.examples.map((example) => (
+												<li key={example.id}>
+													<strong>{example.japaneseSentence}</strong>
+													<p>{example.vietnameseTranslation}</p>
 												</li>
 											))}
 										</ul>

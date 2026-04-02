@@ -20,4 +20,14 @@ const searchKanjis = (query, limit = 30) => {
 		});
 };
 
-export { searchWords, searchKanjis };
+const searchSentences = (query, limit = 20) => {
+	return axios
+		.get(`/api/dictionary/sentence/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Search sentences error:", err);
+			return { errCode: 1, errMessage: "Search failed", sentences: [] };
+		});
+};
+
+export { searchWords, searchKanjis, searchSentences };

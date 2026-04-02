@@ -180,10 +180,20 @@ const HomePage = () => {
 						<button className="tab-active" type="button">
 							Từ vựng
 						</button>
-						<button type="button">Hán tự</button>
-						<button type="button">Mẫu câu</button>
+						<button
+							type="button"
+							onClick={() => history.push(`/kanji?q=${searchInput.trim()}`)}
+						>
+							Hán tự
+						</button>
+						<button
+							type="button"
+							onClick={() => history.push(`/sentence?q=${searchInput.trim()}`)}
+						>
+							Mẫu câu
+						</button>
 						<button type="button">Ngữ pháp</button>
-						<button type="button">Nhật - Nhật</button>
+						{/* <button type="button">Nhật - Nhật</button> */}
 					</nav>
 
 					{isDropdownOpen && searchInput.trim() && (
