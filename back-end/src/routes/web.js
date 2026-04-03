@@ -36,6 +36,10 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/sentence/search",
 		dictionaryController.HandleSearchSentences
 	);
+	router.get(
+		"/api/dictionary/grammar/search",
+		dictionaryController.HandleSearchGrammars
+	);
 
 	return app.use("/", router);
 };

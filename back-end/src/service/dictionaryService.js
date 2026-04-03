@@ -75,6 +75,31 @@ let searchKanjis = (query, limit = 30) => {
 							[Op.in]: [...new Set(kanjiChars)],
 						},
 					},
+					include: [
+						{
+							model: db.Word,
+							as: "words",
+							attributes: ["id", "word", "reading", "romaji"],
+							through: { attributes: [] },
+							required: false,
+							include: [
+								{
+									model: db.Meaning,
+									as: "meanings",
+									attributes: ["id", "definition", "partOfSpeech"],
+									required: false,
+									limit: 1,
+								},
+								{
+									model: db.Example,
+									as: "examples",
+									attributes: ["id", "japaneseSentence", "vietnameseTranslation"],
+									required: false,
+									limit: 2,
+								},
+							],
+						},
+					],
 					order: [
 						["jlptLevel", "ASC"],
 						["characterKanji", "ASC"],
@@ -95,6 +120,31 @@ let searchKanjis = (query, limit = 30) => {
 						{ onyomi: { [Op.like]: `%${keyword}%` } },
 					],
 				},
+				include: [
+					{
+						model: db.Word,
+						as: "words",
+						attributes: ["id", "word", "reading", "romaji"],
+						through: { attributes: [] },
+						required: false,
+						include: [
+							{
+								model: db.Meaning,
+								as: "meanings",
+								attributes: ["id", "definition", "partOfSpeech"],
+								required: false,
+								limit: 1,
+							},
+							{
+								model: db.Example,
+								as: "examples",
+								attributes: ["id", "japaneseSentence", "vietnameseTranslation"],
+								required: false,
+								limit: 2,
+							},
+						],
+					},
+				],
 				order: [
 					["jlptLevel", "ASC"],
 					["characterKanji", "ASC"],
@@ -164,8 +214,56 @@ let searchSentences = (query, limit = 20) => {
 	});
 };
 
+let searchGrammars = (query, limit = 20) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const keyword = (query || "").trim();
+			const safeLimit = Number.isFinite(+limit)
+				? Math.max(1, Math.min(+limit, 100))
+				: 20;
+
+			if (!keyword) {
+				resolve([]);
+				return;
+			}
+
+			const grammars = await db.Grammar.findAll({
+				where: {
+					[Op.or]: [
+						{ title: { [Op.like]: `%${keyword}%` } },
+						{ meaning: { [Op.like]: `%${keyword}%` } },
+						{ formation: { [Op.like]: `%${keyword}%` } },
+						{ usageNote: { [Op.like]: `%${keyword}%` } },
+					],
+				},
+				include: [
+					{
+						model: db.GrammarExample,
+						as: "examples",
+						attributes: [
+							"id",
+							"japaneseSentence",
+							"readingSentence",
+							"vietnameseTranslation",
+						],
+						required: false,
+						limit: 6,
+					},
+				],
+				order: [["jlptLevel", "ASC"], ["title", "ASC"]],
+				limit: safeLimit,
+			});
+
+			resolve(grammars);
+		} catch (e) {
+			reject(e);
+		}
+	});
+};
+
 module.exports = {
 	searchWords,
 	searchKanjis,
 	searchSentences,
+	searchGrammars,
 };
