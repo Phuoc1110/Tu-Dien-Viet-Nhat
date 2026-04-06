@@ -30,4 +30,14 @@ const searchSentences = (query, limit = 20) => {
 		});
 };
 
-export { searchWords, searchKanjis, searchSentences };
+const searchGrammars = (query, limit = 20) => {
+	return axios
+		.get(`/api/dictionary/grammar/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Search grammars error:", err);
+			return { errCode: 1, errMessage: "Search failed", grammars: [] };
+		});
+};
+
+export { searchWords, searchKanjis, searchSentences, searchGrammars };

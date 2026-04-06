@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchWords } from "../../services/dictionaryService";
+import { addWordSearchHistory } from "../../services/searchHistoryService";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const DictionaryPage = () => {
@@ -40,7 +41,12 @@ const DictionaryPage = () => {
 			const res = await searchWords(keyword.trim(), 1); // Fetch 1 main word
 
 			if (res && res.errCode === 0 && res.words && res.words.length > 0) {
-				setWordDetail(res.words[0]);
+				const mainWord = res.words[0];
+				setWordDetail(mainWord);
+				addWordSearchHistory({
+					word: mainWord.word,
+					meaning: mainWord.meanings?.[0]?.definition || "",
+				});
 				// Fetch related words
 				const relatedRes = await searchWords(keyword.trim(), 6);
 				if (relatedRes && relatedRes.errCode === 0) {
@@ -171,7 +177,9 @@ const DictionaryPage = () => {
 						<button onClick={() => history.push(`/sentence?q=${keyword}`)}>
 							Mẫu câu
 						</button>
-						<button>Ngữ pháp</button>
+						<button onClick={() => history.push(`/grammar?q=${keyword}`)}>
+							Ngữ pháp
+						</button>
 						{/* <button>Nhật - Nhật</button> */}
 					</div>
 					{isDropdownOpen && searchInput.trim() && (

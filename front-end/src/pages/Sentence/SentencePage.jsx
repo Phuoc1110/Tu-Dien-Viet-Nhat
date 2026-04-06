@@ -159,7 +159,9 @@ const SentencePage = () => {
 							Han tu
 						</button>
 						<button className="tab-active">Mau cau</button>
-						<button>Ngu phap</button>
+						<button onClick={() => history.push(`/grammar?q=${searchInput}`)}>
+							Ngu phap
+						</button>
 						{/* <button>Nhat - Nhat</button> */}
 					</div>
 					{isDropdownOpen && searchInput.trim() && (

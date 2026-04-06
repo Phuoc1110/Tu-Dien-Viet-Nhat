@@ -394,6 +394,12 @@
 	cursor: pointer;
 }
 
+.history-preview-empty {
+	margin: 0;
+	font-size: 0.92rem;
+	color: #64748b;
+}
+
 .jlpt-list {
 	margin-top: 10px;
 	display: flex;
@@ -595,6 +601,108 @@
 	line-height: 1.45;
 }
 
+.history-modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.45);
+	z-index: 1200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+}
+
+.history-modal {
+	width: min(860px, 100%);
+	max-height: 82vh;
+	background: #ffffff;
+	border-radius: 12px;
+	border: 1px solid #d8e0ea;
+	box-shadow: 0 24px 50px rgba(15, 23, 42, 0.35);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.history-modal-head {
+	padding: 14px 16px;
+	border-bottom: 1px solid #e2e8f0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+}
+
+.history-modal-head h3 {
+	margin: 0;
+	font-size: 1.5rem;
+	color: #0f172a;
+}
+
+.history-modal-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.history-modal-actions button {
+	border: 1px solid #dbe4ef;
+	background: #f8fafc;
+	border-radius: 8px;
+	padding: 6px 10px;
+	font-weight: 700;
+	color: #334155;
+	cursor: pointer;
+}
+
+.history-modal-list {
+	padding: 8px 0;
+	overflow-y: auto;
+}
+
+.history-modal-item {
+	width: 100%;
+	border: none;
+	border-bottom: 1px solid #edf2f7;
+	background: #ffffff;
+	padding: 12px 16px;
+	text-align: left;
+	cursor: pointer;
+}
+
+.history-modal-item:hover {
+	background: #f8fafc;
+}
+
+.history-item-main {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	align-items: baseline;
+}
+
+.history-item-main strong {
+	color: #1d4ed8;
+	font-size: 1.05rem;
+}
+
+.history-item-main small {
+	color: #94a3b8;
+	font-size: 0.78rem;
+	white-space: nowrap;
+}
+
+.history-modal-item p {
+	margin: 6px 0 0;
+	color: #334155;
+	line-height: 1.45;
+}
+
+.history-empty {
+	margin: 0;
+	padding: 16px;
+	color: #64748b;
+}
+
 @media (max-width: 1024px) {
 	.mazii-content-grid {
 		grid-template-columns: 1fr;
@@ -638,5 +746,9 @@
 
 	.promo-card h2 {
 		font-size: 1.2rem;
+	}
+
+	.history-modal {
+		max-height: 88vh;
 	}
 }

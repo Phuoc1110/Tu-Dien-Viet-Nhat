@@ -59,6 +59,56 @@ const KanjiPage = () => {
 		[kanjiDetail]
 	);
 
+	useEffect(() => {
+		setCurrentStrokeIndex(0);
+	}, [kanjiDetail?.id, strokePaths.length]);
+
+	useEffect(() => {
+		if (!strokePaths.length) {
+			return undefined;
+		}
+
+		const timer = setInterval(() => {
+			setCurrentStrokeIndex((prev) =>
+				prev >= strokePaths.length - 1 ? 0 : prev + 1
+			);
+		}, 900);
+
+		return () => clearInterval(timer);
+	}, [strokePaths]);
+
+	const kanjiWords = useMemo(() => {
+		if (!kanjiDetail?.words || !Array.isArray(kanjiDetail.words)) {
+			return [];
+		}
+
+		return kanjiDetail.words.slice(0, 10);
+	}, [kanjiDetail]);
+
+	const kanjiExamples = useMemo(() => {
+		if (!kanjiWords.length) {
+			return [];
+		}
+
+		const seen = new Set();
+		const examples = [];
+
+		for (const word of kanjiWords) {
+			for (const item of word.examples || []) {
+				const key = `${item.japaneseSentence}__${item.vietnameseTranslation}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					examples.push({ ...item, relatedWord: word.word });
+				}
+				if (examples.length >= 8) {
+					return examples;
+				}
+			}
+		}
+
+		return examples;
+	}, [kanjiWords]);
+
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
 		return params.get("q") || params.get("keyword") || "";
@@ -159,6 +209,17 @@ const KanjiPage = () => {
 		setIsDropdownOpen(false);
 	};
 
+	const getReadingItems = (value) => {
+		if (!value) {
+			return [];
+		}
+
+		return value
+			.split(/[;；,、]/)
+			.map((item) => item.trim())
+			.filter(Boolean);
+	};
+
 	const renderDropdownBody = () => {
 		if (loadingDropdown) {
 			return <div className="dropdown-status">Đang tra cứu...</div>;
@@ -197,7 +258,7 @@ const KanjiPage = () => {
 
 		if (!strokePaths.length) {
 			return (
-				<div className="detail-section">
+				<div className="stroke-side-card stroke-side-empty">
 					<h3>Hướng dẫn viết nét</h3>
 					<p className="stroke-empty">
 						Chưa có dữ liệu nét vẽ cho kanji này. Bạn cần nạp `strokePaths` vào
@@ -211,69 +272,31 @@ const KanjiPage = () => {
 		const displayedStrokes = strokePaths.slice(0, maxStrokeIndex + 1);
 
 		return (
-			<div className="detail-section">
-				<h3>Hướng dẫn viết nét</h3>
-				<div className="stroke-guide-container">
-					<div className="stroke-guide-canvas">
-						<div className="kanji-character-display">
-							<h2>{kanjiDetail.characterKanji}</h2>
-							<p>Số nét: {strokePaths.length}</p>
-						</div>
-						<svg viewBox="0 0 109 109" className="stroke-guide-svg" aria-label="Kanji stroke guide">
-							<rect x="0" y="0" width="109" height="109" fill="#ffffff" stroke="#e2e8f0" strokeWidth="2" />
-							<path d="M54.5 0V109" stroke="#f0f4f8" strokeWidth="1" />
-							<path d="M0 54.5H109" stroke="#f0f4f8" strokeWidth="1" />
-							{displayedStrokes.map((item, index) => {
-								const isCurrentStroke = index === maxStrokeIndex;
-								return (
-									<path
-										key={`stroke-guide-${index}`}
-										d={item.d}
-										fill="none"
-										stroke={isCurrentStroke ? "#ef4444" : "#2563eb"}
-										strokeWidth={isCurrentStroke ? "4" : "3"}
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										opacity={isCurrentStroke ? "1" : "0.7"}
-									/>
-								);
-							})}
-						</svg>
-					</div>
-					<div className="stroke-guide-controls">
-						<div className="stroke-counter">
-							<span className="current-stroke">{maxStrokeIndex + 1}</span>
-							<span className="total-strokes">/ {strokePaths.length}</span>
-						</div>
-						<div className="stroke-navigation">
-							<button
-								className="nav-button prev-button"
-								onClick={() => setCurrentStrokeIndex(Math.max(0, currentStrokeIndex - 1))}
-								disabled={currentStrokeIndex === 0}
-							>
-								← Lùi
-							</button>
-							<button
-								className="nav-button next-button"
-								onClick={() => setCurrentStrokeIndex(Math.min(strokePaths.length, currentStrokeIndex + 1))}
-								disabled={currentStrokeIndex >= strokePaths.length - 1}
-							>
-								Tiến →
-							</button>
-							<button
-								className="nav-button reset-button"
-								onClick={() => setCurrentStrokeIndex(0)}
-							>
-								↻ Bắt đầu lại
-							</button>
-						</div>
-						<div className="current-stroke-info">
-							{displayedStrokes[maxStrokeIndex] && (
-								<p>Nét {displayedStrokes[maxStrokeIndex].order || maxStrokeIndex + 1}</p>
-							)}
-						</div>
-					</div>
+			<div className="stroke-side-card">
+				<div className="stroke-side-toolbar">
+					<span className="stroke-auto-badge">Nét vẽ</span>
+					<span className="stroke-progress">Nét {maxStrokeIndex + 1}/{strokePaths.length}</span>
 				</div>
+				<svg viewBox="0 0 109 109" className="stroke-guide-svg" aria-label="Kanji stroke guide">
+					<rect x="0" y="0" width="109" height="109" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
+					<path d="M54.5 0V109" stroke="#dbe4ef" strokeWidth="1" />
+					<path d="M0 54.5H109" stroke="#dbe4ef" strokeWidth="1" />
+					{displayedStrokes.map((item, index) => {
+						const isCurrentStroke = index === maxStrokeIndex;
+						return (
+							<path
+								key={`stroke-guide-${index}`}
+								d={item.d}
+								fill="none"
+								stroke={isCurrentStroke ? "#ef4444" : "#0ea5e9"}
+								strokeWidth={isCurrentStroke ? "4" : "3"}
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								opacity={isCurrentStroke ? "1" : "0.55"}
+							/>
+						);
+					})}
+				</svg>
 			</div>
 		);
 	};
@@ -305,7 +328,9 @@ const KanjiPage = () => {
 						<button onClick={() => history.push(`/sentence?q=${searchInput}`)}>
 							Mẫu câu
 						</button>
-						<button>Ngữ pháp</button>
+						<button onClick={() => history.push(`/grammar?q=${searchInput}`)}>
+							Ngữ pháp
+						</button>
 						{/* <button>Nhật - Nhật</button> */}
 					</div>
 					{isDropdownOpen && searchInput.trim() && (
@@ -319,26 +344,33 @@ const KanjiPage = () => {
 						{error && <div className="detail-card error">{error}</div>}
 						{kanjiDetail && (
 							<div className="detail-card">
-								<div className="detail-head">
+								<div className="detail-overview-grid">
 									<div>
-										<h1>{kanjiDetail.characterKanji}</h1>
-										<div className="detail-reading">{kanjiDetail.meaning}</div>
+										<div className="detail-head">
+											<div>
+												<h1>{kanjiDetail.characterKanji}</h1>
+												<div className="detail-reading">{kanjiDetail.meaning}</div>
+											</div>
+											<div className="detail-actions">
+												<button>+</button>
+												<button>SVG</button>
+											</div>
+										</div>
+										<div className="detail-meta">
+											<div>Số nét: {kanjiDetail.strokeCount}</div>
+											<div>JLPT: {kanjiDetail.jlptLevel ? `N${kanjiDetail.jlptLevel}` : "-"}</div>
+											<div>Tần suất: #{kanjiDetail.frequencyRank}/2500</div>
+										</div>
 									</div>
-									<div className="detail-actions">
-										<button>+</button>
-										<button>SVG</button>
+									<div className="detail-stroke-wrap">
+										{renderStrokeOrder()}
 									</div>
-								</div>
-								<div className="detail-meta">
-									<span>Số nét: {kanjiDetail.strokeCount}</span>
-									<span>JLPT: {kanjiDetail.jlptLevel ? `N${kanjiDetail.jlptLevel}` : "-"}</span>
-									<span>Tần suất: #{kanjiDetail.frequencyRank}/2500</span>
 								</div>
 								<div className="detail-section">
 									<h3>Kunyomi</h3>
-									{kanjiDetail.kunyomi ? (
+									{getReadingItems(kanjiDetail.kunyomi).length ? (
 										<ul className="reading-list">
-											{kanjiDetail.kunyomi.split(";").map((item, idx) => (
+											{getReadingItems(kanjiDetail.kunyomi).map((item, idx) => (
 												<li key={idx}>{item.trim()}</li>
 											))}
 										</ul>
@@ -348,9 +380,9 @@ const KanjiPage = () => {
 								</div>
 								<div className="detail-section">
 									<h3>Onyomi</h3>
-									{kanjiDetail.onyomi ? (
+									{getReadingItems(kanjiDetail.onyomi).length ? (
 										<ul className="reading-list">
-											{kanjiDetail.onyomi.split(";").map((item, idx) => (
+											{getReadingItems(kanjiDetail.onyomi).map((item, idx) => (
 												<li key={idx}>{item.trim()}</li>
 											))}
 										</ul>
@@ -373,7 +405,45 @@ const KanjiPage = () => {
 									<h3>Nghĩa</h3>
 									<p>{kanjiDetail.meaning}</p>
 								</div>
-								{renderStrokeOrder()}
+								{kanjiWords.length > 0 && (
+									<div className="detail-section">
+										<h3>Từ vựng chứa kanji này</h3>
+										<div className="kanji-word-table-wrap">
+											<table className="kanji-word-table">
+												<thead>
+													<tr>
+														<th>Từ</th>
+														<th>Đọc</th>
+														<th>Nghĩa</th>
+													</tr>
+												</thead>
+												<tbody>
+													{kanjiWords.map((word) => (
+														<tr key={word.id}>
+															<td>{word.word}</td>
+															<td>{word.reading || "-"}</td>
+															<td>{word.meanings?.[0]?.definition || "-"}</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</div>
+								)}
+								{kanjiExamples.length > 0 && (
+									<div className="detail-section">
+										<h3>Ví dụ</h3>
+										<div className="kanji-example-list">
+											{kanjiExamples.map((example) => (
+												<div className="kanji-example-item" key={example.id}>
+													<p className="kanji-example-jp">{example.japaneseSentence}</p>
+													<p className="kanji-example-vi">{example.vietnameseTranslation}</p>
+													<small>Từ liên quan: {example.relatedWord}</small>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
 							</div>
 						)}
 					</div>

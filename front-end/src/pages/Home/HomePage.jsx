@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./HomePage.css";
 import { searchWords } from "../../services/dictionaryService";
 import { useHistory } from "react-router-dom";
+import {
+	clearWordSearchHistory,
+	getWordSearchHistory,
+} from "../../services/searchHistoryService";
 
 const HomePage = () => {
 	const [searchInput, setSearchInput] = useState("");
@@ -9,13 +13,10 @@ const HomePage = () => {
 	const [searchError, setSearchError] = useState("");
 	const [searchResults, setSearchResults] = useState([]);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+	const [historyItems, setHistoryItems] = useState([]);
 	const searchWrapRef = useRef(null);
 	const history = useHistory();
-
-	const historyWords = useMemo(
-		() => ["こない", "きりで", "景気", "経営", "作業", "次位", "返し", "看る"],
-		[]
-	);
 
 	const hotKeywords = useMemo(
 		() => ["健康", "期待", "求める", "表", "開く", "仕事", "検討", "役割"],
@@ -50,8 +51,6 @@ const HomePage = () => {
 		[]
 	);
 
-	const resultCountLabel = `${searchResults.length} kết quả`;
-
 	useEffect(() => {
 		if (!searchInput.trim()) {
 			setSearchError("");
@@ -76,6 +75,19 @@ const HomePage = () => {
 
 		document.addEventListener("mousedown", handleOutsideClick);
 		return () => document.removeEventListener("mousedown", handleOutsideClick);
+	}, []);
+
+	useEffect(() => {
+		setHistoryItems(getWordSearchHistory());
+
+		const syncHistory = () => setHistoryItems(getWordSearchHistory());
+		window.addEventListener("focus", syncHistory);
+		window.addEventListener("storage", syncHistory);
+
+		return () => {
+			window.removeEventListener("focus", syncHistory);
+			window.removeEventListener("storage", syncHistory);
+		};
 	}, []);
 
 	const handleSearch = (event) => {
@@ -116,6 +128,23 @@ const HomePage = () => {
 	const handleSelectWord = (word) => {
 		history.push(`/dictionary?q=${word.word}`);
 	};
+
+	const openHistoryPopup = () => {
+		setHistoryItems(getWordSearchHistory());
+		setIsHistoryOpen(true);
+	};
+
+	const handleSelectHistoryItem = (item) => {
+		setIsHistoryOpen(false);
+		history.push(`/dictionary?q=${item.word}`);
+	};
+
+	const handleClearHistory = () => {
+		clearWordSearchHistory();
+		setHistoryItems([]);
+	};
+
+	const historyPreviewItems = historyItems.slice(0, 8);
 
 	const renderDropdownBody = () => {
 		if (loadingSearch) {
@@ -169,7 +198,7 @@ const HomePage = () => {
 							<button type="button">↗</button>
 							<button type="button">A文</button>
 							<button type="button">Mic</button>
-							<button type="button">His</button>
+							<button type="button" onClick={openHistoryPopup}>His</button>
 						</div>
 						<button className="lang-switch" type="submit">
 							Nhật - Việt ▾
@@ -192,7 +221,12 @@ const HomePage = () => {
 						>
 							Mẫu câu
 						</button>
-						<button type="button">Ngữ pháp</button>
+						<button
+							type="button"
+							onClick={() => history.push(`/grammar?q=${searchInput.trim()}`)}
+						>
+							Ngữ pháp
+						</button>
 						{/* <button type="button">Nhật - Nhật</button> */}
 					</nav>
 
@@ -200,6 +234,46 @@ const HomePage = () => {
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</header>
+
+				{isHistoryOpen && (
+					<div className="history-modal-overlay" onClick={() => setIsHistoryOpen(false)}>
+						<div
+							className="history-modal"
+							onClick={(event) => event.stopPropagation()}
+						>
+							<div className="history-modal-head">
+								<h3>Lịch sử</h3>
+								<div className="history-modal-actions">
+									<button type="button" onClick={handleClearHistory}>Xóa</button>
+									<button type="button" onClick={() => setIsHistoryOpen(false)}>
+										✕
+									</button>
+								</div>
+							</div>
+							<div className="history-modal-list">
+								{historyItems.length === 0 && (
+									<p className="history-empty">Chưa có từ nào trong lịch sử.</p>
+								)}
+								{historyItems.map((item, index) => (
+									<button
+										type="button"
+										key={`${item.word}-${item.searchedAt}-${index}`}
+										className="history-modal-item"
+										onClick={() => handleSelectHistoryItem(item)}
+									>
+										<div className="history-item-main">
+											<strong>{item.word}</strong>
+											<small>
+												{new Date(item.searchedAt).toLocaleString("vi-VN")}
+											</small>
+										</div>
+										{item.meaning && <p>{item.meaning}</p>}
+									</button>
+								))}
+							</div>
+						</div>
+					</div>
+				)}
 
 				<main className={`mazii-content-grid`}>
 					<>
@@ -224,14 +298,21 @@ const HomePage = () => {
 							<article className="chip-section">
 								<div className="chip-header">
 									<h3>Lịch sử</h3>
-									<button type="button">Xem thêm</button>
+									<button type="button" onClick={openHistoryPopup}>Xem thêm</button>
 								</div>
 								<div className="chip-list">
-									{historyWords.map((word) => (
-										<button key={word} type="button" onClick={() => applyHintAndSearch(word)}>
-											{word}
+									{historyPreviewItems.map((item, index) => (
+										<button
+											key={`${item.word}-${index}`}
+											type="button"
+											onClick={() => handleSelectHistoryItem(item)}
+										>
+											{item.word}
 										</button>
 									))}
+									{historyPreviewItems.length === 0 && (
+										<p className="history-preview-empty">Chưa có lịch sử tra cứu</p>
+									)}
 								</div>
 							</article>
 
