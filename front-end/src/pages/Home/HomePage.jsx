@@ -6,6 +6,36 @@ import {
 	clearWordSearchHistory,
 	getWordSearchHistory,
 } from "../../services/searchHistoryService";
+import { getLatestWordContributions } from "../../services/wordContributionService";
+
+const splitVariants = (raw) =>
+	String(raw || "")
+		.split(/[;；,，、|/]+/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+
+const normalize = (raw) => String(raw || "").trim().toLowerCase();
+
+const pickBestQueryToken = (entry, typedValue) => {
+	const typed = normalize(typedValue);
+	const variants = [
+		...splitVariants(entry?.word),
+		...splitVariants(entry?.reading),
+		...splitVariants(entry?.romaji),
+	];
+
+	const exact = variants.find((token) => normalize(token) === typed);
+	if (exact) {
+		return exact;
+	}
+
+	const partial = variants.find((token) => normalize(token).includes(typed));
+	if (partial) {
+		return partial;
+	}
+
+	return splitVariants(entry?.word)[0] || entry?.word || "";
+};
 
 const HomePage = () => {
 	const [searchInput, setSearchInput] = useState("");
@@ -15,6 +45,7 @@ const HomePage = () => {
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 	const [historyItems, setHistoryItems] = useState([]);
+	const [communityPosts, setCommunityPosts] = useState([]);
 	const searchWrapRef = useRef(null);
 	const history = useHistory();
 
@@ -29,24 +60,6 @@ const HomePage = () => {
 			{ id: 2, jp: "青年", vi: "tuổi trẻ đầy hứa hẹn" },
 			{ id: 3, jp: "挟まる", vi: "ở giữa, bị kẹp" },
 			{ id: 4, jp: "目の肥えた", vi: "con mắt tinh tường" },
-		],
-		[]
-	);
-
-	const communityPosts = useMemo(
-		() => [
-			{
-				id: 1,
-				title: "mua sổ nách rồ chi?",
-				author: "ăng",
-				content: "mua sổ nách rồ à, buồn ngủ quàaaa...",
-			},
-			{
-				id: 2,
-				title: "Giám đốc lôi cả bố mẹ ra làm ví dụ",
-				author: "Cửu trăng",
-				content: "Cuộc sống hằng ngày ở Nhật Bản có gì cần lưu ý?",
-			},
 		],
 		[]
 	);
@@ -78,15 +91,19 @@ const HomePage = () => {
 	}, []);
 
 	useEffect(() => {
-		setHistoryItems(getWordSearchHistory());
+		const syncLocalData = () => {
+			setHistoryItems(getWordSearchHistory());
+			setCommunityPosts(getLatestWordContributions(6));
+		};
 
-		const syncHistory = () => setHistoryItems(getWordSearchHistory());
-		window.addEventListener("focus", syncHistory);
-		window.addEventListener("storage", syncHistory);
+		syncLocalData();
+
+		window.addEventListener("focus", syncLocalData);
+		window.addEventListener("storage", syncLocalData);
 
 		return () => {
-			window.removeEventListener("focus", syncHistory);
-			window.removeEventListener("storage", syncHistory);
+			window.removeEventListener("focus", syncLocalData);
+			window.removeEventListener("storage", syncLocalData);
 		};
 	}, []);
 
@@ -126,7 +143,15 @@ const HomePage = () => {
 	};
 
 	const handleSelectWord = (word) => {
-		history.push(`/dictionary?q=${word.word}`);
+		const selectedQuery = pickBestQueryToken(word, searchInput);
+		history.push(`/dictionary?q=${encodeURIComponent(selectedQuery)}`);
+	};
+
+	const handleOpenCommunityPost = (post) => {
+		if (!post?.word) {
+			return;
+		}
+		history.push(`/dictionary?q=${post.word}`);
 	};
 
 	const openHistoryPopup = () => {
@@ -142,6 +167,7 @@ const HomePage = () => {
 	const handleClearHistory = () => {
 		clearWordSearchHistory();
 		setHistoryItems([]);
+		setCommunityPosts(getLatestWordContributions(6));
 	};
 
 	const historyPreviewItems = historyItems.slice(0, 8);
@@ -347,13 +373,23 @@ const HomePage = () => {
 									<button type="button">Xem thêm</button>
 								</div>
 								<div className="community-grid">
-									{communityPosts.map((post) => (
-										<article key={post.id} className="community-card">
-											<h4>{post.title}</h4>
-											<p className="author">{post.author}</p>
+									{communityPosts.map((post, index) => (
+										<button
+											type="button"
+											key={`${post.id}-${index}`}
+											className="community-card"
+											onClick={() => handleOpenCommunityPost(post)}
+										>
+											<h4>{post.word}</h4>
+											<p className="author">
+												{post.author || "Bạn"} • {new Date(post.createdAt).toLocaleString("vi-VN")}
+											</p>
 											<p>{post.content}</p>
-										</article>
+										</button>
 									))}
+									{communityPosts.length === 0 && (
+										<p className="community-empty">Chưa có comment nào từ cộng đồng.</p>
+									)}
 								</div>
 							</section>
 						</section>

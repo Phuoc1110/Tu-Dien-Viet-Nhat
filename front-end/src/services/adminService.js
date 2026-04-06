@@ -18,56 +18,48 @@ const LogOutAdmin = () => {
 	return axios.post("/api/logoutAdmin");
 };
 
-// User Management APIs
-const getAllUsers = () => {
-    return axios.get("/api/admin/get-all-users");
-};
+const getAdminDashboard = () => axios.get("/api/admin/dashboard");
 
-const suspendUser = (userId) => {
-    return axios.post("/api/admin/suspend-user", { userId });
-};
+const getAdminVocabularies = (params = {}) =>
+	axios.get("/api/admin/vocabularies", { params });
 
-const activateUser = (userId) => {
-    return axios.post("/api/admin/activate-user", { userId });
-};
+const createAdminVocabulary = (data) => axios.post("/api/admin/vocabularies", data);
 
-const deleteUser = (userId) => {
-    return axios.delete("/api/admin/delete-user", { data: { userId } });
-};
+const updateAdminVocabulary = (id, data) =>
+	axios.put(`/api/admin/vocabularies/${id}`, data);
 
-// Post Management APIs
-const getAllPosts = () => {
-    return axios.get("/api/admin/get-all-posts");
-};
+const deleteAdminVocabulary = (id) => axios.delete(`/api/admin/vocabularies/${id}`);
 
-const blockPost = (postId) => {
-    return axios.post("/api/admin/block-post", { postId });
-};
+const updateAdminVocabularyJlpt = (id, jlptLevel) =>
+	axios.patch(`/api/admin/vocabularies/${id}/jlpt`, { jlptLevel });
 
-const unblockPost = (postId) => {
-    return axios.post("/api/admin/unblock-post", { postId });
-};
+const getAdminUsers = (params = {}) => axios.get("/api/admin/users", { params });
 
-const deletePost = (postId) => {
-    return axios.delete("/api/admin/delete-post", { data: { postId } });
-};
+const updateAdminUserRole = (id, role) =>
+	axios.patch(`/api/admin/users/${id}/role`, { role });
 
-// Statistics API
-const getStatistics = () => {
-    return axios.get("/api/admin/statistics");
-};
+const updateAdminUserStatus = (id, status) =>
+	axios.patch(`/api/admin/users/${id}/status`, { status });
+
+const resetAdminUserPassword = (id, newPassword) =>
+	axios.post(`/api/admin/users/${id}/reset-password`, { newPassword });
+
+const getAdminAuditLogs = (params = {}) =>
+	axios.get("/api/admin/audit-logs", { params });
 
 export {
     HandleAdminLogin,
     getAdminAccount,
     LogOutAdmin,
-    getAllUsers,
-    suspendUser,
-    activateUser,
-    deleteUser,
-    getAllPosts,
-    blockPost,
-    unblockPost,
-    deletePost,
-    getStatistics,
+    getAdminDashboard,
+    getAdminVocabularies,
+    createAdminVocabulary,
+    updateAdminVocabulary,
+    deleteAdminVocabulary,
+    updateAdminVocabularyJlpt,
+    getAdminUsers,
+    updateAdminUserRole,
+    updateAdminUserStatus,
+    resetAdminUserPassword,
+    getAdminAuditLogs,
 };

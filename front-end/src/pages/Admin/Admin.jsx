@@ -1,680 +1,568 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
-	Users,
+	Activity,
+	BookOpen,
+	ClipboardList,
 	FileText,
-	TrendingUp,
-	AlertCircle,
-	Search,
-	Trash2,
-	Ban,
-	CheckCircle,
 	LogOut,
+	Shield,
+	UserCog,
+	Users,
+	Wrench,
 } from "lucide-react";
-import "./Admin.css";
-import {
-	getAllUsers,
-	suspendUser,
-	activateUser,
-	deleteUser,
-	getAllPosts,
-	blockPost,
-	unblockPost,
-	deletePost,
-	getStatistics,
-	LogOutAdmin,
-} from "../../services/adminService";
 import { toast } from "react-toastify";
-import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
-import { useContext } from "react";
+import { useHistory } from "react-router-dom";
 import { UserContext } from "../../Context/UserProvider";
+import {
+	LogOutAdmin,
+	createAdminVocabulary,
+	deleteAdminVocabulary,
+	getAdminAuditLogs,
+	getAdminDashboard,
+	getAdminUsers,
+	getAdminVocabularies,
+	resetAdminUserPassword,
+	updateAdminUserRole,
+	updateAdminUserStatus,
+	updateAdminVocabulary,
+	updateAdminVocabularyJlpt,
+} from "../../services/adminService";
+import "./Admin.css";
+
+const defaultForm = {
+	word: "",
+	reading: "",
+	romaji: "",
+	definition: "",
+	partOfSpeech: "",
+	jlptLevel: "",
+	isCommon: false,
+};
 
 const Admin = () => {
-	const [activeTab, setActiveTab] = useState("users");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [statusFilter, setStatusFilter] = useState("all");
-	const [selectedUserId, setSelectedUserId] = useState(null);
-	const [users, setUsers] = useState([]);
-	const [posts, setPosts] = useState([]);
-	const [stats, setStats] = useState({
-		totalUsers: 0,
-		activeUsers: 0,
-		totalPosts: 0,
-		pendingPosts: 0,
-	});
-	const [loading, setLoading] = useState(false);
-	const [currentUserPage, setCurrentUserPage] = useState(1);
-	const [currentPostPage, setCurrentPostPage] = useState(1);
-	const usersPerPage = 5;
-	const postsPerPage = 9;
 	const history = useHistory();
-	const { logoutContext } = useContext(UserContext);
+	const { logoutAdminContext } = useContext(UserContext);
 
-	// Fetch data on component mount
-	useEffect(() => {
-		fetchAllData();
-	}, []);
+	const [tab, setTab] = useState("dashboard");
+	const [loading, setLoading] = useState(false);
 
-	const fetchAllData = async () => {
+	const [dashboard, setDashboard] = useState(null);
+
+	const [vocabularyQuery, setVocabularyQuery] = useState("");
+	const [vocabularyJlpt, setVocabularyJlpt] = useState("");
+	const [vocabularies, setVocabularies] = useState([]);
+	const [editingVocabularyId, setEditingVocabularyId] = useState(null);
+	const [vocabularyForm, setVocabularyForm] = useState(defaultForm);
+
+	const [users, setUsers] = useState([]);
+	const [userQuery, setUserQuery] = useState("");
+	const [resetPasswordMap, setResetPasswordMap] = useState({});
+
+	const [auditLogs, setAuditLogs] = useState([]);
+
+	const loadDashboard = async () => {
+		const res = await getAdminDashboard();
+		if (res?.errCode === 0) {
+			setDashboard(res.data);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải dashboard");
+	};
+
+	const loadVocabularies = async () => {
+		const res = await getAdminVocabularies({
+			query: vocabularyQuery,
+			jlptLevel: vocabularyJlpt,
+			limit: 30,
+		});
+		if (res?.errCode === 0) {
+			setVocabularies(res.data?.items || []);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải danh sách từ vựng");
+	};
+
+	const loadUsers = async () => {
+		const res = await getAdminUsers({ query: userQuery });
+		if (res?.errCode === 0) {
+			setUsers(res.data || []);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải danh sách người dùng");
+	};
+
+	const loadAuditLogs = async () => {
+		const res = await getAdminAuditLogs({ limit: 80 });
+		if (res?.errCode === 0) {
+			setAuditLogs(res.data || []);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải audit logs");
+	};
+
+	const reloadCurrentTab = async () => {
 		setLoading(true);
 		try {
-			await Promise.all([fetchUsers(), fetchPosts(), fetchStatistics()]);
-		} catch (error) {
-			console.error("Error loading data:", error);
-			toast.error("Error loading data");
+			if (tab === "dashboard") await loadDashboard();
+			if (tab === "content") await loadVocabularies();
+			if (tab === "users") await loadUsers();
+			if (tab === "audit") await loadAuditLogs();
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	const fetchUsers = async () => {
-		try {
-			const response = await getAllUsers();
-			if (response && response.errCode === 0) {
-				setUsers(response.data || []);
-			} else {
-				console.error("Error fetching users:", response?.errMessage);
-				toast.error(response?.errMessage || "Failed to fetch users");
-			}
-		} catch (error) {
-			console.error("Error fetching users:", error);
-			toast.error("Error fetching users");
-		}
-	};
+	useEffect(() => {
+		reloadCurrentTab();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [tab]);
 
-	const fetchPosts = async () => {
-		try {
-			const response = await getAllPosts();
-			if (response && response.errCode === 0) {
-				setPosts(response.data || []);
-			} else {
-				console.error("Error fetching posts:", response?.errMessage);
-				toast.error(response?.errMessage || "Failed to fetch posts");
-			}
-		} catch (error) {
-			console.error("Error fetching posts:", error);
-			toast.error("Error fetching posts");
+	useEffect(() => {
+		if (tab === "content") {
+			loadVocabularies();
 		}
-	};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [vocabularyQuery, vocabularyJlpt]);
 
-	const fetchStatistics = async () => {
-		try {
-			const response = await getStatistics();
-			if (response && response.errCode === 0) {
-				setStats(
-					response.data || {
-						totalUsers: 0,
-						activeUsers: 0,
-						totalPosts: 0,
-						pendingPosts: 0,
-					}
-				);
-			} else {
-				console.error("Error fetching statistics:", response?.errMessage);
-			}
-		} catch (error) {
-			console.error("Error fetching statistics:", error);
+	useEffect(() => {
+		if (tab === "users") {
+			loadUsers();
 		}
-	};
-
-	// User actions
-	const handleSuspendUser = async (userId) => {
-		try {
-			const response = await suspendUser(userId);
-			if (response && response.errCode === 0) {
-				toast.success("User suspended successfully");
-				await fetchUsers();
-				await fetchStatistics();
-			} else {
-				toast.error(response?.errMessage || "Failed to suspend user");
-			}
-		} catch (error) {
-			console.error("Error suspending user:", error);
-			toast.error("Error suspending user");
-		}
-	};
-
-	const handleActivateUser = async (userId) => {
-		try {
-			const response = await activateUser(userId);
-			if (response && response.errCode === 0) {
-				toast.success("User activated successfully");
-				await fetchUsers();
-				await fetchStatistics();
-			} else {
-				toast.error(response?.errMessage || "Failed to activate user");
-			}
-		} catch (error) {
-			console.error("Error activating user:", error);
-			toast.error("Error activating user");
-		}
-	};
-
-	const handleDeleteUser = async (userId) => {
-		if (window.confirm("Are you sure you want to delete this user?")) {
-			try {
-				const response = await deleteUser(userId);
-				if (response && response.errCode === 0) {
-					toast.success("User deleted successfully");
-					await fetchUsers();
-					await fetchStatistics();
-				} else {
-					toast.error(response?.errMessage || "Failed to delete user");
-				}
-			} catch (error) {
-				console.error("Error deleting user:", error);
-				toast.error("Error deleting user");
-			}
-		}
-	};
-
-	// Post actions
-	const handleToggleBlockPost = async (postId, isDeleted) => {
-		try {
-			// Nếu đang deleted (blocked) → gọi unblock, ngược lại → gọi block
-			const response = isDeleted
-				? await unblockPost(postId)
-				: await blockPost(postId);
-
-			if (response && response.errCode === 0) {
-				toast.success(
-					`Post ${isDeleted ? "unblocked" : "blocked"} successfully`
-				);
-				await fetchPosts();
-				await fetchStatistics();
-			} else {
-				toast.error(
-					response?.errMessage ||
-						`Failed to ${isDeleted ? "unblock" : "block"} post`
-				);
-			}
-		} catch (error) {
-			console.error("Error updating post:", error);
-			toast.error("Error updating post");
-		}
-	};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [userQuery]);
 
 	const handleLogout = async () => {
-		let data = await LogOutAdmin();
-		logoutContext();
-		if (data && data.errCode === 0) {
+		const res = await LogOutAdmin();
+		logoutAdminContext();
+		if (res?.errCode === 0) {
 			history.push("/");
-			toast.success("Log out success");
-		} else {
-			toast.error(data.errMessage);
+			toast.success("Đã đăng xuất admin");
+			return;
 		}
+		toast.error(res?.errMessage || "Đăng xuất thất bại");
 	};
 
-	const handleDeletePost = async (postId) => {
-		if (window.confirm("Are you sure you want to delete this post?")) {
-			try {
-				const response = await deletePost(postId);
-				if (response && response.errCode === 0) {
-					toast.success("Post deleted successfully");
-					await fetchPosts();
-					await fetchStatistics();
-				} else {
-					toast.error(response?.errMessage || "Failed to delete post");
-				}
-			} catch (error) {
-				console.error("Error deleting post:", error);
-				toast.error("Error deleting post");
-			}
+	const handleSaveVocabulary = async () => {
+		const payload = {
+			...vocabularyForm,
+			jlptLevel: vocabularyForm.jlptLevel || null,
+		};
+
+		if (!payload.word || !payload.reading) {
+			toast.error("Từ vựng và cách đọc là bắt buộc");
+			return;
 		}
+
+		const res = editingVocabularyId
+			? await updateAdminVocabulary(editingVocabularyId, payload)
+			: await createAdminVocabulary(payload);
+
+		if (res?.errCode === 0) {
+			toast.success(editingVocabularyId ? "Đã cập nhật từ vựng" : "Đã thêm từ vựng");
+			setVocabularyForm(defaultForm);
+			setEditingVocabularyId(null);
+			await loadVocabularies();
+			await loadAuditLogs();
+			return;
+		}
+
+		toast.error(res?.errMessage || "Không thể lưu từ vựng");
 	};
 
-	// View user's posts
-	const handleViewUserPosts = (userId) => {
-		setSelectedUserId(userId);
-		setActiveTab("posts");
-		setSearchQuery("");
-		setCurrentPostPage(1);
+	const handleEditVocabulary = (item) => {
+		setEditingVocabularyId(item.id);
+		setVocabularyForm({
+			word: item.word || "",
+			reading: item.reading || "",
+			romaji: item.romaji || "",
+			definition: item.meanings?.[0]?.definition || "",
+			partOfSpeech: item.meanings?.[0]?.partOfSpeech || "",
+			jlptLevel: item.jlptLevel ? String(item.jlptLevel) : "",
+			isCommon: Boolean(item.isCommon),
+		});
 	};
 
-	// Clear selected user filter
-	const handleClearUserFilter = () => {
-		setSelectedUserId(null);
-		setCurrentPostPage(1);
+	const handleDeleteVocabulary = async (id) => {
+		if (!window.confirm("Xóa từ vựng này?")) {
+			return;
+		}
+		const res = await deleteAdminVocabulary(id);
+		if (res?.errCode === 0) {
+			toast.success("Đã xóa từ vựng");
+			await loadVocabularies();
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể xóa từ vựng");
 	};
 
-	// Filter data based on search
-	const filteredUsers = users.filter((user) => {
-		const matchesSearch =
-			user.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			user.email?.toLowerCase().includes(searchQuery.toLowerCase());
-
-		const matchesStatus =
-			statusFilter === "all" || user.status === statusFilter;
-
-		return matchesSearch && matchesStatus;
-	});
-
-	const filteredPosts = posts.filter((post) => {
-		const matchesUser = selectedUserId ? post.userId === selectedUserId : true;
-
-		const matchesSearch =
-			post.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			post.content?.toLowerCase().includes(searchQuery.toLowerCase());
-
-		return matchesUser && matchesSearch;
-	});
-
-	const selectedUser = selectedUserId
-		? users.find((u) => u.id === selectedUserId)
-		: null;
-
-	// Pagination logic for users
-	const indexOfLastUser = currentUserPage * usersPerPage;
-	const indexOfFirstUser = indexOfLastUser - usersPerPage;
-	const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-	const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage);
-
-	// Pagination logic for posts
-	const indexOfLastPost = currentPostPage * postsPerPage;
-	const indexOfFirstPost = indexOfLastPost - postsPerPage;
-	const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
-	const totalPostPages = Math.ceil(filteredPosts.length / postsPerPage);
-
-	// Pagination handlers
-	const handleUserPageChange = (pageNumber) => {
-		setCurrentUserPage(pageNumber);
+	const handleUpdateJlpt = async (id, jlptLevel) => {
+		const res = await updateAdminVocabularyJlpt(id, jlptLevel);
+		if (res?.errCode === 0) {
+			toast.success("Đã gắn nhãn JLPT");
+			await loadVocabularies();
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể cập nhật JLPT");
 	};
 
-	const handlePostPageChange = (pageNumber) => {
-		setCurrentPostPage(pageNumber);
+	const handleUpdateRole = async (id, role) => {
+		const res = await updateAdminUserRole(id, role);
+		if (res?.errCode === 0) {
+			toast.success("Đã cập nhật phân quyền");
+			await loadUsers();
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể cập nhật quyền");
 	};
 
-	// Reset to page 1 when search or filter changes
-	useEffect(() => {
-		setCurrentUserPage(1);
-	}, [searchQuery, statusFilter]);
+	const handleToggleUserStatus = async (user) => {
+		const nextStatus = user.status === "active" ? "suspended" : "active";
+		const res = await updateAdminUserStatus(user.id, nextStatus);
+		if (res?.errCode === 0) {
+			toast.success("Đã cập nhật trạng thái người dùng");
+			await loadUsers();
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể cập nhật trạng thái");
+	};
 
-	useEffect(() => {
-		setCurrentPostPage(1);
-	}, [searchQuery, selectedUserId]);
+	const handleResetPassword = async (userId) => {
+		const newPassword = resetPasswordMap[userId] || "";
+		if (newPassword.trim().length < 6) {
+			toast.error("Mật khẩu mới cần ít nhất 6 ký tự");
+			return;
+		}
+		const res = await resetAdminUserPassword(userId, newPassword.trim());
+		if (res?.errCode === 0) {
+			toast.success("Đã reset mật khẩu");
+			setResetPasswordMap((prev) => ({ ...prev, [userId]: "" }));
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể reset mật khẩu");
+	};
 
-	if (loading) {
-		return (
-			<div className="admin-dashboard">
-				<div className="loading-container">
-					<div className="spinner"></div>
-					<p>Loading...</p>
-				</div>
-			</div>
-		);
-	}
+	const statsCards = useMemo(() => {
+		const summary = dashboard?.summary || {};
+		return [
+			{ label: "Từ vựng", value: summary.totalWords || 0, icon: <BookOpen size={18} /> },
+			{ label: "Kanji", value: summary.totalKanjis || 0, icon: <FileText size={18} /> },
+			{ label: "Ngữ pháp", value: summary.totalGrammars || 0, icon: <ClipboardList size={18} /> },
+			{ label: "Câu ví dụ", value: summary.totalExamples || 0, icon: <Activity size={18} /> },
+		];
+	}, [dashboard]);
 
 	return (
-		<div className="admin-dashboard">
-			<div className="admin-header">
+		<div className="admin2-wrap">
+			<div className="admin2-header">
 				<div>
-					<h1>Admin Dashboard</h1>
-					<p>Manage users and posts</p>
+					<h1>Bảng điều khiển quản trị</h1>
+					<p>Dashboard - Nội dung - Người dùng - Audit logs</p>
 				</div>
-				<button className="logout-btn" onClick={() => handleLogout()}>
-					<LogOut size={20} />
-					Logout
+				<button type="button" className="admin2-logout" onClick={handleLogout}>
+					<LogOut size={16} /> Đăng xuất
 				</button>
 			</div>
 
-			{/* Statistics Cards */}
-			<div className="stats-grid">
-				<div className="stat-card">
-					<div className="stat-icon users">
-						<Users size={24} />
-					</div>
-					<div className="stat-info">
-						<h3>{stats.totalUsers}</h3>
-						<p>Total Users</p>
-					</div>
-				</div>
-
-				<div className="stat-card">
-					<div className="stat-icon active">
-						<TrendingUp size={24} />
-					</div>
-					<div className="stat-info">
-						<h3>{stats.activeUsers}</h3>
-						<p>Active Users</p>
-					</div>
-				</div>
-
-				<div className="stat-card">
-					<div className="stat-icon posts">
-						<FileText size={24} />
-					</div>
-					<div className="stat-info">
-						<h3>{stats.totalPosts}</h3>
-						<p>Total Posts</p>
-					</div>
-				</div>
-
-				<div className="stat-card">
-					<div className="stat-icon pending">
-						<AlertCircle size={24} />
-					</div>
-					<div className="stat-info">
-						<h3>{stats.pendingPosts}</h3>
-						<p>Blocked Posts</p>
-					</div>
-				</div>
-			</div>
-
-			{/* Tabs */}
-			<div className="admin-tabs">
-				<button
-					className={`tab-btn ${activeTab === "users" ? "active" : ""}`}
-					onClick={() => {
-						setActiveTab("users");
-						handleClearUserFilter();
-						setSearchQuery("");
-						setCurrentUserPage(1);
-					}}
-				>
-					<Users size={18} />
-					Users Management
+			<div className="admin2-tabs">
+				<button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")}>
+					<Wrench size={16} /> Dashboard
 				</button>
-				<button
-					className={`tab-btn ${activeTab === "posts" ? "active" : ""}`}
-					onClick={() => {
-						setActiveTab("posts");
-						setSearchQuery("");
-						setCurrentPostPage(1);
-					}}
-				>
-					<FileText size={18} />
-					Posts Management
+				<button className={tab === "content" ? "active" : ""} onClick={() => setTab("content")}>
+					<BookOpen size={16} /> Vocabulary & Content
+				</button>
+				<button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
+					<UserCog size={16} /> Users & Roles
+				</button>
+				<button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
+					<Shield size={16} /> Audit Logs
 				</button>
 			</div>
 
-			{/* Search Bar and Filters */}
-			<div className="search-section">
-				<div className="search-bar">
-					<Search size={20} />
-					<input
-						type="text"
-						placeholder={`Search ${activeTab}...`}
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-					/>
-				</div>
-				{activeTab === "users" && (
-					<div className="filter-buttons">
-						<button
-							className={`filter-btn ${statusFilter === "all" ? "active" : ""}`}
-							onClick={() => setStatusFilter("all")}
-						>
-							All
-						</button>
-						<button
-							className={`filter-btn ${
-								statusFilter === "active" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("active")}
-						>
-							Active
-						</button>
-						<button
-							className={`filter-btn ${
-								statusFilter === "suspended" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("suspended")}
-						>
-							Suspended
-						</button>
-					</div>
-				)}
-			</div>
+			{loading && <div className="admin2-loading">Đang tải dữ liệu...</div>}
 
-			{/* Content */}
-			{activeTab === "users" ? (
-				<div className="users-table-container">
-					{filteredUsers.length === 0 ? (
-						<div className="no-data-message">
-							<Users size={48} />
-							<p>No users found</p>
-						</div>
-					) : (
-						<table className="admin-table">
-							<thead>
-								<tr>
-									<th>ID</th>
-									<th>Name</th>
-									<th>Email</th>
-									<th>Status</th>
-									<th>Bio</th>
-									<th>Joined</th>
-									<th>View Posts</th>
-									<th>Actions</th>
-								</tr>
-						</thead>
-						<tbody>
-							{currentUsers.map((user) => (
-								<tr key={user.id}>
-									<td>{user.id}</td>
-									<td>
-										<div className="user-info-cell">
-											<div className="user-avatar-small">
-												{user.fullName?.charAt(0) || "?"}
-											</div>
-											<span>{user.fullName || "Unknown"}</span>
-										</div>
-									</td>
-										<td>{user.email}</td>
-										<td>
-											<span className={`status-badge ${user.status}`}>
-												{user.status || "unknown"}
-											</span>
-										</td>
-										<td>{user.bio || "N/A"}</td>
-										<td>{new Date(user.createdAt).toLocaleDateString()}</td>
-										<td>
-											<button
-												className="action-btn view"
-												onClick={() => handleViewUserPosts(user.id)}
-												title="View User's Posts"
-											>
-												<FileText size={16} />
-											</button>
-										</td>
-										<td>
-											<div className="action-buttons">
-												{user.status === "active" ? (
-													<button
-														className="action-btn suspend"
-														onClick={() => handleSuspendUser(user.id)}
-														title="Suspend User"
-													>
-														<Ban size={16} />
-													</button>
-												) : (
-													<button
-														className="action-btn activate"
-														onClick={() => handleActivateUser(user.id)}
-														title="Activate User"
-													>
-														<CheckCircle size={16} />
-													</button>
-												)}
-												<button
-													className="action-btn delete"
-													onClick={() => handleDeleteUser(user.id)}
-													title="Delete User"
-												>
-													<Trash2 size={16} />
-												</button>
-											</div>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					)}
-					{filteredUsers.length > 0 && totalUserPages > 1 && (
-						<div className="pagination">
-							<button
-								className="pagination-btn"
-								onClick={() => handleUserPageChange(currentUserPage - 1)}
-								disabled={currentUserPage === 1}
-							>
-								← Previous
-							</button>
-							<div className="pagination-numbers">
-								{Array.from({ length: totalUserPages }, (_, i) => i + 1).map(
-									(page) => (
-										<button
-											key={page}
-											className={`pagination-number ${
-												page === currentUserPage ? "active" : ""
-											}`}
-											onClick={() => handleUserPageChange(page)}
-										>
-											{page}
-										</button>
-									)
-								)}
-							</div>
-							<button
-								className="pagination-btn"
-								onClick={() => handleUserPageChange(currentUserPage + 1)}
-								disabled={currentUserPage === totalUserPages}
-							>
-								Next →
-							</button>
-						</div>
-					)}
-				</div>
-			) : (
-				<div className="posts-section">
-					{selectedUser && (
-						<div className="posts-filter-info">
-							<div className="filter-user-info">
-								<span>
-									Showing posts by: <strong>{selectedUser.fullName}</strong>
-								</span>
-							</div>
-							<button
-								className="clear-filter-btn"
-								onClick={handleClearUserFilter}
-							>
-								✕ Clear Filter
-							</button>
-						</div>
-					)}
-					<div className="posts-grid">
-						{filteredPosts.length === 0 ? (
-							<div className="no-data-message">
-								<FileText size={48} />
-								<p>No posts found</p>
-							</div>
-						) : (
-							currentPosts.map((post) => (
-								<div key={post.id} className="admin-post-card">
-									<div className="post-header">
-										<div className="post-user">
-											<div className="user-avatar-small">
-												{post.userName?.charAt(0) || "?"}
-											</div>
-											<div>
-												<p className="user-name">
-													{post.userName || "Unknown User"}
-												</p>
-												<p className="post-date">
-													{new Date(post.createdAt).toLocaleDateString()}
-												</p>
-											</div>
-										</div>
-										<span
-											className={`status-badge ${
-												post.isDeleted ? "blocked" : "active"
-											}`}
-										>
-											{post.isDeleted ? "Blocked" : "Active"}
-										</span>
-									</div>
-									<div className="post-content">
-										<p>{post.content}</p>
-										{post.imageUrl && post.imageUrl.length > 0 && (
-											<div className="post-image">
-												<img src={post.imageUrl[0]} alt="Post" />
-											</div>
-										)}
-										{post.videoUrl && (
-											<div className="post-video">
-												<video
-													src={post.videoUrl}
-													controls
-													style={{ width: "100%", borderRadius: 8 }}
-												/>
-											</div>
-										)}
-									</div>
-
-									<div className="post-actions">
-										<button
-											className={`action-btn ${
-												post.isDeleted ? "activate" : "suspend"
-											}`}
-											onClick={() =>
-												handleToggleBlockPost(post.id, post.isDeleted)
-											}
-										>
-											{post.isDeleted ? (
-												<>
-													<CheckCircle size={16} />
-													Unblock
-												</>
-											) : (
-												<>
-													<Ban size={16} />
-													Block
-												</>
-											)}
-										</button>
-										<button
-											className="action-btn delete"
-											onClick={() => handleDeletePost(post.id)}
-										>
-											<Trash2 size={16} />
-											Delete
-										</button>
-									</div>
+			{tab === "dashboard" && (
+				<div className="admin2-grid">
+					<div className="admin2-cards">
+						{statsCards.map((card) => (
+							<div className="admin2-card" key={card.label}>
+								<div className="icon">{card.icon}</div>
+								<div>
+									<strong>{card.value}</strong>
+									<p>{card.label}</p>
 								</div>
-							))
-						)}
-					</div>
-					{filteredPosts.length > 0 && totalPostPages > 1 && (
-						<div className="pagination">
-							<button
-								className="pagination-btn"
-								onClick={() => handlePostPageChange(currentPostPage - 1)}
-								disabled={currentPostPage === 1}
-							>
-								← Previous
-							</button>
-							<div className="pagination-numbers">
-								{Array.from({ length: totalPostPages }, (_, i) => i + 1).map(
-									(page) => (
-										<button
-											key={page}
-											className={`pagination-number ${
-												page === currentPostPage ? "active" : ""
-											}`}
-											onClick={() => handlePostPageChange(page)}
-										>
-											{page}
-										</button>
-									)
-								)}
 							</div>
+						))}
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Người dùng đăng ký mới (7 ngày)</h3>
+						<div className="admin2-bars">
+							{(dashboard?.newUsersByDay || []).map((item) => (
+								<div key={item.date} className="bar-row">
+									<span>{item.date}</span>
+									<div className="bar-track">
+										<div className="bar-fill" style={{ width: `${Math.max(8, item.count * 14)}px` }} />
+									</div>
+									<em>{item.count}</em>
+								</div>
+							))}
+						</div>
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Từ được tra cứu nhiều nhất</h3>
+						<ul>
+							{(dashboard?.topSearchTerms || []).map((item) => (
+								<li key={item.searchTerm}>
+									<span>{item.searchTerm}</span>
+									<strong>{item.count}</strong>
+								</li>
+							))}
+						</ul>
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Cấp độ JLPT phổ biến</h3>
+						<ul>
+							{(dashboard?.topJlptLevels || []).map((item) => (
+								<li key={item.jlptLevel}>
+									<span>{item.jlptLevel}</span>
+									<strong>{item.count}</strong>
+								</li>
+							))}
+						</ul>
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Sức khỏe hệ thống</h3>
+						<p>
+							DB: <b>{dashboard?.health?.database?.status || "unknown"}</b> • latency:
+							 {dashboard?.health?.database?.latencyMs ?? "-"} ms
+						</p>
+						<p>
+							API: <b>{dashboard?.health?.api?.status || "unknown"}</b> • latency:
+							 {dashboard?.health?.api?.latencyMs ?? "-"} ms
+						</p>
+					</div>
+				</div>
+			)}
+
+			{tab === "content" && (
+				<div className="admin2-grid">
+					<div className="admin2-panel">
+						<h3>Thêm / sửa từ vựng</h3>
+						<div className="admin2-form-grid">
+							<input placeholder="Kanji/Từ" value={vocabularyForm.word} onChange={(e) => setVocabularyForm((p) => ({ ...p, word: e.target.value }))} />
+							<input placeholder="Hiragana/Katakana" value={vocabularyForm.reading} onChange={(e) => setVocabularyForm((p) => ({ ...p, reading: e.target.value }))} />
+							<input placeholder="Romaji" value={vocabularyForm.romaji} onChange={(e) => setVocabularyForm((p) => ({ ...p, romaji: e.target.value }))} />
+							<input placeholder="Từ loại" value={vocabularyForm.partOfSpeech} onChange={(e) => setVocabularyForm((p) => ({ ...p, partOfSpeech: e.target.value }))} />
+							<select value={vocabularyForm.jlptLevel} onChange={(e) => setVocabularyForm((p) => ({ ...p, jlptLevel: e.target.value }))}>
+								<option value="">JLPT</option>
+								<option value="5">N5</option>
+								<option value="4">N4</option>
+								<option value="3">N3</option>
+								<option value="2">N2</option>
+								<option value="1">N1</option>
+							</select>
+							<label className="inline-check">
+								<input type="checkbox" checked={vocabularyForm.isCommon} onChange={(e) => setVocabularyForm((p) => ({ ...p, isCommon: e.target.checked }))} />
+								Từ thông dụng
+							</label>
+							<textarea
+								placeholder="Nghĩa tiếng Việt"
+								value={vocabularyForm.definition}
+								onChange={(e) => setVocabularyForm((p) => ({ ...p, definition: e.target.value }))}
+							/>
+						</div>
+						<div className="admin2-actions">
+							<button type="button" onClick={handleSaveVocabulary}>
+								{editingVocabularyId ? "Cập nhật" : "Thêm từ"}
+							</button>
 							<button
-								className="pagination-btn"
-								onClick={() => handlePostPageChange(currentPostPage + 1)}
-								disabled={currentPostPage === totalPostPages}
+								type="button"
+								className="ghost"
+								onClick={() => {
+									setVocabularyForm(defaultForm);
+									setEditingVocabularyId(null);
+								}}
 							>
-								Next →
+								Làm mới
 							</button>
 						</div>
-					)}
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Danh sách từ vựng</h3>
+						<div className="admin2-filters">
+							<input
+								placeholder="Tìm từ / reading / romaji"
+								value={vocabularyQuery}
+								onChange={(e) => setVocabularyQuery(e.target.value)}
+							/>
+							<select value={vocabularyJlpt} onChange={(e) => setVocabularyJlpt(e.target.value)}>
+								<option value="">Tất cả JLPT</option>
+								<option value="N5">N5</option>
+								<option value="N4">N4</option>
+								<option value="N3">N3</option>
+								<option value="N2">N2</option>
+								<option value="N1">N1</option>
+							</select>
+						</div>
+
+						<div className="admin2-table-wrap">
+							<table className="admin2-table">
+								<thead>
+									<tr>
+										<th>Từ</th>
+										<th>Reading</th>
+										<th>Romaji</th>
+										<th>Nghĩa</th>
+										<th>JLPT</th>
+										<th>Hành động</th>
+									</tr>
+								</thead>
+								<tbody>
+									{vocabularies.map((item) => (
+										<tr key={item.id}>
+											<td>{item.word}</td>
+											<td>{item.reading}</td>
+											<td>{item.romaji || "-"}</td>
+											<td>{item.meanings?.[0]?.definition || "-"}</td>
+											<td>
+												<select
+													value={item.jlptLevel ? `N${item.jlptLevel}` : ""}
+													onChange={(e) => handleUpdateJlpt(item.id, e.target.value)}
+												>
+													<option value="">-</option>
+													<option value="N5">N5</option>
+													<option value="N4">N4</option>
+													<option value="N3">N3</option>
+													<option value="N2">N2</option>
+													<option value="N1">N1</option>
+												</select>
+											</td>
+											<td>
+												<div className="row-actions">
+													<button type="button" onClick={() => handleEditVocabulary(item)}>Sửa</button>
+													<button type="button" className="danger" onClick={() => handleDeleteVocabulary(item.id)}>Xóa</button>
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{tab === "users" && (
+				<div className="admin2-grid">
+					<div className="admin2-panel">
+						<h3>Quản lý tài khoản & phân quyền</h3>
+						<div className="admin2-filters">
+							<input
+								placeholder="Tìm theo username/email"
+								value={userQuery}
+								onChange={(e) => setUserQuery(e.target.value)}
+							/>
+						</div>
+						<div className="admin2-table-wrap">
+							<table className="admin2-table">
+								<thead>
+									<tr>
+										<th>User</th>
+										<th>Email</th>
+										<th>Role</th>
+										<th>Trạng thái</th>
+										<th>Reset mật khẩu</th>
+										<th>Hành động</th>
+									</tr>
+								</thead>
+								<tbody>
+									{users.map((user) => (
+										<tr key={user.id}>
+											<td>{user.username}</td>
+											<td>{user.email}</td>
+											<td>
+												<select
+													value={user.role === "moderator" ? "editor" : user.role}
+													onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+												>
+													<option value="admin">Admin</option>
+													<option value="editor">Editor</option>
+													<option value="user">User</option>
+												</select>
+											</td>
+											<td>
+												<span className={`status ${user.status}`}>{user.status}</span>
+											</td>
+											<td>
+												<input
+													type="password"
+													placeholder="Mật khẩu mới"
+													value={resetPasswordMap[user.id] || ""}
+													onChange={(e) =>
+														setResetPasswordMap((prev) => ({
+															...prev,
+															[user.id]: e.target.value,
+														}))
+													}
+												/>
+											</td>
+											<td>
+												<div className="row-actions">
+													<button type="button" onClick={() => handleToggleUserStatus(user)}>
+														{user.status === "active" ? "Khóa" : "Mở khóa"}
+													</button>
+													<button type="button" onClick={() => handleResetPassword(user.id)}>
+														Reset mật khẩu
+													</button>
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{tab === "audit" && (
+				<div className="admin2-grid">
+					<div className="admin2-panel">
+						<h3>Lịch sử chỉnh sửa (Audit Logs)</h3>
+						<div className="admin2-table-wrap">
+							<table className="admin2-table">
+								<thead>
+									<tr>
+										<th>Thời gian</th>
+										<th>Admin</th>
+										<th>Action</th>
+										<th>Target</th>
+										<th>Chi tiết</th>
+									</tr>
+								</thead>
+								<tbody>
+									{auditLogs.map((log) => (
+										<tr key={log.id}>
+											<td>{new Date(log.createdAt).toLocaleString("vi-VN")}</td>
+											<td>{log.admin?.username || log.admin?.email || "Unknown"}</td>
+											<td>{log.actionType}</td>
+											<td>{log.targetType} #{log.targetId || "-"}</td>
+											<td className="log-details">{log.details || "-"}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
 				</div>
 			)}
 		</div>

@@ -1,367 +1,457 @@
-import { raw } from "mysql2";
 import db from "../models/index";
 import bcrypt from "bcryptjs";
-import { where } from "sequelize";
-import { response } from "express";
+import { Op, fn, col, literal } from "sequelize";
 import { CreateJWT } from "../middleware/JWT_Action";
 require("dotenv").config();
 
-let HandleAdminLogin = (email, password) => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			let userData = {};
-			let isExist = await CheckAdminEmail(email);
-			if (isExist) {
-				let user = await db.Admin.findOne({
-					where: { email: email },
-					raw: true,
-				});
-				if (user) {
-					let check = password === user.password;
-					if (check) {
-						let payload = {
-							id: user.id,
-							email: user.email,
-							role: "admin",
-						};
-						let token = CreateJWT(payload);
-						userData.errCode = 0;
-						userData.errMessage = `OK`;
-						delete user.password;
-						userData.user = user;
-						userData.DT = {
-							access_token: token,
-						};
-					} else {
-						userData.errCode = 3;
-						userData.errMessage = `Yours's Email or Password is incorrect!`;
-					}
-				} else {
-					userData.errCode = 2;
-					userData.errMessage = `Admin's not found`;
-				}
-			} else {
-				userData.errCode = 1;
-				userData.errMessage = `Yours's Email or Password is incorrect!`;
-			}
-			resolve(userData);
-		} catch (e) {
-			reject(e);
-		}
-	});
+const mapRole = (role) => {
+    if (role === "editor") {
+        return "moderator";
+    }
+    return role;
 };
 
-let CheckAdminEmail = (userEmail) => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			let user = await db.Admin.findOne({
-				where: { email: userEmail },
-			});
-			if (user) {
-				resolve(true);
-			} else {
-				resolve(false);
-			}
-		} catch (e) {
-			reject(e);
-		}
-	});
-};
-
-//Admin dashboard
-const getAllUsers = async () => {
+const writeAuditLog = async ({ adminId, actionType, targetType, targetId, details }) => {
+    if (!adminId) {
+        return;
+    }
     try {
-        const users = await db.User.findAll({
-            attributes: [
-                "id",
-                "email",
-                "fullName",
-                "bio",
-                "status",
-                "createdAt",
-                "updatedAt",
-            ],
-            order: [["createdAt", "DESC"]],
+        await db.AdminLog.create({
+            adminId,
+            actionType,
+            targetType,
+            targetId,
+            details: details ? JSON.stringify(details) : null,
+        });
+    } catch (e) {
+        console.warn("Skip audit log write:", e?.message || e);
+    }
+};
+
+const HandleAdminLogin = async (email, password) => {
+    try {
+        const adminUser = await db.User.findOne({
+            where: { email },
             raw: true,
         });
-        return users;
-    } catch (error) {
-        console.log(error);
-        throw error;
-    }
-};
 
-const suspendUser = async (userId) => {
-    try {
-        const user = await db.User.findOne({
-            where: { id: userId },
-        });
-
-        if (!user) {
+        if (!adminUser) {
             return {
-                errCode: 2,
-                errMessage: "User not found",
+                errCode: 1,
+                errMessage: "Yours's Email or Password is incorrect!",
             };
         }
 
-        await db.User.update(
-            { status: "suspended" },
-            { where: { id: userId } }
-        );
-
-        return {
-            errCode: 0,
-            errMessage: "User suspended successfully",
-        };
-    } catch (error) {
-        console.log(error);
-        return {
-            errCode: -1,
-            errMessage: "Error from server",
-        };
-    }
-};
-
-const activateUser = async (userId) => {
-    try {
-        const user = await db.User.findOne({
-            where: { id: userId },
-        });
-
-        if (!user) {
+        const isPasswordValid = bcrypt.compareSync(password, adminUser.passwordHash);
+        if (!isPasswordValid) {
             return {
-                errCode: 2,
-                errMessage: "User not found",
+                errCode: 1,
+                errMessage: "Yours's Email or Password is incorrect!",
             };
         }
 
-        await db.User.update(
-            { status: "active" },
-            { where: { id: userId } }
-        );
-
-        return {
-            errCode: 0,
-            errMessage: "User activated successfully",
-        };
-    } catch (error) {
-        console.log(error);
-        return {
-            errCode: -1,
-            errMessage: "Error from server",
-        };
-    }
-};
-
-const deleteUser = async (userId) => {
-    try {
-        const user = await db.User.findOne({
-            where: { id: userId },
-        });
-
-        if (!user) {
+        if (adminUser.status !== "active") {
             return {
                 errCode: 2,
-                errMessage: "User not found",
+                errMessage: "Your admin account is not active",
             };
         }
 
-        // Delete related data first
-        await db.Post.destroy({ where: { userId: userId } });
-        await db.Comment.destroy({ where: { userId: userId } });
-        await db.Like.destroy({ where: { userId: userId } });
-
-        // Delete user
-        await db.User.destroy({ where: { id: userId } });
-
-        return {
-            errCode: 0,
-            errMessage: "User deleted successfully",
-        };
-    } catch (error) {
-        console.log(error);
-        return {
-            errCode: -1,
-            errMessage: "Error from server",
-        };
-    }
-};
-
-const getAllPosts = async () => {
-    try {
-        const posts = await db.Post.findAll({
-            // where: {
-            //     isDeleted: false,
-            // },
-            include: [
-                {
-                    model: db.User,
-                    attributes: ["id", "fullName", "email"],
-                },
-            ],
-            order: [["createdAt", "DESC"]],
-        });
-
-        // Format data
-        const formattedPosts = posts.map((post) => {
-            let images = [];
-            try {
-                if (typeof post.imageUrl === "string") {
-                    images = JSON.parse(post.imageUrl);
-                } else if (Array.isArray(post.imageUrl)) {
-                    images = post.imageUrl;
-                }
-            } catch (err) {
-                console.warn("Invalid imageUrl JSON:", post.imageUrl);
-            }
-
+        if (adminUser.role !== "admin") {
             return {
-                id: post.id,
-                content: post.content,
-                imageUrl: images,
-                videoUrl: post.videoUrl || null,
-                isDeleted: post.isDeleted || false,
-                createdAt: post.createdAt,
-                userId: post.User.id,
-                userName: post.User.fullName,
-                userEmail: post.User.email,
-            };
-        });
-
-        return formattedPosts;
-    } catch (error) {
-        console.log(error);
-        throw error;
-    }
-};
-
-const blockPost = async (postId) => {
-    try {
-        const post = await db.Post.findOne({
-            where: { id: postId },
-        });
-
-        if (!post) {
-            return {
-                errCode: 2,
-                errMessage: "Post not found",
+                errCode: 3,
+                errMessage: "Admin permission required",
             };
         }
 
-        await db.Post.update(
-            { isDeleted: true }, 
-            { where: { id: postId } }
-        );
+        const token = CreateJWT({
+            id: adminUser.id,
+            email: adminUser.email,
+            username: adminUser.username,
+            role: "admin",
+            status: adminUser.status,
+        });
 
         return {
             errCode: 0,
-            errMessage: "Post blocked successfully",
+            errMessage: "OK",
+            user: {
+                id: adminUser.id,
+                email: adminUser.email,
+                fullName: adminUser.username || "System Admin",
+                role: "admin",
+            },
+            DT: { access_token: token },
         };
-    } catch (error) {
-        console.log(error);
-        return {
-            errCode: -1,
-            errMessage: "Error from server",
-        };
+    } catch (e) {
+        throw e;
     }
 };
 
-const unblockPost = async (postId) => {
+const getAdminDashboard = async () => {
+    const startedAt = Date.now();
+
+    const [totalWords, totalKanjis, totalGrammars, totalExamples, totalUsers] = await Promise.all([
+        db.Word.count(),
+        db.Kanji.count(),
+        db.Grammar.count(),
+        db.Example.count(),
+        db.User.count(),
+    ]);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    const newUsers = await db.User.findAll({
+        attributes: [
+            [fn("DATE", col("createdAt")), "date"],
+            [fn("COUNT", col("id")), "count"],
+        ],
+        where: { createdAt: { [Op.gte]: sevenDaysAgo } },
+        group: [fn("DATE", col("createdAt"))],
+        order: [[literal("date"), "ASC"]],
+        raw: true,
+    });
+
+    const topSearchTerms = await db.SearchHistory.findAll({
+        attributes: ["searchTerm", [fn("COUNT", col("searchTerm")), "count"]],
+        group: ["searchTerm"],
+        order: [[literal("count"), "DESC"]],
+        limit: 10,
+        raw: true,
+    });
+
+    const topJlptLevelsRaw = await db.Word.findAll({
+        attributes: ["jlptLevel", [fn("COUNT", col("id")), "count"]],
+        where: { jlptLevel: { [Op.ne]: null } },
+        group: ["jlptLevel"],
+        order: [[literal("count"), "DESC"]],
+        raw: true,
+    });
+
+    let dbStatus = "down";
+    let dbLatencyMs = null;
     try {
-        const post = await db.Post.findOne({
-            where: { id: postId },
-        });
-
-        if (!post) {
-            return {
-                errCode: 2,
-                errMessage: "Post not found",
-            };
-        }
-
-        await db.Post.update(
-            { isDeleted: false },
-            { where: { id: postId } }
-        );
-
-        return {
-            errCode: 0,
-            errMessage: "Post unblocked successfully",
-        };
-    } catch (error) {
-        console.log(error);
-        return {
-            errCode: -1,
-            errMessage: "Error from server",
-        };
+        const dbStartedAt = Date.now();
+        await db.sequelize.authenticate();
+        dbLatencyMs = Date.now() - dbStartedAt;
+        dbStatus = "up";
+    } catch (_e) {
+        dbStatus = "down";
     }
-};
 
-const deletePost = async (postId) => {
-    try {
-        const post = await db.Post.findOne({
-            where: { id: postId },
-        });
+    const apiLatencyMs = Date.now() - startedAt;
 
-        if (!post) {
-            return {
-                errCode: 2,
-                errMessage: "Post not found",
-            };
-        }
-
-        // Delete related data first
-        await db.Comment.destroy({ where: { postId: postId } });
-        await db.Like.destroy({ where: { postId: postId } });
-
-        // Delete post
-        await db.Post.destroy({ where: { id: postId } });
-
-        return {
-            errCode: 0,
-            errMessage: "Post deleted successfully",
-        };
-    } catch (error) {
-        console.log(error);
-        return {
-            errCode: -1,
-            errMessage: "Error from server",
-        };
-    }
-};
-
-const getStatistics = async () => {
-    try {
-        const totalUsers = await db.User.count();
-        const activeUsers = await db.User.count({
-            where: { status: "active" },
-        });
-        const totalPosts = await db.Post.count();
-        const blockedPosts = await db.Post.count({
-            where: { isDeleted: true },
-        });
-
-        return {
+    return {
+        summary: {
+            totalWords,
+            totalKanjis,
+            totalGrammars,
+            totalExamples,
             totalUsers,
-            activeUsers,
-            totalPosts,
-            pendingPosts: blockedPosts,
-        };
-    } catch (error) {
-        console.log(error);
-        throw error;
+        },
+        newUsersByDay: newUsers.map((item) => ({ date: item.date, count: Number(item.count) })),
+        topSearchTerms: topSearchTerms.map((item) => ({ searchTerm: item.searchTerm, count: Number(item.count) })),
+        topJlptLevels: topJlptLevelsRaw.map((item) => ({ jlptLevel: `N${item.jlptLevel}`, count: Number(item.count) })),
+        health: {
+            database: { status: dbStatus, latencyMs: dbLatencyMs },
+            api: { status: "up", latencyMs: apiLatencyMs },
+        },
+    };
+};
+
+const getVocabularies = async ({ query = "", jlptLevel = "", page = 1, limit = 20 }) => {
+    const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
+    const safeLimit = Number.isFinite(+limit) ? Math.min(100, Math.max(1, +limit)) : 20;
+    const offset = (safePage - 1) * safeLimit;
+
+    const where = {};
+    if (query) {
+        where[Op.or] = [
+            { word: { [Op.like]: `%${query}%` } },
+            { reading: { [Op.like]: `%${query}%` } },
+            { romaji: { [Op.like]: `%${query}%` } },
+        ];
     }
+    if (jlptLevel) {
+        const normalized = String(jlptLevel).replace("N", "");
+        where.jlptLevel = Number(normalized);
+    }
+
+    const { rows, count } = await db.Word.findAndCountAll({
+        where,
+        include: [
+            {
+                model: db.Meaning,
+                as: "meanings",
+                attributes: ["id", "partOfSpeech", "definition", "language"],
+                required: false,
+            },
+        ],
+        order: [["updatedAt", "DESC"]],
+        limit: safeLimit,
+        offset,
+    });
+
+    return {
+        items: rows,
+        pagination: {
+            page: safePage,
+            limit: safeLimit,
+            totalItems: count,
+            totalPages: Math.ceil(count / safeLimit),
+        },
+    };
+};
+
+const createVocabulary = async ({ adminId, payload }) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const word = await db.Word.create(
+            {
+                word: payload.word,
+                reading: payload.reading,
+                romaji: payload.romaji || null,
+                jlptLevel: payload.jlptLevel ? Number(payload.jlptLevel) : null,
+                isCommon: Boolean(payload.isCommon),
+            },
+            { transaction }
+        );
+
+        if (payload.definition) {
+            await db.Meaning.create(
+                {
+                    wordId: word.id,
+                    partOfSpeech: payload.partOfSpeech || null,
+                    definition: payload.definition,
+                    language: "vi",
+                },
+                { transaction }
+            );
+        }
+
+        await transaction.commit();
+
+        await writeAuditLog({
+            adminId,
+            actionType: "CREATE_VOCABULARY",
+            targetType: "Word",
+            targetId: word.id,
+            details: payload,
+        });
+
+        return word;
+    } catch (e) {
+        await transaction.rollback();
+        throw e;
+    }
+};
+
+const updateVocabulary = async ({ adminId, id, payload }) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const word = await db.Word.findByPk(id, {
+            include: [{ model: db.Meaning, as: "meanings", required: false }],
+            transaction,
+        });
+
+        if (!word) {
+            throw new Error("Vocabulary not found");
+        }
+
+        await word.update(
+            {
+                word: payload.word ?? word.word,
+                reading: payload.reading ?? word.reading,
+                romaji: payload.romaji ?? word.romaji,
+                jlptLevel:
+                    payload.jlptLevel !== undefined
+                        ? payload.jlptLevel
+                            ? Number(payload.jlptLevel)
+                            : null
+                        : word.jlptLevel,
+                isCommon:
+                    payload.isCommon !== undefined ? Boolean(payload.isCommon) : word.isCommon,
+            },
+            { transaction }
+        );
+
+        if (payload.definition !== undefined || payload.partOfSpeech !== undefined) {
+            const firstMeaning = word.meanings?.[0];
+            if (firstMeaning) {
+                await firstMeaning.update(
+                    {
+                        definition: payload.definition ?? firstMeaning.definition,
+                        partOfSpeech: payload.partOfSpeech ?? firstMeaning.partOfSpeech,
+                    },
+                    { transaction }
+                );
+            } else if (payload.definition) {
+                await db.Meaning.create(
+                    {
+                        wordId: word.id,
+                        definition: payload.definition,
+                        partOfSpeech: payload.partOfSpeech || null,
+                        language: "vi",
+                    },
+                    { transaction }
+                );
+            }
+        }
+
+        await transaction.commit();
+
+        await writeAuditLog({
+            adminId,
+            actionType: "UPDATE_VOCABULARY",
+            targetType: "Word",
+            targetId: Number(id),
+            details: payload,
+        });
+
+        return true;
+    } catch (e) {
+        await transaction.rollback();
+        throw e;
+    }
+};
+
+const deleteVocabulary = async ({ adminId, id }) => {
+    const deleted = await db.Word.destroy({ where: { id } });
+    if (!deleted) {
+        throw new Error("Vocabulary not found");
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "DELETE_VOCABULARY",
+        targetType: "Word",
+        targetId: Number(id),
+        details: null,
+    });
+
+    return true;
+};
+
+const updateVocabularyJlpt = async ({ adminId, id, jlptLevel }) => {
+    const word = await db.Word.findByPk(id);
+    if (!word) {
+        throw new Error("Vocabulary not found");
+    }
+    const normalized = String(jlptLevel || "").replace("N", "");
+    await word.update({ jlptLevel: Number(normalized) || null });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "UPDATE_VOCABULARY_JLPT",
+        targetType: "Word",
+        targetId: Number(id),
+        details: { jlptLevel },
+    });
+};
+
+const getUsers = async ({ query = "" }) => {
+    const where = {};
+    if (query) {
+        where[Op.or] = [
+            { username: { [Op.like]: `%${query}%` } },
+            { email: { [Op.like]: `%${query}%` } },
+        ];
+    }
+
+    return db.User.findAll({
+        where,
+        attributes: ["id", "username", "email", "role", "status", "createdAt", "updatedAt"],
+        order: [["createdAt", "DESC"]],
+        raw: true,
+    });
+};
+
+const updateUserRole = async ({ adminId, userId, role }) => {
+    const mappedRole = mapRole(role);
+    if (!["admin", "moderator", "user"].includes(mappedRole)) {
+        throw new Error("Invalid role");
+    }
+    const [affected] = await db.User.update({ role: mappedRole }, { where: { id: userId } });
+    if (!affected) {
+        throw new Error("User not found");
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "UPDATE_USER_ROLE",
+        targetType: "User",
+        targetId: Number(userId),
+        details: { role: mappedRole },
+    });
+};
+
+const updateUserStatus = async ({ adminId, userId, status }) => {
+    if (!["active", "suspended", "banned"].includes(status)) {
+        throw new Error("Invalid status");
+    }
+    const [affected] = await db.User.update({ status }, { where: { id: userId } });
+    if (!affected) {
+        throw new Error("User not found");
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "UPDATE_USER_STATUS",
+        targetType: "User",
+        targetId: Number(userId),
+        details: { status },
+    });
+};
+
+const resetUserPassword = async ({ adminId, userId, newPassword }) => {
+    if (!newPassword || String(newPassword).trim().length < 6) {
+        throw new Error("Password must be at least 6 characters");
+    }
+    const hash = bcrypt.hashSync(String(newPassword).trim(), 10);
+    const [affected] = await db.User.update({ passwordHash: hash }, { where: { id: userId } });
+    if (!affected) {
+        throw new Error("User not found");
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "RESET_USER_PASSWORD",
+        targetType: "User",
+        targetId: Number(userId),
+        details: { resetBy: adminId },
+    });
+};
+
+const getAuditLogs = async ({ limit = 50 }) => {
+    const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 50;
+    const logs = await db.AdminLog.findAll({
+        include: [
+            {
+                model: db.User,
+                as: "admin",
+                attributes: ["id", "username", "email"],
+                required: false,
+            },
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: safeLimit,
+    });
+
+    return logs;
 };
 
 module.exports = {
-	HandleAdminLogin: HandleAdminLogin,
-	getAllUsers,
-    suspendUser,
-    activateUser,
-    deleteUser,
-    getAllPosts,
-    blockPost,
-    unblockPost,
-    deletePost,
-    getStatistics,
+    HandleAdminLogin,
+    getAdminDashboard,
+    getVocabularies,
+    createVocabulary,
+    updateVocabulary,
+    deleteVocabulary,
+    updateVocabularyJlpt,
+    getUsers,
+    updateUserRole,
+    updateUserStatus,
+    resetUserPassword,
+    getAuditLogs,
 };

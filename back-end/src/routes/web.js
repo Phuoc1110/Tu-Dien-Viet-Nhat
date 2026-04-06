@@ -1,6 +1,7 @@
 import express from "express";
 import userController from "../controllers/userController";
 import dictionaryController from "../controllers/dictionaryController";
+import adminController from "../controllers/adminController";
 import { checkUserJWT } from "../middleware/JWT_Action";
 import {
 	sendResetOTP,
@@ -15,9 +16,12 @@ let initWebRoutes = (app) => {
 
 	// Auth
 	router.post("/api/login", userController.HandleLogin);
+	router.post("/api/admin_login", adminController.HandleAdminLogin);
 	router.post("/api/logout", userController.HandleLogOut);
+	router.post("/api/logoutAdmin", adminController.HandleLogOutAdmin);
 	router.post("/api/create-new-user", userController.HandleCreateNewUser);
 	router.get("/api/account", userController.getUserAccount);
+	router.get("/api/accountAdmin", adminController.getAdminAccount);
 	router.get("/api/get-all-user", userController.HandleGetAllUser);
 	router.put("/api/edit-user", userController.HandleEditUser);
 	router.put("/api/update-profile", userController.HandleUpdateProfile);
@@ -40,6 +44,32 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/grammar/search",
 		dictionaryController.HandleSearchGrammars
 	);
+
+	// Admin - Dashboard
+	router.get("/api/admin/dashboard", adminController.getDashboard);
+
+	// Admin - Vocabulary & Content
+	router.get("/api/admin/vocabularies", adminController.getVocabularies);
+	router.post("/api/admin/vocabularies", adminController.createVocabulary);
+	router.put("/api/admin/vocabularies/:id", adminController.updateVocabulary);
+	router.delete("/api/admin/vocabularies/:id", adminController.deleteVocabulary);
+	router.patch(
+		"/api/admin/vocabularies/:id/jlpt",
+		adminController.updateVocabularyJlpt
+	);
+
+	// Admin - Users & Roles
+	router.get("/api/admin/users", adminController.getUsers);
+	router.patch("/api/admin/users/:id/role", adminController.updateUserRole);
+	router.patch("/api/admin/users/:id/status", adminController.updateUserStatus);
+	router.post(
+		"/api/admin/users/:id/reset-password",
+		adminController.resetUserPassword
+	);
+
+	// Admin - Audit logs
+	router.get("/api/admin/audit-logs", adminController.getAuditLogs);
+
 	return app.use("/", router);
 };
 

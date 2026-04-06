@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
-import { searchKanjis } from "../../services/dictionaryService";
+import { searchKanjis, searchSentences } from "../../services/dictionaryService";
 import "./KanjiPage.css";
 
 const KanjiPage = () => {
@@ -18,6 +18,7 @@ const KanjiPage = () => {
 	const searchWrapRef = useRef(null);
 	const [activeKanji, setActiveKanji] = useState(null);
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
+	const [fallbackExamples, setFallbackExamples] = useState([]);
 
 	const normalizeStrokePaths = (value) => {
 		if (!value) return [];
@@ -108,6 +109,51 @@ const KanjiPage = () => {
 
 		return examples;
 	}, [kanjiWords]);
+
+	const displayedKanjiExamples = useMemo(() => {
+		if (kanjiExamples.length >= 4) {
+			return kanjiExamples.slice(0, 4);
+		}
+
+		return kanjiExamples.concat(fallbackExamples).slice(0, 4);
+	}, [kanjiExamples, fallbackExamples]);
+
+	useEffect(() => {
+		const runFallbackExamples = async () => {
+			if (!kanjiDetail?.characterKanji) {
+				setFallbackExamples([]);
+				return;
+			}
+
+			if (kanjiExamples.length >= 4) {
+				setFallbackExamples([]);
+				return;
+			}
+
+			const query = kanjiDetail.characterKanji;
+			const res = await searchSentences(query, 20);
+			if (res && res.errCode === 0) {
+				const seen = new Set();
+				const sentences = (res.sentences || [])
+					.filter((item) => {
+						const key = `${item.japaneseSentence}__${item.vietnameseTranslation}`;
+						if (seen.has(key)) return false;
+						seen.add(key);
+						return true;
+					})
+					.filter((item) => item.japaneseSentence?.includes(query) || item.vietnameseTranslation)
+					.map((item) => ({
+						...item,
+						relatedWord: kanjiDetail.characterKanji,
+					}));
+				setFallbackExamples(sentences.slice(0, Math.max(0, 4 - kanjiExamples.length)));
+			} else {
+				setFallbackExamples([]);
+			}
+		};
+
+		runFallbackExamples();
+	}, [kanjiDetail?.characterKanji, kanjiExamples.length]);
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
@@ -430,11 +476,11 @@ const KanjiPage = () => {
 										</div>
 									</div>
 								)}
-								{kanjiExamples.length > 0 && (
+								{displayedKanjiExamples.length > 0 && (
 									<div className="detail-section">
 										<h3>Ví dụ</h3>
 										<div className="kanji-example-list">
-											{kanjiExamples.map((example) => (
+											{displayedKanjiExamples.map((example) => (
 												<div className="kanji-example-item" key={example.id}>
 													<p className="kanji-example-jp">{example.japaneseSentence}</p>
 													<p className="kanji-example-vi">{example.vietnameseTranslation}</p>

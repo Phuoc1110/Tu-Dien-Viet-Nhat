@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
-import { searchWords } from "../../services/dictionaryService";
+import { searchSentences, searchWords } from "../../services/dictionaryService";
 import { addWordSearchHistory } from "../../services/searchHistoryService";
 import {
 	addWordContribution,
@@ -8,6 +8,35 @@ import {
 } from "../../services/wordContributionService";
 import WordImages from "../../components/WordImages/WordImages";
 import "./DictionaryPage.css"; // Using the new CSS file
+
+const splitVariants = (raw) =>
+	String(raw || "")
+		.split(/[;；,，、|/]+/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+
+const normalize = (raw) => String(raw || "").trim().toLowerCase();
+
+const pickBestQueryToken = (entry, typedValue) => {
+	const typed = normalize(typedValue);
+	const variants = [
+		...splitVariants(entry?.word),
+		...splitVariants(entry?.reading),
+		...splitVariants(entry?.romaji),
+	];
+
+	const exact = variants.find((token) => normalize(token) === typed);
+	if (exact) {
+		return exact;
+	}
+
+	const partial = variants.find((token) => normalize(token).includes(typed));
+	if (partial) {
+		return partial;
+	}
+
+	return splitVariants(entry?.word)[0] || entry?.word || "";
+};
 
 const DictionaryPage = () => {
 	const { search } = useLocation();
@@ -23,6 +52,7 @@ const DictionaryPage = () => {
 	const [errorDropdown, setErrorDropdown] = useState("");
 	const [contributions, setContributions] = useState([]);
 	const [newContribution, setNewContribution] = useState("");
+	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const searchWrapRef = useRef(null);
 
 	const keyword = useMemo(() => {
@@ -37,10 +67,49 @@ const DictionaryPage = () => {
 	useEffect(() => {
 		if (!wordDetail?.word) {
 			setContributions([]);
+			setFallbackExamples([]);
 			return;
 		}
 		setContributions(getWordContributions(wordDetail.word));
 	}, [wordDetail]);
+
+	useEffect(() => {
+		const runFallbackExamples = async () => {
+			if (!wordDetail?.word) {
+				setFallbackExamples([]);
+				return;
+			}
+
+			if (Array.isArray(wordDetail.examples) && wordDetail.examples.length > 0) {
+				setFallbackExamples([]);
+				return;
+			}
+
+			const query = (wordDetail.word || keyword || "").trim();
+			if (!query) {
+				setFallbackExamples([]);
+				return;
+			}
+
+			const res = await searchSentences(query, 20);
+			if (res && res.errCode === 0) {
+				const seen = new Set();
+				const sentences = (res.sentences || [])
+					.filter((item) => {
+						const key = `${item.japaneseSentence}__${item.vietnameseTranslation}`;
+						if (seen.has(key)) return false;
+						seen.add(key);
+						return true;
+					})
+					.slice(0, 4);
+				setFallbackExamples(sentences);
+			} else {
+				setFallbackExamples([]);
+			}
+		};
+
+		runFallbackExamples();
+	}, [keyword, wordDetail]);
 
 	useEffect(() => {
 		const runSearch = async () => {
@@ -53,10 +122,28 @@ const DictionaryPage = () => {
 
 			setLoading(true);
 			setError("");
-			const res = await searchWords(keyword.trim(), 1); // Fetch 1 main word
+			const normalizedKeyword = keyword.trim().toLowerCase();
+			const res = await searchWords(keyword.trim(), 20);
 
 			if (res && res.errCode === 0 && res.words && res.words.length > 0) {
-				const mainWord = res.words[0];
+				const exactMatches = res.words.filter((item) => {
+					const candidates = [
+						...splitVariants(item.word),
+						...splitVariants(item.reading),
+						...splitVariants(item.romaji),
+					];
+					return candidates.some((token) => normalize(token) === normalizedKeyword);
+				});
+
+				const pickByExampleCount = (items) =>
+					[...items].sort((a, b) => {
+						const aCount = Array.isArray(a.examples) ? a.examples.length : 0;
+						const bCount = Array.isArray(b.examples) ? b.examples.length : 0;
+						return bCount - aCount;
+					})[0];
+
+				const mainWord =
+					pickByExampleCount(exactMatches) || pickByExampleCount(res.words) || res.words[0];
 				setWordDetail(mainWord);
 				addWordSearchHistory({
 					word: mainWord.word,
@@ -65,7 +152,10 @@ const DictionaryPage = () => {
 				// Fetch related words
 				const relatedRes = await searchWords(keyword.trim(), 6);
 				if (relatedRes && relatedRes.errCode === 0) {
-					setRelatedWords(relatedRes.words.slice(1)); // Exclude the main word
+					const related = (relatedRes.words || []).filter(
+						(item) => item.id !== mainWord.id
+					);
+					setRelatedWords(related.slice(0, 5));
 				}
 			} else {
 				setWordDetail(null);
@@ -128,7 +218,8 @@ const DictionaryPage = () => {
 	};
 
 	const handleSelectWord = (word) => {
-		history.push(`/dictionary?q=${word.word}`);
+		const selectedQuery = pickBestQueryToken(word, searchInput || keyword);
+		history.push(`/dictionary?q=${encodeURIComponent(selectedQuery)}`);
 		setIsDropdownOpen(false);
 	};
 
@@ -254,11 +345,11 @@ const DictionaryPage = () => {
 									</div>
 								)}
 
-								{wordDetail.examples && wordDetail.examples.length > 0 && (
+								{(wordDetail.examples?.length > 0 || fallbackExamples.length > 0) && (
 									<div className="detail-section">
 										<h3>Ví dụ</h3>
 										<ul>
-											{wordDetail.examples.map((example) => (
+											{(wordDetail.examples?.length ? wordDetail.examples : fallbackExamples).map((example) => (
 												<li key={example.id}>
 													<strong>{example.japaneseSentence}</strong>
 													<p>{example.vietnameseTranslation}</p>

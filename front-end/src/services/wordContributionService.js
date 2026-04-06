@@ -34,6 +34,26 @@ const getWordContributions = (word) => {
 	return Array.isArray(all[key]) ? all[key] : [];
 };
 
+const getLatestWordContributions = (limit = 6) => {
+	const safeLimit = Number.isFinite(+limit)
+		? Math.max(1, Math.min(+limit, 100))
+		: 6;
+	const all = readAll();
+
+	return Object.entries(all)
+		.flatMap(([wordKey, items]) => {
+			if (!Array.isArray(items)) {
+				return [];
+			}
+			return items.map((item) => ({
+				...item,
+				word: wordKey,
+			}));
+		})
+		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+		.slice(0, safeLimit);
+};
+
 const addWordContribution = ({ word, content, author = "Bạn" }) => {
 	const key = normalizeWordKey(word);
 	const text = String(content || "").trim();
@@ -57,4 +77,4 @@ const addWordContribution = ({ word, content, author = "Bạn" }) => {
 	return nextItem;
 };
 
-export { getWordContributions, addWordContribution };
+export { getWordContributions, getLatestWordContributions, addWordContribution };

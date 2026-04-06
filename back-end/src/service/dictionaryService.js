@@ -1,6 +1,57 @@
 import db from "../models/index";
 import { Op } from "sequelize";
 
+const splitVariants = (raw) =>
+	String(raw || "")
+		.split(/[;；,，、|/]+/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+
+const buildWordExampleConditions = (word) => {
+	const variants = [
+		...splitVariants(word?.word),
+		...splitVariants(word?.reading),
+		...splitVariants(word?.romaji),
+	].filter(Boolean);
+
+	if (variants.length === 0) {
+		return [];
+	}
+
+	return variants.map((variant) => ({
+		japaneseSentence: { [Op.like]: `%${variant}%` },
+	}));
+};
+
+const getFallbackExamplesForWord = async (word, limit = 4) => {
+	const safeLimit = Number.isFinite(+limit) ? Math.max(1, Math.min(+limit, 10)) : 4;
+	const conditions = buildWordExampleConditions(word);
+
+	if (conditions.length === 0) {
+		return [];
+	}
+
+	const examples = await db.Example.findAll({
+		where: {
+			[Op.or]: conditions,
+		},
+		attributes: ["id", "japaneseSentence", "vietnameseTranslation", "createdAt"],
+		order: [["createdAt", "DESC"]],
+		limit: safeLimit,
+		raw: true,
+	});
+
+	const seen = new Set();
+	return examples.filter((item) => {
+		const key = `${item.japaneseSentence}__${item.vietnameseTranslation}`;
+		if (seen.has(key)) {
+			return false;
+		}
+		seen.add(key);
+		return true;
+	});
+};
+
 let searchWords = (query, limit = 30) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -45,6 +96,15 @@ let searchWords = (query, limit = 30) => {
 				],
 				limit: safeLimit,
 			});
+
+			for (const word of words) {
+				const currentExamples = Array.isArray(word.examples) ? word.examples : [];
+				if (currentExamples.length === 0) {
+					word.examples = await getFallbackExamplesForWord(word, 4);
+				} else {
+					word.examples = currentExamples.slice(0, 4);
+				}
+			}
 
 			resolve(words);
 		} catch (e) {
