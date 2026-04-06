@@ -182,11 +182,11 @@ const SentencePage = () => {
 								<div className="sentence-item" key={item.id}>
 									<p className="sentence-jp">{item.japaneseSentence}</p>
 									<p className="sentence-vi">{item.vietnameseTranslation}</p>
-									{item.word && (
+									{/* {item.word && (
 										<small className="sentence-word">
 											Tu lien quan: {item.word.word}
 										</small>
-									)}
+									)} */}
 								</div>
 							))}
 					</div>

@@ -40,7 +40,6 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/grammar/search",
 		dictionaryController.HandleSearchGrammars
 	);
-
 	return app.use("/", router);
 };
 

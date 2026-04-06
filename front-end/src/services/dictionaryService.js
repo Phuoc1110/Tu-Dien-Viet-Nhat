@@ -40,4 +40,9 @@ const searchGrammars = (query, limit = 20) => {
 		});
 };
 
-export { searchWords, searchKanjis, searchSentences, searchGrammars };
+export {
+	searchWords,
+	searchKanjis,
+	searchSentences,
+	searchGrammars,
+};

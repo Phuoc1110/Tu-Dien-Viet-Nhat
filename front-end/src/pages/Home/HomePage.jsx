@@ -195,9 +195,9 @@ const HomePage = () => {
 							placeholder="日本, nihon, Nhật Bản"
 						/>
 						<div className="search-actions">
-							<button type="button">↗</button>
+							{/* <button type="button">↗</button> */}
 							<button type="button">A文</button>
-							<button type="button">Mic</button>
+							{/* <button type="button">Mic</button> */}
 							<button type="button" onClick={openHistoryPopup}>His</button>
 						</div>
 						<button className="lang-switch" type="submit">

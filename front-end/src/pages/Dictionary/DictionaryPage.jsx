@@ -2,6 +2,11 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchWords } from "../../services/dictionaryService";
 import { addWordSearchHistory } from "../../services/searchHistoryService";
+import {
+	addWordContribution,
+	getWordContributions,
+} from "../../services/wordContributionService";
+import WordImages from "../../components/WordImages/WordImages";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const DictionaryPage = () => {
@@ -16,6 +21,8 @@ const DictionaryPage = () => {
 	const [dropdownResults, setDropdownResults] = useState([]);
 	const [loadingDropdown, setLoadingDropdown] = useState(false);
 	const [errorDropdown, setErrorDropdown] = useState("");
+	const [contributions, setContributions] = useState([]);
+	const [newContribution, setNewContribution] = useState("");
 	const searchWrapRef = useRef(null);
 
 	const keyword = useMemo(() => {
@@ -26,6 +33,14 @@ const DictionaryPage = () => {
 	useEffect(() => {
 		setSearchInput(keyword);
 	}, [keyword]);
+
+	useEffect(() => {
+		if (!wordDetail?.word) {
+			setContributions([]);
+			return;
+		}
+		setContributions(getWordContributions(wordDetail.word));
+	}, [wordDetail]);
 
 	useEffect(() => {
 		const runSearch = async () => {
@@ -117,6 +132,22 @@ const DictionaryPage = () => {
 		setIsDropdownOpen(false);
 	};
 
+	const handleAddContribution = () => {
+		if (!wordDetail?.word || !newContribution.trim()) {
+			return;
+		}
+
+		const created = addWordContribution({
+			word: wordDetail.word,
+			content: newContribution,
+		});
+
+		if (created) {
+			setContributions((prev) => [created, ...prev].slice(0, 100));
+			setNewContribution("");
+		}
+	};
+
 	const renderDropdownBody = () => {
 		if (loadingDropdown) {
 			return <div className="dropdown-status">Đang tra cứu...</div>;
@@ -167,6 +198,7 @@ const DictionaryPage = () => {
 						<div className="search-actions">
 							<button>Tìm kiếm</button>
 						</div>
+						
 						<button className="lang-switch">Nhật - Việt</button>
 					</div>
 					<div className="mazii-mode-tabs">
@@ -202,7 +234,6 @@ const DictionaryPage = () => {
 									</div>
 									<div className="detail-actions">
 										<button>Thêm vào sổ tay</button>
-										<button>Luyện phát âm</button>
 									</div>
 								</div>
 								<div className="detail-meta">
@@ -238,9 +269,34 @@ const DictionaryPage = () => {
 								)}
 
 								<div className="detail-section">
-									<h3>Ảnh minh họa</h3>
-									<div className="detail-image">
-										<p>Xem thêm ảnh về {wordDetail.word}</p>
+									<WordImages word={wordDetail.word} />
+								</div>
+
+								<div className="detail-section">
+									<h3>Có {contributions.length} ý kiến đóng góp</h3>
+									<div className="contribution-list">
+										{contributions.map((item) => (
+											<div className="contribution-item" key={item.id}>
+												<p>{item.content}</p>
+												<div className="contribution-meta">
+													<small>{item.author}</small>
+													<small>{new Date(item.createdAt).toLocaleString("vi-VN")}</small>
+												</div>
+											</div>
+										))}
+										{contributions.length === 0 && (
+											<p className="contribution-empty">Chưa có đóng góp nào cho từ này.</p>
+										)}
+									</div>
+									<div className="contribution-form">
+										<textarea
+											value={newContribution}
+											onChange={(e) => setNewContribution(e.target.value)}
+											placeholder="Thêm nghĩa hoặc ví dụ. Ấn SHIFT + ENTER để xuống dòng"
+										/>
+										<button type="button" onClick={handleAddContribution}>
+											Gửi
+										</button>
 									</div>
 								</div>
 							</div>

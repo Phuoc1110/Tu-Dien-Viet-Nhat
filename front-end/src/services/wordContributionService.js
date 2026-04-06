@@ -1,0 +1,60 @@
+const STORAGE_KEY = "mazii_word_contributions";
+
+const safeParse = (raw) => {
+	try {
+		const parsed = JSON.parse(raw);
+		return parsed && typeof parsed === "object" ? parsed : {};
+	} catch (error) {
+		return {};
+	}
+};
+
+const normalizeWordKey = (word) => String(word || "").trim().toLowerCase();
+
+const readAll = () => {
+	if (typeof window === "undefined") {
+		return {};
+	}
+	return safeParse(localStorage.getItem(STORAGE_KEY) || "{}");
+};
+
+const writeAll = (value) => {
+	if (typeof window === "undefined") {
+		return;
+	}
+	localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+};
+
+const getWordContributions = (word) => {
+	const key = normalizeWordKey(word);
+	if (!key) {
+		return [];
+	}
+	const all = readAll();
+	return Array.isArray(all[key]) ? all[key] : [];
+};
+
+const addWordContribution = ({ word, content, author = "Bạn" }) => {
+	const key = normalizeWordKey(word);
+	const text = String(content || "").trim();
+	if (!key || !text) {
+		return null;
+	}
+
+	const all = readAll();
+	const current = Array.isArray(all[key]) ? all[key] : [];
+	const nextItem = {
+		id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+		content: text,
+		author,
+		createdAt: new Date().toISOString(),
+		upvotes: 0,
+		downvotes: 0,
+	};
+
+	all[key] = [nextItem, ...current].slice(0, 100);
+	writeAll(all);
+	return nextItem;
+};
+
+export { getWordContributions, addWordContribution };
