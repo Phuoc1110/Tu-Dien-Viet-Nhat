@@ -1,80 +1,71 @@
-const STORAGE_KEY = "mazii_word_contributions";
+import axios from "../setup/axios";
 
-const safeParse = (raw) => {
-	try {
-		const parsed = JSON.parse(raw);
-		return parsed && typeof parsed === "object" ? parsed : {};
-	} catch (error) {
-		return {};
-	}
-};
-
-const normalizeWordKey = (word) => String(word || "").trim().toLowerCase();
-
-const readAll = () => {
-	if (typeof window === "undefined") {
-		return {};
-	}
-	return safeParse(localStorage.getItem(STORAGE_KEY) || "{}");
-};
-
-const writeAll = (value) => {
-	if (typeof window === "undefined") {
-		return;
-	}
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-};
-
-const getWordContributions = (word) => {
-	const key = normalizeWordKey(word);
-	if (!key) {
+const getWordContributions = async ({ word, wordId }, limit = 100) => {
+	const keyword = String(word || "").trim();
+	const normalizedWordId = Number(wordId);
+	if (!keyword && !normalizedWordId) {
 		return [];
 	}
-	const all = readAll();
-	return Array.isArray(all[key]) ? all[key] : [];
-};
+	const query = normalizedWordId
+		? `wordId=${normalizedWordId}`
+		: `word=${encodeURIComponent(keyword)}`;
 
-const getLatestWordContributions = (limit = 6) => {
-	const safeLimit = Number.isFinite(+limit)
-		? Math.max(1, Math.min(+limit, 100))
-		: 6;
-	const all = readAll();
-
-	return Object.entries(all)
-		.flatMap(([wordKey, items]) => {
-			if (!Array.isArray(items)) {
-				return [];
+	return axios
+		.get(
+			`/api/dictionary/contributions?${query}&limit=${limit}`
+		)
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return res.contributions || [];
 			}
-			return items.map((item) => ({
-				...item,
-				word: wordKey,
-			}));
+			return [];
 		})
-		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-		.slice(0, safeLimit);
+		.catch((err) => {
+			console.error("Get word contributions error:", err);
+			return [];
+		});
 };
 
-const addWordContribution = ({ word, content, author = "Bạn" }) => {
-	const key = normalizeWordKey(word);
+const getLatestWordContributions = async (limit = 6) => {
+	return axios
+		.get(`/api/dictionary/contributions/latest?limit=${limit}`)
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return res.contributions || [];
+			}
+			return [];
+		})
+		.catch((err) => {
+			console.error("Get latest contributions error:", err);
+			return [];
+		});
+};
+
+const addWordContribution = async ({ word, wordId, content }) => {
+	const keyword = String(word || "").trim();
+	const normalizedWordId = Number(wordId);
 	const text = String(content || "").trim();
-	if (!key || !text) {
+
+	if ((!keyword && !normalizedWordId) || !text) {
 		return null;
 	}
 
-	const all = readAll();
-	const current = Array.isArray(all[key]) ? all[key] : [];
-	const nextItem = {
-		id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-		content: text,
-		author,
-		createdAt: new Date().toISOString(),
-		upvotes: 0,
-		downvotes: 0,
-	};
-
-	all[key] = [nextItem, ...current].slice(0, 100);
-	writeAll(all);
-	return nextItem;
+	return axios
+		.post("/api/dictionary/contributions", {
+			word: keyword,
+			wordId: normalizedWordId || undefined,
+			content: text,
+		})
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return res.contribution || null;
+			}
+			return null;
+		})
+		.catch((err) => {
+			console.error("Add contribution error:", err);
+			return null;
+		});
 };
 
 export { getWordContributions, getLatestWordContributions, addWordContribution };

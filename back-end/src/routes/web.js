@@ -44,6 +44,30 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/grammar/search",
 		dictionaryController.HandleSearchGrammars
 	);
+	router.get(
+		"/api/dictionary/history",
+		dictionaryController.HandleGetSearchHistory
+	);
+	router.post(
+		"/api/dictionary/history",
+		dictionaryController.HandleAddSearchHistory
+	);
+	router.delete(
+		"/api/dictionary/history",
+		dictionaryController.HandleClearSearchHistory
+	);
+	router.get(
+		"/api/dictionary/contributions",
+		dictionaryController.HandleGetWordContributions
+	);
+	router.post(
+		"/api/dictionary/contributions",
+		dictionaryController.HandleAddWordContribution
+	);
+	router.get(
+		"/api/dictionary/contributions/latest",
+		dictionaryController.HandleGetLatestWordContributions
+	);
 
 	// Admin - Dashboard
 	router.get("/api/admin/dashboard", adminController.getDashboard);

@@ -1,67 +1,89 @@
-const WORD_HISTORY_KEY = "mazii_word_search_history";
-const WORD_HISTORY_LIMIT = 80;
+import axios from "../setup/axios";
 
-const safeParse = (rawValue) => {
+const LAST_HISTORY_KEY = "mazii_last_history_write";
+
+const shouldSkipDuplicateWrite = (word) => {
+	if (typeof window === "undefined") {
+		return false;
+	}
+
+	const normalizedWord = String(word || "").trim().toLowerCase();
+	if (!normalizedWord) {
+		return true;
+	}
+
 	try {
-		const parsed = JSON.parse(rawValue);
-		return Array.isArray(parsed) ? parsed : [];
+		const raw = sessionStorage.getItem(LAST_HISTORY_KEY);
+		const last = raw ? JSON.parse(raw) : null;
+		const now = Date.now();
+
+		if (
+			last &&
+			last.word === normalizedWord &&
+			Number.isFinite(last.ts) &&
+			now - last.ts < 5000
+		) {
+			return true;
+		}
+
+		sessionStorage.setItem(
+			LAST_HISTORY_KEY,
+			JSON.stringify({
+				word: normalizedWord,
+				ts: now,
+			})
+		);
 	} catch (error) {
-		return [];
+		return false;
 	}
+
+	return false;
 };
 
-const normalizeItem = (item) => {
-	if (!item || !item.word) {
-		return null;
-	}
-
-	return {
-		word: String(item.word).trim(),
-		meaning: item.meaning ? String(item.meaning).trim() : "",
-		searchedAt: item.searchedAt || new Date().toISOString(),
-	};
+const getWordSearchHistory = async (limit = 80) => {
+	return axios
+		.get(`/api/dictionary/history?limit=${limit}`)
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return res.history || [];
+			}
+			return [];
+		})
+		.catch((err) => {
+			console.error("Get search history error:", err);
+			return [];
+		});
 };
 
-const getWordSearchHistory = () => {
-	if (typeof window === "undefined") {
-		return [];
+const addWordSearchHistory = async (item) => {
+	const word = String(item?.word || "").trim();
+	if (!word) {
+		return { errCode: 1, errMessage: "Missing word" };
 	}
 
-	const rawValue = localStorage.getItem(WORD_HISTORY_KEY);
-	if (!rawValue) {
-		return [];
+	if (shouldSkipDuplicateWrite(word)) {
+		return { errCode: 0, errMessage: "Skipped duplicate" };
 	}
 
-	return safeParse(rawValue)
-		.map(normalizeItem)
-		.filter((item) => item && item.word);
+	return axios
+		.post("/api/dictionary/history", {
+			searchTerm: word,
+		})
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Add search history error:", err);
+			return { errCode: 1, errMessage: "Add search history failed" };
+		});
 };
 
-const addWordSearchHistory = (item) => {
-	if (typeof window === "undefined") {
-		return;
-	}
-
-	const normalized = normalizeItem(item);
-	if (!normalized || !normalized.word) {
-		return;
-	}
-
-	const currentItems = getWordSearchHistory();
-	const nextItems = [
-		normalized,
-		...currentItems.filter((entry) => entry.word !== normalized.word),
-	].slice(0, WORD_HISTORY_LIMIT);
-
-	localStorage.setItem(WORD_HISTORY_KEY, JSON.stringify(nextItems));
-};
-
-const clearWordSearchHistory = () => {
-	if (typeof window === "undefined") {
-		return;
-	}
-
-	localStorage.removeItem(WORD_HISTORY_KEY);
+const clearWordSearchHistory = async () => {
+	return axios
+		.delete("/api/dictionary/history")
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Clear search history error:", err);
+			return { errCode: 1, errMessage: "Clear search history failed" };
+		});
 };
 
 export { getWordSearchHistory, addWordSearchHistory, clearWordSearchHistory };

@@ -23,6 +23,66 @@ const buildWordExampleConditions = (word) => {
 	}));
 };
 
+const parseLimit = (limit, fallback = 20, max = 100) => {
+	if (!Number.isFinite(+limit)) {
+		return fallback;
+	}
+	return Math.max(1, Math.min(+limit, max));
+};
+
+const resolveWordByKeyword = async (rawWord) => {
+	const keyword = String(rawWord || "").trim();
+	if (!keyword) {
+		return null;
+	}
+
+	const exactWord = await db.Word.findOne({
+		where: { word: keyword },
+		attributes: ["id", "word"],
+		raw: true,
+	});
+	if (exactWord) {
+		return exactWord;
+	}
+
+	const variants = splitVariants(keyword);
+	for (const variant of variants) {
+		const exactVariant = await db.Word.findOne({
+			where: { word: variant },
+			attributes: ["id", "word"],
+			raw: true,
+		});
+		if (exactVariant) {
+			return exactVariant;
+		}
+	}
+
+	return db.Word.findOne({
+		where: {
+			[Op.or]: [{ word: { [Op.like]: `%${keyword}%` } }],
+		},
+		attributes: ["id", "word"],
+		order: [["isCommon", "DESC"], ["id", "ASC"]],
+		raw: true,
+	});
+};
+
+const resolveWordTarget = async ({ wordId, word }) => {
+	const normalizedWordId = Number(wordId);
+	if (normalizedWordId) {
+		const byId = await db.Word.findOne({
+			where: { id: normalizedWordId },
+			attributes: ["id", "word"],
+			raw: true,
+		});
+		if (byId) {
+			return byId;
+		}
+	}
+
+	return resolveWordByKeyword(word);
+};
+
 const getFallbackExamplesForWord = async (word, limit = 4) => {
 	const safeLimit = Number.isFinite(+limit) ? Math.max(1, Math.min(+limit, 10)) : 4;
 	const conditions = buildWordExampleConditions(word);
@@ -321,9 +381,196 @@ let searchGrammars = (query, limit = 20) => {
 	});
 };
 
+let addSearchHistory = async (userId, searchTerm) => {
+	const normalizedUserId = Number(userId);
+	const normalizedTerm = String(searchTerm || "").trim();
+
+	if (!normalizedUserId || !normalizedTerm) {
+		return null;
+	}
+
+	return db.SearchHistory.create({
+		userId: normalizedUserId,
+		searchTerm: normalizedTerm.slice(0, 100),
+		searchedAt: new Date(),
+	});
+};
+
+let getSearchHistory = async (userId, limit = 80) => {
+	const normalizedUserId = Number(userId);
+	if (!normalizedUserId) {
+		return [];
+	}
+
+	const safeLimit = parseLimit(limit, 80, 200);
+
+	const rows = await db.SearchHistory.findAll({
+		where: { userId: normalizedUserId },
+		attributes: ["id", "searchTerm", "searchedAt"],
+		order: [["searchedAt", "DESC"], ["id", "DESC"]],
+		limit: safeLimit,
+		raw: true,
+	});
+
+	return rows.map((item) => ({
+		id: item.id,
+		word: item.searchTerm,
+		meaning: "",
+		searchedAt: item.searchedAt,
+	}));
+};
+
+let clearSearchHistory = async (userId) => {
+	const normalizedUserId = Number(userId);
+	if (!normalizedUserId) {
+		return 0;
+	}
+
+	const deleted = await db.SearchHistory.destroy({
+		where: { userId: normalizedUserId },
+	});
+
+	return deleted;
+};
+
+let addWordContribution = async (userId, payload = {}) => {
+	const normalizedUserId = Number(userId);
+	const text = String(payload.content || "").trim();
+
+	if (!normalizedUserId || !text) {
+		return null;
+	}
+
+	const resolvedWord = await resolveWordTarget({
+		wordId: payload.wordId,
+		word: payload.word,
+	});
+	if (!resolvedWord) {
+		return null;
+	}
+
+	const created = await db.Comment.create({
+		userId: normalizedUserId,
+		targetType: "word",
+		targetId: resolvedWord.id,
+		content: text,
+	});
+
+	const createdRow = await db.Comment.findOne({
+		where: { id: created.id },
+		attributes: ["id", "content", "upvotes", "createdAt"],
+		include: [
+			{
+				model: db.User,
+				as: "user",
+				attributes: ["id", "username"],
+				required: false,
+			},
+		],
+		raw: true,
+	});
+
+	return {
+		id: createdRow.id,
+		word: resolvedWord.word,
+		content: createdRow.content,
+		author: createdRow["user.username"] || "Bạn",
+		createdAt: createdRow.createdAt,
+		upvotes: createdRow.upvotes || 0,
+	};
+};
+
+let getWordContributions = async ({ word, wordId } = {}, limit = 100) => {
+	const resolvedWord = await resolveWordTarget({ wordId, word });
+	if (!resolvedWord) {
+		return [];
+	}
+
+	const safeLimit = parseLimit(limit, 100, 200);
+	const rows = await db.Comment.findAll({
+		where: {
+			targetType: "word",
+			targetId: resolvedWord.id,
+			isHidden: false,
+		},
+		attributes: ["id", "content", "upvotes", "createdAt"],
+		include: [
+			{
+				model: db.User,
+				as: "user",
+				attributes: ["id", "username"],
+				required: false,
+			},
+		],
+		order: [["createdAt", "DESC"], ["id", "DESC"]],
+		limit: safeLimit,
+		raw: true,
+	});
+
+	return rows.map((item) => ({
+		id: item.id,
+		word: resolvedWord.word,
+		content: item.content,
+		author: item["user.username"] || "Bạn",
+		createdAt: item.createdAt,
+		upvotes: item.upvotes || 0,
+	}));
+};
+
+let getLatestWordContributions = async (limit = 6) => {
+	const safeLimit = parseLimit(limit, 6, 100);
+
+	const rows = await db.Comment.findAll({
+		where: {
+			targetType: "word",
+			isHidden: false,
+		},
+		attributes: ["id", "targetId", "content", "upvotes", "createdAt"],
+		include: [
+			{
+				model: db.User,
+				as: "user",
+				attributes: ["id", "username"],
+				required: false,
+			},
+		],
+		order: [["createdAt", "DESC"], ["id", "DESC"]],
+		limit: safeLimit,
+		raw: true,
+	});
+
+	const wordIds = [...new Set(rows.map((item) => item.targetId).filter(Boolean))];
+	const words = wordIds.length
+		? await db.Word.findAll({
+				where: { id: { [Op.in]: wordIds } },
+				attributes: ["id", "word"],
+				raw: true,
+		  })
+		: [];
+
+	const wordMap = new Map(words.map((item) => [item.id, item.word]));
+
+	return rows
+		.map((item) => ({
+			id: item.id,
+			word: wordMap.get(item.targetId) || "",
+			content: item.content,
+			author: item["user.username"] || "Bạn",
+			createdAt: item.createdAt,
+			upvotes: item.upvotes || 0,
+		}))
+		.filter((item) => item.word);
+};
+
 module.exports = {
 	searchWords,
 	searchKanjis,
 	searchSentences,
 	searchGrammars,
+	addSearchHistory,
+	getSearchHistory,
+	clearSearchHistory,
+	addWordContribution,
+	getWordContributions,
+	getLatestWordContributions,
 };

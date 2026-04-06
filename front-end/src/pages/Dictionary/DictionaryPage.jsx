@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchSentences, searchWords } from "../../services/dictionaryService";
 import { addWordSearchHistory } from "../../services/searchHistoryService";
+import { UserContext } from "../../Context/UserProvider";
 import {
 	addWordContribution,
 	getWordContributions,
@@ -41,6 +42,7 @@ const pickBestQueryToken = (entry, typedValue) => {
 const DictionaryPage = () => {
 	const { search } = useLocation();
 	const history = useHistory();
+	const { user } = useContext(UserContext);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [wordDetail, setWordDetail] = useState(null);
@@ -52,6 +54,8 @@ const DictionaryPage = () => {
 	const [errorDropdown, setErrorDropdown] = useState("");
 	const [contributions, setContributions] = useState([]);
 	const [newContribution, setNewContribution] = useState("");
+	const [submittingContribution, setSubmittingContribution] = useState(false);
+	const [contributionError, setContributionError] = useState("");
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const searchWrapRef = useRef(null);
 
@@ -59,6 +63,7 @@ const DictionaryPage = () => {
 		const params = new URLSearchParams(search);
 		return params.get("q") || params.get("keyword") || "";
 	}, [search]);
+	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
 	useEffect(() => {
 		setSearchInput(keyword);
@@ -67,10 +72,13 @@ const DictionaryPage = () => {
 	useEffect(() => {
 		if (!wordDetail?.word) {
 			setContributions([]);
+			setContributionError("");
 			setFallbackExamples([]);
 			return;
 		}
-		setContributions(getWordContributions(wordDetail.word));
+		getWordContributions({ word: wordDetail.word, wordId: wordDetail.id }).then((items) => {
+			setContributions(Array.isArray(items) ? items : []);
+		});
 	}, [wordDetail]);
 
 	useEffect(() => {
@@ -145,10 +153,12 @@ const DictionaryPage = () => {
 				const mainWord =
 					pickByExampleCount(exactMatches) || pickByExampleCount(res.words) || res.words[0];
 				setWordDetail(mainWord);
-				addWordSearchHistory({
-					word: mainWord.word,
-					meaning: mainWord.meanings?.[0]?.definition || "",
-				});
+				if (isLoggedIn) {
+					addWordSearchHistory({
+						word: mainWord.word,
+						meaning: mainWord.meanings?.[0]?.definition || "",
+					});
+				}
 				// Fetch related words
 				const relatedRes = await searchWords(keyword.trim(), 6);
 				if (relatedRes && relatedRes.errCode === 0) {
@@ -167,7 +177,7 @@ const DictionaryPage = () => {
 		};
 
 		runSearch();
-	}, [keyword]);
+	}, [isLoggedIn, keyword]);
 
 	useEffect(() => {
 		if (!searchInput.trim() || searchInput === keyword) {
@@ -223,20 +233,33 @@ const DictionaryPage = () => {
 		setIsDropdownOpen(false);
 	};
 
-	const handleAddContribution = () => {
+	const handleAddContribution = async () => {
 		if (!wordDetail?.word || !newContribution.trim()) {
 			return;
 		}
 
-		const created = addWordContribution({
+		if (!isLoggedIn) {
+			history.push("/login");
+			return;
+		}
+
+		setSubmittingContribution(true);
+		setContributionError("");
+
+		const created = await addWordContribution({
 			word: wordDetail.word,
+			wordId: wordDetail.id,
 			content: newContribution,
 		});
 
 		if (created) {
 			setContributions((prev) => [created, ...prev].slice(0, 100));
 			setNewContribution("");
+		} else {
+			setContributionError("Không gửi được bình luận. Vui lòng thử lại.");
 		}
+
+		setSubmittingContribution(false);
 	};
 
 	const renderDropdownBody = () => {
@@ -385,8 +408,15 @@ const DictionaryPage = () => {
 											onChange={(e) => setNewContribution(e.target.value)}
 											placeholder="Thêm nghĩa hoặc ví dụ. Ấn SHIFT + ENTER để xuống dòng"
 										/>
-										<button type="button" onClick={handleAddContribution}>
-											Gửi
+										{contributionError && (
+											<p className="contribution-empty">{contributionError}</p>
+										)}
+										<button
+											type="button"
+											onClick={handleAddContribution}
+											disabled={submittingContribution}
+										>
+											{submittingContribution ? "Đang gửi..." : "Gửi"}
 										</button>
 									</div>
 								</div>

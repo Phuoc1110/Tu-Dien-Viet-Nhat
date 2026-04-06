@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./HomePage.css";
 import { searchWords } from "../../services/dictionaryService";
 import { useHistory } from "react-router-dom";
@@ -7,6 +7,7 @@ import {
 	getWordSearchHistory,
 } from "../../services/searchHistoryService";
 import { getLatestWordContributions } from "../../services/wordContributionService";
+import { UserContext } from "../../Context/UserProvider";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -46,8 +47,11 @@ const HomePage = () => {
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 	const [historyItems, setHistoryItems] = useState([]);
 	const [communityPosts, setCommunityPosts] = useState([]);
+	const [communityExpanded, setCommunityExpanded] = useState(false);
 	const searchWrapRef = useRef(null);
 	const history = useHistory();
+	const { user } = useContext(UserContext);
+	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
 	const hotKeywords = useMemo(
 		() => ["健康", "期待", "求める", "表", "開く", "仕事", "検討", "役割"],
@@ -92,8 +96,17 @@ const HomePage = () => {
 
 	useEffect(() => {
 		const syncLocalData = () => {
-			setHistoryItems(getWordSearchHistory());
-			setCommunityPosts(getLatestWordContributions(6));
+			if (isLoggedIn) {
+				getWordSearchHistory(80).then((items) => {
+					setHistoryItems(Array.isArray(items) ? items : []);
+				});
+			} else {
+				setHistoryItems([]);
+			}
+
+			getLatestWordContributions(6).then((items) => {
+				setCommunityPosts(Array.isArray(items) ? items : []);
+			});
 		};
 
 		syncLocalData();
@@ -105,7 +118,7 @@ const HomePage = () => {
 			window.removeEventListener("focus", syncLocalData);
 			window.removeEventListener("storage", syncLocalData);
 		};
-	}, []);
+	}, [isLoggedIn]);
 
 	const handleSearch = (event) => {
 		event.preventDefault();
@@ -155,8 +168,14 @@ const HomePage = () => {
 	};
 
 	const openHistoryPopup = () => {
-		setHistoryItems(getWordSearchHistory());
-		setIsHistoryOpen(true);
+		if (!isLoggedIn) {
+			history.push("/login");
+			return;
+		}
+		getWordSearchHistory(80).then((items) => {
+			setHistoryItems(Array.isArray(items) ? items : []);
+			setIsHistoryOpen(true);
+		});
 	};
 
 	const handleSelectHistoryItem = (item) => {
@@ -165,12 +184,21 @@ const HomePage = () => {
 	};
 
 	const handleClearHistory = () => {
-		clearWordSearchHistory();
-		setHistoryItems([]);
-		setCommunityPosts(getLatestWordContributions(6));
+		if (!isLoggedIn) {
+			return;
+		}
+		clearWordSearchHistory().then(() => {
+			setHistoryItems([]);
+		});
+		getLatestWordContributions(6).then((items) => {
+			setCommunityPosts(Array.isArray(items) ? items : []);
+		});
 	};
 
 	const historyPreviewItems = historyItems.slice(0, 8);
+	const displayedCommunityPosts = communityExpanded
+		? communityPosts
+		: communityPosts.slice(0, 6);
 
 	const renderDropdownBody = () => {
 		if (loadingSearch) {
@@ -327,6 +355,9 @@ const HomePage = () => {
 									<button type="button" onClick={openHistoryPopup}>Xem thêm</button>
 								</div>
 								<div className="chip-list">
+									{!isLoggedIn && (
+										<p className="history-preview-empty">Đăng nhập để xem lịch sử tra cứu</p>
+									)}
 									{historyPreviewItems.map((item, index) => (
 										<button
 											key={`${item.word}-${index}`}
@@ -336,7 +367,7 @@ const HomePage = () => {
 											{item.word}
 										</button>
 									))}
-									{historyPreviewItems.length === 0 && (
+									{isLoggedIn && historyPreviewItems.length === 0 && (
 										<p className="history-preview-empty">Chưa có lịch sử tra cứu</p>
 									)}
 								</div>
@@ -370,10 +401,15 @@ const HomePage = () => {
 							<section className="community-area">
 								<div className="chip-header">
 									<h3>Cộng đồng</h3>
-									<button type="button">Xem thêm</button>
+									<button
+										type="button"
+										onClick={() => setCommunityExpanded((prev) => !prev)}
+									>
+										{communityExpanded ? "Thu gọn" : "Xem thêm"}
+									</button>
 								</div>
 								<div className="community-grid">
-									{communityPosts.map((post, index) => (
+									{displayedCommunityPosts.map((post, index) => (
 										<button
 											type="button"
 											key={`${post.id}-${index}`}

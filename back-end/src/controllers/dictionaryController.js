@@ -120,9 +120,200 @@ let HandleSearchGrammars = async (req, res) => {
 	}
 };
 
+let HandleGetSearchHistory = async (req, res) => {
+	try {
+		if (!req.user?.id) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+				history: [],
+			});
+		}
+
+		const limit = req.query.limit || 80;
+		const history = await dictionaryService.getSearchHistory(req.user.id, limit);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			history,
+		});
+	} catch (e) {
+		console.error("HandleGetSearchHistory error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			history: [],
+		});
+	}
+};
+
+let HandleAddSearchHistory = async (req, res) => {
+	try {
+		if (!req.user?.id) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const searchTerm = req.body?.searchTerm || req.body?.word || "";
+		if (!String(searchTerm || "").trim()) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing searchTerm",
+			});
+		}
+
+		await dictionaryService.addSearchHistory(req.user.id, searchTerm);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+		});
+	} catch (e) {
+		console.error("HandleAddSearchHistory error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+let HandleClearSearchHistory = async (req, res) => {
+	try {
+		if (!req.user?.id) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		await dictionaryService.clearSearchHistory(req.user.id);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+		});
+	} catch (e) {
+		console.error("HandleClearSearchHistory error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+let HandleGetWordContributions = async (req, res) => {
+	try {
+		const word = req.query.word || req.query.q || "";
+		const wordId = req.query.wordId || req.query.targetId || "";
+		const limit = req.query.limit || 100;
+
+		if (!String(word || "").trim() && !Number(wordId)) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing word/wordId",
+				contributions: [],
+			});
+		}
+
+		const contributions = await dictionaryService.getWordContributions(
+			{ word, wordId },
+			limit
+		);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			contributions,
+		});
+	} catch (e) {
+		console.error("HandleGetWordContributions error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			contributions: [],
+		});
+	}
+};
+
+let HandleAddWordContribution = async (req, res) => {
+	try {
+		if (!req.user?.id) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const word = req.body?.word || "";
+		const wordId = req.body?.wordId || req.body?.targetId || "";
+		const content = req.body?.content || "";
+
+		if ((!String(word || "").trim() && !Number(wordId)) || !String(content || "").trim()) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing word/wordId/content",
+			});
+		}
+
+		const created = await dictionaryService.addWordContribution(req.user.id, {
+			word,
+			wordId,
+			content,
+		});
+
+		if (!created) {
+			return res.status(200).json({
+				errCode: 2,
+				errMessage: "Word not found or invalid payload",
+			});
+		}
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			contribution: created,
+		});
+	} catch (e) {
+		console.error("HandleAddWordContribution error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+let HandleGetLatestWordContributions = async (req, res) => {
+	try {
+		const limit = req.query.limit || 6;
+		const contributions = await dictionaryService.getLatestWordContributions(limit);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			contributions,
+		});
+	} catch (e) {
+		console.error("HandleGetLatestWordContributions error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			contributions: [],
+		});
+	}
+};
+
 module.exports = {
 	HandleSearchWords,
 	HandleSearchKanjis,
 	HandleSearchSentences,
 	HandleSearchGrammars,
+	HandleGetSearchHistory,
+	HandleAddSearchHistory,
+	HandleClearSearchHistory,
+	HandleGetWordContributions,
+	HandleAddWordContribution,
+	HandleGetLatestWordContributions,
 };
