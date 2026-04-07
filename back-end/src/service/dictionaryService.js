@@ -139,14 +139,19 @@ let searchWords = (query, limit = 30) => {
 						as: "meanings",
 						attributes: ["id", "definition", "partOfSpeech", "language"],
 						required: false,
-						limit: 2,
 					},
 					{
 						model: db.Example,
 						as: "examples",
 						attributes: ["id", "japaneseSentence", "vietnameseTranslation"],
 						required: false,
-						limit: 3,
+					},
+					{
+						model: db.Kanji,
+						as: "kanjis",
+						attributes: ["id", "characterKanji", "meaning", "kunyomi", "onyomi", "jlptLevel", "strokeCount"],
+						through: { attributes: [] },
+						required: false,
 					},
 				],
 				order: [
@@ -163,6 +168,14 @@ let searchWords = (query, limit = 30) => {
 					word.examples = await getFallbackExamplesForWord(word, 4);
 				} else {
 					word.examples = currentExamples.slice(0, 4);
+				}
+
+				// Limit meanings and kanjis
+				if (Array.isArray(word.meanings)) {
+					word.meanings = word.meanings.slice(0, 2);
+				}
+				if (Array.isArray(word.kanjis)) {
+					word.kanjis = word.kanjis.slice(0, 5);
 				}
 			}
 

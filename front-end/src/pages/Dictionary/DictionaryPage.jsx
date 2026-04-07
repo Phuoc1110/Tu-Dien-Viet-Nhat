@@ -39,6 +39,16 @@ const pickBestQueryToken = (entry, typedValue) => {
 	return splitVariants(entry?.word)[0] || entry?.word || "";
 };
 
+const getReadingItems = (value) => {
+	if (!value) {
+		return [];
+	}
+	return value
+		.split(/[;；,、]/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+};
+
 const DictionaryPage = () => {
 	const { search } = useLocation();
 	const history = useHistory();
@@ -424,6 +434,32 @@ const DictionaryPage = () => {
 						)}
 					</div>
 					<div className="detail-right">
+						{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
+							<div className="lookup-panel">
+								<h3>Các chữ kanji</h3>
+								<div className="kanji-list">
+									{wordDetail.kanjis.map((kanji) => (
+										<div key={kanji.id} className="kanji-info-card" onClick={() => history.push(`/kanji?q=${kanji.characterKanji}`)} style={{ cursor: 'pointer' }}>
+											<div className="kanji-char">{kanji.characterKanji}</div>
+											<div className="kanji-meaning">{kanji.meaning}</div>
+											{kanji.kunyomi && (
+												<div className="kanji-reading">
+													<small><strong>Kun:</strong> {getReadingItems(kanji.kunyomi).join(", ")}</small>
+												</div>
+											)}
+											{kanji.onyomi && (
+												<div className="kanji-reading">
+													<small><strong>On:</strong> {getReadingItems(kanji.onyomi).join(", ")}</small>
+												</div>
+											)}
+											{kanji.jlptLevel && (
+												<small className="kanji-jlpt">JLPT N{kanji.jlptLevel}</small>
+											)}
+										</div>
+									))}
+								</div>
+							</div>
+						)}
 						<div className="lookup-panel">
 							<h3>Các từ liên quan tới {keyword}</h3>
 							<div className="related-list">
