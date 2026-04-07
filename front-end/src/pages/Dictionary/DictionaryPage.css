@@ -639,11 +639,9 @@
 
 .kanji-list {
 	margin: 10px 0 0;
-	padding: 0;
-	list-style: none;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 10px;
 }
 
 .kanji-list li {
@@ -689,12 +687,17 @@
 	border: 1px solid #e2e8f0;
 	border-radius: 10px;
 	background: #f8fafc;
-	padding: 12px;
-	text-align: center;
+	padding: 14px;
+	text-align: left;
 	cursor: pointer;
 	transition: all 0.2s ease;
 	display: grid;
-	gap: 8px;
+	gap: 10px;
+	width: 100%;
+	min-height: 250px;
+	align-content: start;
+	box-sizing: border-box;
+	font: inherit;
 }
 
 .kanji-info-card:hover {
@@ -704,23 +707,46 @@
 	box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15);
 }
 
+.kanji-card-head {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
 .kanji-char {
-	font-size: 2.5rem;
+	font-size: 2rem;
 	font-weight: 800;
 	color: #1d4ed8;
 	line-height: 1;
 }
 
-.kanji-meaning {
-	font-size: 0.9rem;
+.kanji-head-reading {
+	font-size: 1rem;
+	font-weight: 700;
 	color: #334155;
-	font-weight: 600;
 }
 
-.kanji-reading {
-	font-size: 0.85rem;
-	color: #475569;
-	line-height: 1.4;
+.kanji-meaning {
+	margin: 0;
+	font-size: 1rem;
+	color: #334155;
+	font-weight: 700;
+}
+
+.kanji-reading-lines {
+	display: grid;
+	gap: 6px;
+}
+
+.kanji-reading-lines p {
+	margin: 0;
+	font-size: 0.95rem;
+	line-height: 1.45;
+	color: #1f2937;
+}
+
+.kanji-reading-lines span {
+	font-weight: 700;
 }
 
 .kanji-jlpt {
@@ -731,6 +757,7 @@
 	border-radius: 6px;
 	font-weight: 700;
 	font-size: 0.8rem;
+	justify-self: start;
 }
 
 @media (max-width: 1024px) {

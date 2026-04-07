@@ -111,11 +111,11 @@ const KanjiPage = () => {
 	}, [kanjiWords]);
 
 	const displayedKanjiExamples = useMemo(() => {
-		if (kanjiExamples.length >= 4) {
-			return kanjiExamples.slice(0, 4);
+		if (kanjiExamples.length >= 5) {
+			return kanjiExamples.slice(0, 5);
 		}
 
-		return kanjiExamples.concat(fallbackExamples).slice(0, 4);
+		return kanjiExamples.concat(fallbackExamples).slice(0, 5);
 	}, [kanjiExamples, fallbackExamples]);
 
 	useEffect(() => {
@@ -125,7 +125,7 @@ const KanjiPage = () => {
 				return;
 			}
 
-			if (kanjiExamples.length >= 4) {
+			if (kanjiExamples.length >= 5) {
 				setFallbackExamples([]);
 				return;
 			}
@@ -146,7 +146,7 @@ const KanjiPage = () => {
 						...item,
 						relatedWord: kanjiDetail.characterKanji,
 					}));
-				setFallbackExamples(sentences.slice(0, Math.max(0, 4 - kanjiExamples.length)));
+				setFallbackExamples(sentences.slice(0, Math.max(0, 5 - kanjiExamples.length)));
 			} else {
 				setFallbackExamples([]);
 			}

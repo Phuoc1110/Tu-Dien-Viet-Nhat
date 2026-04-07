@@ -83,8 +83,8 @@ const resolveWordTarget = async ({ wordId, word }) => {
 	return resolveWordByKeyword(word);
 };
 
-const getFallbackExamplesForWord = async (word, limit = 4) => {
-	const safeLimit = Number.isFinite(+limit) ? Math.max(1, Math.min(+limit, 10)) : 4;
+const getFallbackExamplesForWord = async (word, limit = 5) => {
+	const safeLimit = Number.isFinite(+limit) ? Math.max(1, Math.min(+limit, 10)) : 5;
 	const conditions = buildWordExampleConditions(word);
 
 	if (conditions.length === 0) {
@@ -165,9 +165,9 @@ let searchWords = (query, limit = 30) => {
 			for (const word of words) {
 				const currentExamples = Array.isArray(word.examples) ? word.examples : [];
 				if (currentExamples.length === 0) {
-					word.examples = await getFallbackExamplesForWord(word, 4);
+					word.examples = await getFallbackExamplesForWord(word, 5);
 				} else {
-					word.examples = currentExamples.slice(0, 4);
+					word.examples = currentExamples.slice(0, 5);
 				}
 
 				// Limit meanings and kanjis

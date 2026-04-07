@@ -98,7 +98,7 @@ const DictionaryPage = () => {
 				return;
 			}
 
-			if (Array.isArray(wordDetail.examples) && wordDetail.examples.length > 0) {
+			if (Array.isArray(wordDetail.examples) && wordDetail.examples.length >= 5) {
 				setFallbackExamples([]);
 				return;
 			}
@@ -119,7 +119,7 @@ const DictionaryPage = () => {
 						seen.add(key);
 						return true;
 					})
-					.slice(0, 4);
+					.slice(0, 5);
 				setFallbackExamples(sentences);
 			} else {
 				setFallbackExamples([]);
@@ -128,6 +128,25 @@ const DictionaryPage = () => {
 
 		runFallbackExamples();
 	}, [keyword, wordDetail]);
+
+	const displayedExamples = useMemo(() => {
+		const source =
+			Array.isArray(wordDetail?.examples) && wordDetail.examples.length > 0
+				? wordDetail.examples
+				: fallbackExamples;
+
+		const seen = new Set();
+		return (source || [])
+			.filter((item) => {
+				const key = `${item?.japaneseSentence || ""}__${item?.vietnameseTranslation || ""}`;
+				if (seen.has(key)) {
+					return false;
+				}
+				seen.add(key);
+				return true;
+			})
+			.slice(0, 5);
+	}, [wordDetail?.examples, fallbackExamples]);
 
 	useEffect(() => {
 		const runSearch = async () => {
@@ -378,11 +397,11 @@ const DictionaryPage = () => {
 									</div>
 								)}
 
-								{(wordDetail.examples?.length > 0 || fallbackExamples.length > 0) && (
+								{displayedExamples.length > 0 && (
 									<div className="detail-section">
 										<h3>Ví dụ</h3>
 										<ul>
-											{(wordDetail.examples?.length ? wordDetail.examples : fallbackExamples).map((example) => (
+											{displayedExamples.map((example) => (
 												<li key={example.id}>
 													<strong>{example.japaneseSentence}</strong>
 													<p>{example.vietnameseTranslation}</p>
@@ -436,26 +455,37 @@ const DictionaryPage = () => {
 					<div className="detail-right">
 						{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
 							<div className="lookup-panel">
-								<h3>Các chữ kanji</h3>
+								<h3>Các chữ kanji của {wordDetail.word}</h3>
 								<div className="kanji-list">
 									{wordDetail.kanjis.map((kanji) => (
-										<div key={kanji.id} className="kanji-info-card" onClick={() => history.push(`/kanji?q=${kanji.characterKanji}`)} style={{ cursor: 'pointer' }}>
-											<div className="kanji-char">{kanji.characterKanji}</div>
-											<div className="kanji-meaning">{kanji.meaning}</div>
-											{kanji.kunyomi && (
-												<div className="kanji-reading">
-													<small><strong>Kun:</strong> {getReadingItems(kanji.kunyomi).join(", ")}</small>
-												</div>
-											)}
-											{kanji.onyomi && (
-												<div className="kanji-reading">
-													<small><strong>On:</strong> {getReadingItems(kanji.onyomi).join(", ")}</small>
-												</div>
-											)}
+										<button
+											key={kanji.id}
+											type="button"
+											className="kanji-info-card"
+											onClick={() => history.push(`/kanji?q=${kanji.characterKanji}`)}
+										>
+											<div className="kanji-card-head">
+												<strong className="kanji-char">{kanji.characterKanji}</strong>
+												<span className="kanji-head-reading">
+													[{getReadingItems(kanji.onyomi)[0] || "-"}]
+												</span>
+											</div>
+											<p className="kanji-meaning">{(kanji.meaning || "-").toUpperCase()}</p>
+											<div className="kanji-reading-lines">
+												<p>
+													<span>Hán tự:</span> {kanji.characterKanji} - {(kanji.meaning || "-").toUpperCase()}
+												</p>
+												<p>
+													<span>訓:</span> {getReadingItems(kanji.kunyomi).join(" ") || "-"}
+												</p>
+												<p>
+													<span>音:</span> {getReadingItems(kanji.onyomi).join(" ") || "-"}
+												</p>
+											</div>
 											{kanji.jlptLevel && (
 												<small className="kanji-jlpt">JLPT N{kanji.jlptLevel}</small>
 											)}
-										</div>
+										</button>
 									))}
 								</div>
 							</div>
