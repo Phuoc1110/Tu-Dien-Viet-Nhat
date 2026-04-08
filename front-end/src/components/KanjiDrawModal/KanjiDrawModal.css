@@ -1,20 +1,25 @@
 .kanji-draw-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(15, 23, 42, 0.45);
-	display: grid;
-	place-items: center;
+	background: transparent;
 	z-index: 1200;
-	padding: 16px;
 }
 
 .kanji-draw-modal {
-	width: min(94vw, 420px);
+	width: min(94vw, 980px);
 	background: #ffffff;
 	border: 1px solid #dbe4ef;
 	border-radius: 14px;
-	padding: 14px;
+	padding: 14px 14px 12px;
 	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+	position: fixed;
+	left: 50%;
+	top: 88px;
+	transform: translateX(-50%);
+}
+
+.kanji-draw-modal.kanji-draw-docked {
+	transform: none;
 }
 
 .kanji-draw-head {
@@ -31,8 +36,7 @@
 }
 
 .kanji-draw-head button,
-.kanji-draw-actions button,
-.kanji-draw-pick-row button {
+.kanji-draw-actions button {
 	border: 1px solid #d6dee8;
 	background: #f8fafc;
 	color: #334155;
@@ -43,28 +47,34 @@
 }
 
 .kanji-draw-hint {
-	margin: 10px 0;
+	margin: 8px 0 10px;
 	font-size: 0.9rem;
 	color: #475569;
 	line-height: 1.4;
 }
 
+.kanji-draw-board-wrap {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 8px;
+}
+
 .kanji-draw-canvas {
-	width: 280px;
-	height: 280px;
-	max-width: 100%;
+	width: 100%;
+	height: 260px;
 	background: #ffffff;
 	border: 1px dashed #94a3b8;
 	border-radius: 10px;
 	touch-action: none;
 	display: block;
-	margin: 0 auto;
+	margin: 0;
 }
 
 .kanji-draw-actions {
-	margin-top: 10px;
+	margin-top: 8px;
 	display: flex;
-	justify-content: center;
+	justify-content: flex-end;
 	gap: 8px;
 }
 
@@ -74,11 +84,19 @@
 	color: #b91c1c;
 }
 
+.kanji-draw-working {
+	margin: 10px 0 0;
+	font-size: 0.9rem;
+	color: #0f766e;
+}
+
 .kanji-draw-candidates {
-	margin-top: 10px;
+	margin-top: 8px;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
+	max-height: 88px;
+	overflow: auto;
 }
 
 .kanji-draw-candidates button {
@@ -92,10 +110,8 @@
 }
 
 .kanji-draw-pick-row {
-	margin-top: 12px;
-	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: 8px;
+	margin-top: 8px;
+	display: block;
 }
 
 .kanji-draw-pick-row input {
@@ -104,6 +120,18 @@
 	padding: 9px 10px;
 	font: inherit;
 	outline: none;
+	width: min(100%, 320px);
+}
+
+@media (max-width: 720px) {
+	.kanji-draw-modal {
+		border-radius: 12px;
+		padding: 10px;
+	}
+
+	.kanji-draw-canvas {
+		height: 220px;
+	}
 }
 
 .kanji-draw-pick-row input:focus {

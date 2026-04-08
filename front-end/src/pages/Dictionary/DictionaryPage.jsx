@@ -261,7 +261,7 @@ const DictionaryPage = () => {
 	const handleSelectWord = (word) => {
 		const selectedQuery = pickBestQueryToken(word, searchInput || keyword);
 		history.push(`/dictionary?q=${encodeURIComponent(selectedQuery)}`);
-		setIsDropdownOpen(false);
+		setIsDropdownOpen(true);
 	};
 
 	const handleAddContribution = async () => {
@@ -367,9 +367,10 @@ const DictionaryPage = () => {
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
 					onClose={() => setIsKanjiDrawOpen(false)}
+					anchorRef={searchWrapRef}
 					onPick={(value) => {
-						setSearchInput(value);
-						history.push(`/dictionary?q=${value}`);
+						setSearchInput((prev) => `${prev || ""}${value}`);
+						setIsDropdownOpen(true);
 					}}
 				/>
 

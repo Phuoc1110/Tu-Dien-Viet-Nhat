@@ -190,9 +190,10 @@ const GrammarPage = () => {
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
 					onClose={() => setIsKanjiDrawOpen(false)}
+					anchorRef={searchWrapRef}
 					onPick={(value) => {
-						setSearchInput(value);
-						history.push(`/grammar?q=${value}`);
+						setSearchInput((prev) => `${prev || ""}${value}`);
+						setIsDropdownOpen(true);
 					}}
 				/>
 

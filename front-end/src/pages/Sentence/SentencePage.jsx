@@ -174,9 +174,10 @@ const SentencePage = () => {
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
 					onClose={() => setIsKanjiDrawOpen(false)}
+					anchorRef={searchWrapRef}
 					onPick={(value) => {
-						setSearchInput(value);
-						history.push(`/sentence?q=${value}`);
+						setSearchInput((prev) => `${prev || ""}${value}`);
+						setIsDropdownOpen(true);
 					}}
 				/>
 
