@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchKanjis, searchSentences } from "../../services/dictionaryService";
+import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import "./KanjiPage.css";
 
 const KanjiPage = () => {
@@ -19,6 +20,7 @@ const KanjiPage = () => {
 	const [activeKanji, setActiveKanji] = useState(null);
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
 	const [fallbackExamples, setFallbackExamples] = useState([]);
+	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 
 	const normalizeStrokePaths = (value) => {
 		if (!value) return [];
@@ -363,6 +365,7 @@ const KanjiPage = () => {
 						/>
 						<div className="search-actions">
 							<button>Tìm kiếm</button>
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhật - Việt</button>
 					</div>
@@ -383,6 +386,14 @@ const KanjiPage = () => {
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</div>
+				<KanjiDrawModal
+					open={isKanjiDrawOpen}
+					onClose={() => setIsKanjiDrawOpen(false)}
+					onPick={(value) => {
+						setSearchInput(value);
+						history.push(`/kanji?q=${value}`);
+					}}
+				/>
 
 				<div className="mazii-content-grid detail-mode">
 					<div className="detail-left">

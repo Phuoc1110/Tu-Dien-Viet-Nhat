@@ -20,6 +20,21 @@ const searchKanjis = (query, limit = 30) => {
 		});
 };
 
+const recognizeKanjiInk = ({ ink, width = 280, height = 280, numResults = 8 }) => {
+	return axios
+		.post(`/api/dictionary/kanji/recognize`, {
+			ink,
+			width,
+			height,
+			numResults,
+		})
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Recognize kanji error:", err);
+			return { errCode: 1, errMessage: "Recognize failed", candidates: [] };
+		});
+};
+
 const searchSentences = (query, limit = 20) => {
 	return axios
 		.get(`/api/dictionary/sentence/search?q=${encodeURIComponent(query)}&limit=${limit}`)
@@ -43,6 +58,7 @@ const searchGrammars = (query, limit = 20) => {
 export {
 	searchWords,
 	searchKanjis,
+	recognizeKanjiInk,
 	searchSentences,
 	searchGrammars,
 };

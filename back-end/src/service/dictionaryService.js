@@ -1,5 +1,6 @@
 import db from "../models/index";
 import { Op } from "sequelize";
+import axios from "axios";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -575,11 +576,60 @@ let getLatestWordContributions = async (limit = 6) => {
 		.filter((item) => item.word);
 };
 
+let recognizeKanjiFromInk = async ({ ink, width = 280, height = 280, numResults = 8 }) => {
+	const safeNumResults = parseLimit(numResults, 8, 20);
+	const safeWidth = parseLimit(width, 280, 1000);
+	const safeHeight = parseLimit(height, 280, 1000);
+
+	if (!Array.isArray(ink) || ink.length === 0) {
+		return [];
+	}
+
+	const requestPayload = {
+		input_type: 0,
+		requests: [
+			{
+				language: "ja",
+				writing_guide: {
+					writing_area_width: safeWidth,
+					writing_area_height: safeHeight,
+				},
+				ink,
+				num_results: safeNumResults,
+			},
+		],
+	};
+
+	const { data } = await axios.post(
+		"https://inputtools.google.com/request?itc=ja-t-i0-handwrit&app=translate",
+		requestPayload,
+		{
+			headers: { "Content-Type": "application/json" },
+			timeout: 8000,
+		}
+	);
+
+	if (!Array.isArray(data) || data[0] !== "SUCCESS") {
+		return [];
+	}
+
+	const candidates = data?.[1]?.[0]?.[1];
+	if (!Array.isArray(candidates)) {
+		return [];
+	}
+
+	return candidates
+		.map((item) => String(item || "").trim())
+		.filter(Boolean)
+		.slice(0, safeNumResults);
+};
+
 module.exports = {
 	searchWords,
 	searchKanjis,
 	searchSentences,
 	searchGrammars,
+	recognizeKanjiFromInk,
 	addSearchHistory,
 	getSearchHistory,
 	clearSearchHistory,

@@ -36,6 +36,10 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/kanji/search",
 		dictionaryController.HandleSearchKanjis
 	);
+	router.post(
+		"/api/dictionary/kanji/recognize",
+		dictionaryController.HandleRecognizeKanji
+	);
 	router.get(
 		"/api/dictionary/sentence/search",
 		dictionaryController.HandleSearchSentences

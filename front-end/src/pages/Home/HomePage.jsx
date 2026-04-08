@@ -8,6 +8,7 @@ import {
 } from "../../services/searchHistoryService";
 import { getLatestWordContributions } from "../../services/wordContributionService";
 import { UserContext } from "../../Context/UserProvider";
+import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -45,6 +46,7 @@ const HomePage = () => {
 	const [searchResults, setSearchResults] = useState([]);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [historyItems, setHistoryItems] = useState([]);
 	const [communityPosts, setCommunityPosts] = useState([]);
 	const [communityExpanded, setCommunityExpanded] = useState(false);
@@ -250,7 +252,7 @@ const HomePage = () => {
 						/>
 						<div className="search-actions">
 							{/* <button type="button">↗</button> */}
-							<button type="button">A文</button>
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 							{/* <button type="button">Mic</button> */}
 							<button type="button" onClick={openHistoryPopup}>His</button>
 						</div>
@@ -288,6 +290,15 @@ const HomePage = () => {
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</header>
+
+				<KanjiDrawModal
+					open={isKanjiDrawOpen}
+					onClose={() => setIsKanjiDrawOpen(false)}
+					onPick={(value) => {
+						setSearchInput(value);
+						history.push(`/dictionary?q=${value}`);
+					}}
+				/>
 
 				{isHistoryOpen && (
 					<div className="history-modal-overlay" onClick={() => setIsHistoryOpen(false)}>

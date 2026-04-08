@@ -8,6 +8,7 @@ import {
 	getWordContributions,
 } from "../../services/wordContributionService";
 import WordImages from "../../components/WordImages/WordImages";
+import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -67,6 +68,7 @@ const DictionaryPage = () => {
 	const [submittingContribution, setSubmittingContribution] = useState(false);
 	const [contributionError, setContributionError] = useState("");
 	const [fallbackExamples, setFallbackExamples] = useState([]);
+	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const searchWrapRef = useRef(null);
 
 	const keyword = useMemo(() => {
@@ -340,6 +342,7 @@ const DictionaryPage = () => {
 						/>
 						<div className="search-actions">
 							<button>Tìm kiếm</button>
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						
 						<button className="lang-switch">Nhật - Việt</button>
@@ -361,6 +364,14 @@ const DictionaryPage = () => {
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</div>
+				<KanjiDrawModal
+					open={isKanjiDrawOpen}
+					onClose={() => setIsKanjiDrawOpen(false)}
+					onPick={(value) => {
+						setSearchInput(value);
+						history.push(`/dictionary?q=${value}`);
+					}}
+				/>
 
 				<div className="mazii-content-grid detail-mode">
 					<div className="detail-left">

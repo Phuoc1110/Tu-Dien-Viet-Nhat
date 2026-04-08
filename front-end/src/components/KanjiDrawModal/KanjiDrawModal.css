@@ -1,0 +1,112 @@
+.kanji-draw-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.45);
+	display: grid;
+	place-items: center;
+	z-index: 1200;
+	padding: 16px;
+}
+
+.kanji-draw-modal {
+	width: min(94vw, 420px);
+	background: #ffffff;
+	border: 1px solid #dbe4ef;
+	border-radius: 14px;
+	padding: 14px;
+	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+}
+
+.kanji-draw-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+}
+
+.kanji-draw-head h3 {
+	margin: 0;
+	font-size: 1.1rem;
+	color: #0f172a;
+}
+
+.kanji-draw-head button,
+.kanji-draw-actions button,
+.kanji-draw-pick-row button {
+	border: 1px solid #d6dee8;
+	background: #f8fafc;
+	color: #334155;
+	border-radius: 8px;
+	padding: 8px 10px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.kanji-draw-hint {
+	margin: 10px 0;
+	font-size: 0.9rem;
+	color: #475569;
+	line-height: 1.4;
+}
+
+.kanji-draw-canvas {
+	width: 280px;
+	height: 280px;
+	max-width: 100%;
+	background: #ffffff;
+	border: 1px dashed #94a3b8;
+	border-radius: 10px;
+	touch-action: none;
+	display: block;
+	margin: 0 auto;
+}
+
+.kanji-draw-actions {
+	margin-top: 10px;
+	display: flex;
+	justify-content: center;
+	gap: 8px;
+}
+
+.kanji-draw-error {
+	margin: 10px 0 0;
+	font-size: 0.9rem;
+	color: #b91c1c;
+}
+
+.kanji-draw-candidates {
+	margin-top: 10px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.kanji-draw-candidates button {
+	border: 1px solid #cbd5e1;
+	background: #ffffff;
+	border-radius: 8px;
+	padding: 6px 10px;
+	font-size: 1.1rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.kanji-draw-pick-row {
+	margin-top: 12px;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+}
+
+.kanji-draw-pick-row input {
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	padding: 9px 10px;
+	font: inherit;
+	outline: none;
+}
+
+.kanji-draw-pick-row input:focus {
+	border-color: #60a5fa;
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}

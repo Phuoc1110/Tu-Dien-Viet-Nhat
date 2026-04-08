@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { searchSentences } from "../../services/dictionaryService";
+import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import "./SentencePage.css";
 
 const SentencePage = () => {
@@ -15,6 +16,7 @@ const SentencePage = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [sentences, setSentences] = useState([]);
+	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
@@ -148,6 +150,7 @@ const SentencePage = () => {
 						/>
 						<div className="search-actions">
 							<button>Tim kiem</button>
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>
 					</div>
@@ -168,6 +171,14 @@ const SentencePage = () => {
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</div>
+				<KanjiDrawModal
+					open={isKanjiDrawOpen}
+					onClose={() => setIsKanjiDrawOpen(false)}
+					onPick={(value) => {
+						setSearchInput(value);
+						history.push(`/sentence?q=${value}`);
+					}}
+				/>
 
 				<div className="sentence-results">
 					<div className="sentence-card">
