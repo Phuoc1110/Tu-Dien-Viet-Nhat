@@ -5,6 +5,7 @@ import { useHistory } from "react-router-dom";
 import {
 	clearWordSearchHistory,
 	getWordSearchHistory,
+	getTopSearchKeywordsToday,
 } from "../../services/searchHistoryService";
 import { getLatestWordContributions } from "../../services/wordContributionService";
 import { UserContext } from "../../Context/UserProvider";
@@ -49,24 +50,14 @@ const HomePage = () => {
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [historyItems, setHistoryItems] = useState([]);
 	const [communityPosts, setCommunityPosts] = useState([]);
-	const [communityExpanded, setCommunityExpanded] = useState(false);
+	const [hotKeywords, setHotKeywords] = useState([]);
 	const searchWrapRef = useRef(null);
 	const history = useHistory();
 	const { user } = useContext(UserContext);
 	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
-	const hotKeywords = useMemo(
+	const defaultHotKeywords = useMemo(
 		() => ["健康", "期待", "求める", "表", "開く", "仕事", "検討", "役割"],
-		[]
-	);
-
-	const feedbackItems = useMemo(
-		() => [
-			{ id: 1, jp: "御坊ちゃま", vi: "cậu ấm, cậu con trai nhỏ" },
-			{ id: 2, jp: "青年", vi: "tuổi trẻ đầy hứa hẹn" },
-			{ id: 3, jp: "挟まる", vi: "ở giữa, bị kẹp" },
-			{ id: 4, jp: "目の肥えた", vi: "con mắt tinh tường" },
-		],
 		[]
 	);
 
@@ -106,7 +97,7 @@ const HomePage = () => {
 				setHistoryItems([]);
 			}
 
-			getLatestWordContributions(6).then((items) => {
+			getLatestWordContributions(20).then((items) => {
 				setCommunityPosts(Array.isArray(items) ? items : []);
 			});
 		};
@@ -121,6 +112,19 @@ const HomePage = () => {
 			window.removeEventListener("storage", syncLocalData);
 		};
 	}, [isLoggedIn]);
+
+	useEffect(() => {
+		const loadTopKeywords = async () => {
+			const items = await getTopSearchKeywordsToday(8);
+			if (Array.isArray(items) && items.length > 0) {
+				setHotKeywords(items.map((item) => item.word).filter(Boolean));
+				return;
+			}
+			setHotKeywords(defaultHotKeywords);
+		};
+
+		loadTopKeywords();
+	}, [defaultHotKeywords]);
 
 	const handleSearch = (event) => {
 		event.preventDefault();
@@ -162,13 +166,6 @@ const HomePage = () => {
 		history.push(`/dictionary?q=${encodeURIComponent(selectedQuery)}`);
 	};
 
-	const handleOpenCommunityPost = (post) => {
-		if (!post?.word) {
-			return;
-		}
-		history.push(`/dictionary?q=${post.word}`);
-	};
-
 	const openHistoryPopup = () => {
 		if (!isLoggedIn) {
 			history.push("/login");
@@ -192,15 +189,12 @@ const HomePage = () => {
 		clearWordSearchHistory().then(() => {
 			setHistoryItems([]);
 		});
-		getLatestWordContributions(6).then((items) => {
+		getLatestWordContributions(20).then((items) => {
 			setCommunityPosts(Array.isArray(items) ? items : []);
 		});
 	};
 
 	const historyPreviewItems = historyItems.slice(0, 8);
-	const displayedCommunityPosts = communityExpanded
-		? communityPosts
-		: communityPosts.slice(0, 6);
 
 	const renderDropdownBody = () => {
 		if (loadingSearch) {
@@ -388,7 +382,7 @@ const HomePage = () => {
 							<article className="chip-section">
 								<div className="chip-header">
 									<h3>Từ khóa hot</h3>
-									<button type="button">Xem thêm</button>
+									<button type="button">Hôm nay</button>
 								</div>
 								<div className="chip-list">
 									{hotKeywords.map((word) => (
@@ -410,58 +404,25 @@ const HomePage = () => {
 								</div>
 							</article>
 
-							<section className="community-area">
-								<div className="chip-header">
-									<h3>Cộng đồng</h3>
-									<button
-										type="button"
-										onClick={() => setCommunityExpanded((prev) => !prev)}
-									>
-										{communityExpanded ? "Thu gọn" : "Xem thêm"}
-									</button>
-								</div>
-								<div className="community-grid">
-									{displayedCommunityPosts.map((post, index) => (
-										<button
-											type="button"
-											key={`${post.id}-${index}`}
-											className="community-card"
-											onClick={() => handleOpenCommunityPost(post)}
-										>
-											<h4>{post.word}</h4>
-											<p className="author">
-												{post.author || "Bạn"} • {new Date(post.createdAt).toLocaleString("vi-VN")}
-											</p>
-											<p>{post.content}</p>
-										</button>
-									))}
-									{communityPosts.length === 0 && (
-										<p className="community-empty">Chưa có comment nào từ cộng đồng.</p>
-									)}
-								</div>
-							</section>
+
 						</section>
 
 						<aside className="mazii-right-column">
 							<article className="lookup-panel">
-								<h3>Kết quả tra cứu</h3>
-								<p className="empty-panel">Tra một từ để xem chi tiết nhanh.</p>
-							</article>
-
-							<article className="lookup-panel">
-								<h3>Các chữ kanji</h3>
-								<p className="empty-panel">Kết quả chưa có kanji.</p>
-							</article>
-
-							<article className="lookup-panel">
 								<h3>Góp ý</h3>
 								<div className="feedback-list">
-									{feedbackItems.map((item) => (
-										<div key={item.id} className="feedback-item">
-											<strong>{item.jp}</strong>
-											<p>{item.vi}</p>
+									{communityPosts.map((item) => (
+										<div key={`${item.id}-${item.createdAt}`} className="feedback-item">
+											<strong>{item.word}</strong>
+											<p>{item.content}</p>
+											<small className="feedback-meta">
+												{item.author || "Bạn"} • {new Date(item.createdAt).toLocaleString("vi-VN")}
+											</small>
 										</div>
 									))}
+									{communityPosts.length === 0 && (
+										<p className="feedback-empty">Chưa có bình luận nào.</p>
+									)}
 								</div>
 							</article>
 						</aside>

@@ -587,6 +587,8 @@
 	margin-top: 10px;
 	display: grid;
 	gap: 10px;
+	max-height: 420px;
+	overflow: auto;
 }
 
 .feedback-item {
@@ -609,6 +611,19 @@
 	font-size: 0.93rem;
 	color: #334155;
 	line-height: 1.45;
+}
+
+.feedback-meta {
+	display: block;
+	margin-top: 6px;
+	font-size: 0.8rem;
+	color: #64748b;
+}
+
+.feedback-empty {
+	margin: 0;
+	color: #64748b;
+	font-size: 0.92rem;
 }
 
 .history-modal-overlay {

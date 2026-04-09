@@ -447,6 +447,40 @@ let clearSearchHistory = async (userId) => {
 	return deleted;
 };
 
+let getTopSearchKeywordsToday = async (limit = 8) => {
+	const safeLimit = parseLimit(limit, 8, 50);
+
+	const startOfDay = new Date();
+	startOfDay.setHours(0, 0, 0, 0);
+
+	const endOfDay = new Date();
+	endOfDay.setHours(23, 59, 59, 999);
+
+	const rows = await db.SearchHistory.findAll({
+		where: {
+			searchedAt: {
+				[Op.between]: [startOfDay, endOfDay],
+			},
+		},
+		attributes: [
+			"searchTerm",
+			[db.Sequelize.fn("COUNT", db.Sequelize.col("searchTerm")), "searchCount"],
+		],
+		group: ["searchTerm"],
+		order: [
+			[db.Sequelize.literal("searchCount"), "DESC"],
+			["searchTerm", "ASC"],
+		],
+		limit: safeLimit,
+		raw: true,
+	});
+
+	return rows.map((item) => ({
+		word: item.searchTerm,
+		count: Number(item.searchCount) || 0,
+	}));
+};
+
 let addWordContribution = async (userId, payload = {}) => {
 	const normalizedUserId = Number(userId);
 	const text = String(payload.content || "").trim();
@@ -632,6 +666,7 @@ module.exports = {
 	recognizeKanjiFromInk,
 	addSearchHistory,
 	getSearchHistory,
+	getTopSearchKeywordsToday,
 	clearSearchHistory,
 	addWordContribution,
 	getWordContributions,

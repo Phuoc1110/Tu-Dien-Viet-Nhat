@@ -241,6 +241,26 @@ let HandleClearSearchHistory = async (req, res) => {
 	}
 };
 
+let HandleGetTopSearchKeywordsToday = async (req, res) => {
+	try {
+		const limit = req.query.limit || 8;
+		const keywords = await dictionaryService.getTopSearchKeywordsToday(limit);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			keywords,
+		});
+	} catch (e) {
+		console.error("HandleGetTopSearchKeywordsToday error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			keywords: [],
+		});
+	}
+};
+
 let HandleGetWordContributions = async (req, res) => {
 	try {
 		const word = req.query.word || req.query.q || "";
@@ -351,6 +371,7 @@ module.exports = {
 	HandleGetSearchHistory,
 	HandleAddSearchHistory,
 	HandleClearSearchHistory,
+	HandleGetTopSearchKeywordsToday,
 	HandleGetWordContributions,
 	HandleAddWordContribution,
 	HandleGetLatestWordContributions,

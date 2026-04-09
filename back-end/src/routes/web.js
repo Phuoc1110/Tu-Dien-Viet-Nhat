@@ -52,6 +52,10 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/history",
 		dictionaryController.HandleGetSearchHistory
 	);
+	router.get(
+		"/api/dictionary/history/top-keywords",
+		dictionaryController.HandleGetTopSearchKeywordsToday
+	);
 	router.post(
 		"/api/dictionary/history",
 		dictionaryController.HandleAddSearchHistory

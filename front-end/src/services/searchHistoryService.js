@@ -55,6 +55,21 @@ const getWordSearchHistory = async (limit = 80) => {
 		});
 };
 
+const getTopSearchKeywordsToday = async (limit = 8) => {
+	return axios
+		.get(`/api/dictionary/history/top-keywords?limit=${limit}`)
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return res.keywords || [];
+			}
+			return [];
+		})
+		.catch((err) => {
+			console.error("Get top search keywords error:", err);
+			return [];
+		});
+};
+
 const addWordSearchHistory = async (item) => {
 	const word = String(item?.word || "").trim();
 	if (!word) {
@@ -86,4 +101,9 @@ const clearWordSearchHistory = async () => {
 		});
 };
 
-export { getWordSearchHistory, addWordSearchHistory, clearWordSearchHistory };
+export {
+	getWordSearchHistory,
+	getTopSearchKeywordsToday,
+	addWordSearchHistory,
+	clearWordSearchHistory,
+};
