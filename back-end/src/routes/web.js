@@ -3,6 +3,7 @@ import userController from "../controllers/userController";
 import dictionaryController from "../controllers/dictionaryController";
 import adminController from "../controllers/adminController";
 import { checkUserJWT } from "../middleware/JWT_Action";
+import { uploadCloud } from "../middleware/Cloudinary_Multer";
 import {
 	sendResetOTP,
 	verifyResetOTP,
@@ -24,7 +25,19 @@ let initWebRoutes = (app) => {
 	router.get("/api/accountAdmin", adminController.getAdminAccount);
 	router.get("/api/get-all-user", userController.HandleGetAllUser);
 	router.put("/api/edit-user", userController.HandleEditUser);
-	router.put("/api/update-profile", userController.HandleUpdateProfile);
+	router.put(
+		"/api/update-profile",
+		uploadCloud.single("image"),
+		userController.HandleUpdateProfile
+	);
+	router.get(
+		"/api/profile/recent-comments",
+		userController.HandleGetRecentComments
+	);
+	router.post(
+		"/api/profile/change-password",
+		userController.HandleChangePassword
+	);
 	router.delete("/api/delete-user", userController.HandleDeleteUser);
 
 	// Reset password via OTP

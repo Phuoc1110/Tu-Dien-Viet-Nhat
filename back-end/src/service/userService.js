@@ -1,6 +1,7 @@
 import db from "../models/index";
 import bcrypt from "bcryptjs";
 import { CreateJWT } from "../middleware/JWT_Action";
+import { Op } from "sequelize";
 const cloudinary = require("cloudinary").v2;
 require("dotenv").config();
 const salt = bcrypt.genSaltSync(10);
@@ -407,6 +408,153 @@ let resetPassword = (email, newPassword) => {
 	});
 };
 
+let getRecentCommentsByUser = (userId, limit = 10) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const normalizedUserId = Number(userId);
+			const normalizedLimit = Math.min(Math.max(Number(limit) || 10, 1), 30);
+
+			if (!normalizedUserId) {
+				resolve([]);
+				return;
+			}
+
+			const comments = await db.Comment.findAll({
+				where: {
+					userId: normalizedUserId,
+					isHidden: false,
+					targetType: {
+						[Op.in]: ["word", "kanji", "grammar"],
+					},
+				},
+				attributes: ["id", "targetType", "targetId", "content", "createdAt", "upvotes"],
+				order: [["createdAt", "DESC"]],
+				limit: normalizedLimit,
+				raw: true,
+			});
+
+			const wordIds = comments
+				.filter((item) => item.targetType === "word")
+				.map((item) => item.targetId);
+			const kanjiIds = comments
+				.filter((item) => item.targetType === "kanji")
+				.map((item) => item.targetId);
+			const grammarIds = comments
+				.filter((item) => item.targetType === "grammar")
+				.map((item) => item.targetId);
+
+			const [words, kanjis, grammars] = await Promise.all([
+				wordIds.length
+					? db.Word.findAll({
+							where: { id: { [Op.in]: wordIds } },
+							attributes: ["id", "word"],
+							raw: true,
+					  })
+					: [],
+				kanjiIds.length
+					? db.Kanji.findAll({
+							where: { id: { [Op.in]: kanjiIds } },
+							attributes: ["id", "characterKanji"],
+							raw: true,
+					  })
+					: [],
+				grammarIds.length
+					? db.Grammar.findAll({
+							where: { id: { [Op.in]: grammarIds } },
+							attributes: ["id", "title"],
+							raw: true,
+					  })
+					: [],
+			]);
+
+			const wordMap = new Map(words.map((item) => [item.id, item.word]));
+			const kanjiMap = new Map(
+				kanjis.map((item) => [item.id, item.characterKanji])
+			);
+			const grammarMap = new Map(grammars.map((item) => [item.id, item.title]));
+
+			const results = comments.map((item) => {
+				let targetLabel = "";
+				if (item.targetType === "word") targetLabel = wordMap.get(item.targetId) || "";
+				if (item.targetType === "kanji") targetLabel = kanjiMap.get(item.targetId) || "";
+				if (item.targetType === "grammar") {
+					targetLabel = grammarMap.get(item.targetId) || "";
+				}
+
+				return {
+					id: item.id,
+					targetType: item.targetType,
+					targetId: item.targetId,
+					targetLabel,
+					content: item.content,
+					upvotes: item.upvotes || 0,
+					createdAt: item.createdAt,
+				};
+			});
+
+			resolve(results);
+		} catch (e) {
+			reject(e);
+		}
+	});
+};
+
+let changePasswordWithCurrent = (userId, currentPassword, newPassword) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			if (!userId || !currentPassword || !newPassword) {
+				resolve({
+					errCode: 1,
+					errMessage: "Missing required parameters",
+				});
+				return;
+			}
+
+			if (newPassword.length < 6) {
+				resolve({
+					errCode: 1,
+					errMessage: "New password must be at least 6 characters",
+				});
+				return;
+			}
+
+			const user = await db.User.findOne({ where: { id: userId } });
+			if (!user) {
+				resolve({
+					errCode: 1,
+					errMessage: "User not found",
+				});
+				return;
+			}
+
+			const isValidCurrentPassword = bcrypt.compareSync(
+				currentPassword,
+				user.passwordHash
+			);
+			if (!isValidCurrentPassword) {
+				resolve({
+					errCode: 2,
+					errMessage: "Current password is incorrect",
+				});
+				return;
+			}
+
+			const hashPassword = bcrypt.hashSync(newPassword, salt);
+			await db.User.update(
+				{ passwordHash: hashPassword },
+				{ where: { id: userId } }
+			);
+
+			resolve({
+				errCode: 0,
+				message: "Password updated successfully",
+			});
+		} catch (e) {
+			reject(e);
+		}
+	});
+};
+
 module.exports = {
 	HandleUserLogin: HandleUserLogin,
 	getAllUser: getAllUser,
@@ -415,5 +563,7 @@ module.exports = {
 	updateUser: updateUser,
 	updateUserProfile: updateUserProfile,
 	resetPassword: resetPassword,
+	getRecentCommentsByUser: getRecentCommentsByUser,
+	changePasswordWithCurrent: changePasswordWithCurrent,
 	CheckUserEmail: CheckUserEmail,
 };

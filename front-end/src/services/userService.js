@@ -58,6 +58,24 @@ const sendResetOTP = async (email) => {
 	}
 };
 
+const getRecentProfileComments = (userId, limit = 10) => {
+	return axios
+		.get(`/api/profile/recent-comments?userId=${userId}&limit=${limit}`)
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+		});
+};
+
+const changePasswordWithCurrent = (currentPassword, newPassword) => {
+	return axios
+		.post("/api/profile/change-password", { currentPassword, newPassword })
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+		});
+};
+
 const verifyOTP = async (email, otp) => {
 	try {
 		const response = await axios.post("/api/reset-otp/verify", { email, otp });
@@ -79,4 +97,6 @@ export {
 	resetPassword,
 	sendResetOTP,
 	verifyOTP,
+	getRecentProfileComments,
+	changePasswordWithCurrent,
 };

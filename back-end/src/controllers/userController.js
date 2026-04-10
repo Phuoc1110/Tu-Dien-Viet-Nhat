@@ -179,6 +179,58 @@ let HandleDeleteUser = async (req, res) => {
 	});
 };
 
+let HandleGetRecentComments = async (req, res) => {
+	try {
+		const targetUserId = Number(req.query.userId || req.user?.id);
+		const limit = Number(req.query.limit || 10);
+
+		if (!targetUserId) {
+			return res.status(400).json({
+				errCode: 1,
+				errMessage: "Missing userId parameter!",
+			});
+		}
+
+		const data = await userService.getRecentCommentsByUser(targetUserId, limit);
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			DT: data,
+		});
+	} catch (error) {
+		console.error("Error in HandleGetRecentComments:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+let HandleChangePassword = async (req, res) => {
+	try {
+		if (!req.user?.id) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const { currentPassword, newPassword } = req.body;
+		const message = await userService.changePasswordWithCurrent(
+			req.user.id,
+			currentPassword,
+			newPassword
+		);
+		return res.status(200).json(message);
+	} catch (error) {
+		console.error("Error in HandleChangePassword:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
 module.exports = {
 	HandleLogin: HandleLogin,
 	HandleGetAllUser: HandleGetAllUser,
@@ -186,6 +238,8 @@ module.exports = {
 	HandleEditUser: HandleEditUser,
 	HandleUpdateProfile: HandleUpdateProfile,
 	HandleDeleteUser: HandleDeleteUser,
+	HandleGetRecentComments: HandleGetRecentComments,
+	HandleChangePassword: HandleChangePassword,
 	getUserAccount,
 	HandleLogOut: HandleLogOut,
 };

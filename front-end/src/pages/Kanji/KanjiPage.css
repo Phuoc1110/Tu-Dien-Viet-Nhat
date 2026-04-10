@@ -33,13 +33,6 @@
 	padding: 6px;
 }
 
-.search-leading {
-	font-size: 12px;
-	font-weight: 700;
-	color: #64748b;
-	padding: 0 8px;
-}
-
 .mazii-search-bar input {
 	border: none;
 	outline: none;

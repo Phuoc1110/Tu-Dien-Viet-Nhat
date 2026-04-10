@@ -235,7 +235,7 @@ const HomePage = () => {
 				<header className="mazii-search-wrap" ref={searchWrapRef}>
 					<form className="mazii-search-bar" onSubmit={handleSearch}>
 						<span className="search-leading" aria-hidden="true">
-							Search
+							🔍
 						</span>
 						<input
 							type="text"

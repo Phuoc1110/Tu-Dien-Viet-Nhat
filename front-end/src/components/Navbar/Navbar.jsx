@@ -18,7 +18,7 @@ import {
 import { LogOutUser } from "../../services/userService";
 import { toast } from "react-toastify";
 // import Notification from "../Notification/Notification";
-import logo from "../../assets/images/logo3.png";
+import logo from "../../assets/images/JP_Dict_Logo.jpg";
 
 const Navbar = ({ title = "HomePage" }) => {
 	const [showUserMenu, setShowUserMenu] = useState(false);

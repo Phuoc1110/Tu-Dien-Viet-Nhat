@@ -9,7 +9,7 @@
 
 .admin2-header {
 	background: linear-gradient(135deg, #0f172a, #1e3a8a);
-	border-radius: 14px;
+	/* border-radius: 14px; */
 	padding: 18px;
 	display: flex;
 	justify-content: space-between;
@@ -30,9 +30,9 @@
 
 .admin2-logout {
 	border: 1px solid #334155;
-	background: #0b1221;
+	background: #ec0000ec;
 	color: #e2e8f0;
-	border-radius: 10px;
+	border-radius: 6px;
 	padding: 8px 12px;
 	cursor: pointer;
 	display: inline-flex;
@@ -49,7 +49,7 @@
 .admin2-tabs button {
 	border: 1px solid #dbe4ef;
 	background: #fff;
-	border-radius: 999px;
+	/* border-radius: 999px; */
 	padding: 8px 12px;
 	cursor: pointer;
 	display: inline-flex;
@@ -87,7 +87,7 @@
 .admin2-panel {
 	background: #fff;
 	border: 1px solid #d8e0ea;
-	border-radius: 12px;
+	/* border-radius: 12px; */
 }
 
 .admin2-card {
@@ -198,7 +198,7 @@
 .admin2-table input,
 .admin2-table select {
 	border: 1px solid #cbd5e1;
-	border-radius: 8px;
+	/* border-radius: 8px; */
 	padding: 8px 10px;
 	font-size: 0.93rem;
 }
@@ -222,7 +222,7 @@
 	border: 1px solid #dbe4ef;
 	background: #f8fafc;
 	color: #334155;
-	border-radius: 8px;
+	border-radius: 4px;
 	padding: 6px 10px;
 	cursor: pointer;
 }
