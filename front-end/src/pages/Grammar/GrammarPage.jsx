@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { searchGrammars } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
+import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import "../Dictionary/DictionaryPage.css";
 import "./GrammarPage.css";
 
@@ -19,6 +20,8 @@ const GrammarPage = () => {
 	const [grammars, setGrammars] = useState([]);
 	const [activeGrammar, setActiveGrammar] = useState(null);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
+	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
@@ -196,6 +199,14 @@ const GrammarPage = () => {
 						setIsDropdownOpen(true);
 					}}
 				/>
+				<NotebookPickerModal
+					open={isNotebookPickerOpen}
+					onClose={() => {
+						setIsNotebookPickerOpen(false);
+						setNotebookPickerItem(null);
+					}}
+					item={notebookPickerItem}
+				/>
 
 				<div className="grammar-content-grid">
 					<div className="grammar-left">
@@ -209,7 +220,22 @@ const GrammarPage = () => {
 											<h1>{activeGrammar.title}</h1>
 											<p>{activeGrammar.meaning}</p>
 										</div>
-										<button className="grammar-add-btn">+</button>
+										<button
+											type="button"
+											className="grammar-add-btn"
+											onClick={() => {
+												setNotebookPickerItem({
+													type: "grammar",
+													id: activeGrammar.id,
+													label: activeGrammar.title,
+													subtitle: activeGrammar.jlptLevel ? `N${activeGrammar.jlptLevel}` : "",
+													meaning: activeGrammar.meaning,
+												});
+												setIsNotebookPickerOpen(true);
+											}}
+										>
+											+
+										</button>
 									</div>
 
 									<div className="detail-section">

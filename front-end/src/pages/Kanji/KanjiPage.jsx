@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchKanjis, searchSentences } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
+import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import "./KanjiPage.css";
 
 const KanjiPage = () => {
@@ -21,6 +22,8 @@ const KanjiPage = () => {
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
+	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
 
 	const normalizeStrokePaths = (value) => {
 		if (!value) return [];
@@ -395,6 +398,14 @@ const KanjiPage = () => {
 						setIsDropdownOpen(true);
 					}}
 				/>
+				<NotebookPickerModal
+					open={isNotebookPickerOpen}
+					onClose={() => {
+						setIsNotebookPickerOpen(false);
+						setNotebookPickerItem(null);
+					}}
+					item={notebookPickerItem}
+				/>
 
 				<div className="mazii-content-grid detail-mode">
 					<div className="detail-left">
@@ -410,7 +421,21 @@ const KanjiPage = () => {
 												<div className="detail-reading">{kanjiDetail.meaning}</div>
 											</div>
 											<div className="detail-actions">
-												<button>+</button>
+												<button
+													type="button"
+													onClick={() => {
+													setNotebookPickerItem({
+														type: "kanji",
+														id: kanjiDetail.id,
+														label: kanjiDetail.characterKanji,
+														subtitle: kanjiDetail.sinoVietnamese,
+														meaning: kanjiDetail.meaning,
+													});
+													setIsNotebookPickerOpen(true);
+												}}
+												>
+													+
+												</button>
 												<button>SVG</button>
 											</div>
 										</div>

@@ -7,6 +7,8 @@ import {
 	LogIn,
 	ChevronDown,
 	Crown,
+	NotebookText,
+	BadgeJapaneseYen,
 } from "lucide-react";
 import "./Navbar.css";
 import { UserContext } from "../../Context/UserProvider";
@@ -75,6 +77,25 @@ const Navbar = ({ title = "HomePage" }) => {
 						<img src={logo} alt="SocialHub Logo" className="logo-image" />
 					</div>
 					<span className="brand-name">MAZII</span>
+				</div>
+
+				<div className="navbar-shortcuts">
+					<button
+						type="button"
+						className="navbar-shortcut"
+						onClick={() => history.push("/notebook")}
+					>
+						<NotebookText size={16} />
+						<span>Notebook</span>
+					</button>
+					<button
+						type="button"
+						className="navbar-shortcut"
+						onClick={() => history.push("/jplt")}
+					>
+						<BadgeJapaneseYen size={16} />
+						<span>JPLT</span>
+					</button>
 				</div>
 
 				{/* Search Bar */}

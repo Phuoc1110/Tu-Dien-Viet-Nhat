@@ -66,6 +66,38 @@
   letter-spacing: 0.02em;
 }
 
+.navbar-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 12px;
+  flex: 1;
+}
+
+.navbar-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid #dbe4ef;
+  background: rgba(255, 255, 255, 0.95);
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.navbar-shortcut:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+  transform: translateY(-1px);
+}
+
 
 /* Search Bar */
 .navbar-search {
@@ -311,6 +343,10 @@
   }
   
   .brand-name {
+    display: none;
+  }
+
+  .navbar-shortcuts {
     display: none;
   }
   

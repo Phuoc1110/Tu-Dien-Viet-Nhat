@@ -9,6 +9,7 @@ import {
 } from "../../services/wordContributionService";
 import WordImages from "../../components/WordImages/WordImages";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
+import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -69,6 +70,8 @@ const DictionaryPage = () => {
 	const [contributionError, setContributionError] = useState("");
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
+	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
 	const searchWrapRef = useRef(null);
 
 	const keyword = useMemo(() => {
@@ -373,6 +376,14 @@ const DictionaryPage = () => {
 						setIsDropdownOpen(true);
 					}}
 				/>
+				<NotebookPickerModal
+					open={isNotebookPickerOpen}
+					onClose={() => {
+						setIsNotebookPickerOpen(false);
+						setNotebookPickerItem(null);
+					}}
+					item={notebookPickerItem}
+				/>
 
 				<div className="mazii-content-grid detail-mode">
 					<div className="detail-left">
@@ -388,7 +399,21 @@ const DictionaryPage = () => {
 										</div>
 									</div>
 									<div className="detail-actions">
-										<button>Thêm vào sổ tay</button>
+										<button
+											type="button"
+											onClick={() => {
+											setNotebookPickerItem({
+												type: "word",
+												id: wordDetail.id,
+												label: wordDetail.word,
+												subtitle: wordDetail.reading,
+												meaning: wordDetail.meanings?.[0]?.definition || "",
+											});
+											setIsNotebookPickerOpen(true);
+											}}
+										>
+											+
+										</button>
 									</div>
 								</div>
 								<div className="detail-meta">

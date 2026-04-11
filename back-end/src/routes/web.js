@@ -2,6 +2,7 @@ import express from "express";
 import userController from "../controllers/userController";
 import dictionaryController from "../controllers/dictionaryController";
 import adminController from "../controllers/adminController";
+import notebookController from "../controllers/notebookController";
 import { checkUserJWT } from "../middleware/JWT_Action";
 import { uploadCloud } from "../middleware/Cloudinary_Multer";
 import {
@@ -89,6 +90,10 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/contributions/latest",
 		dictionaryController.HandleGetLatestWordContributions
 	);
+	router.get("/api/notebooks/overview", notebookController.HandleGetNotebookOverview);
+	router.get("/api/notebooks/:id", notebookController.HandleGetNotebookDetail);
+	router.post("/api/notebooks", notebookController.HandleCreateNotebook);
+	router.post("/api/notebooks/:id/items", notebookController.HandleAddNotebookItem);
 
 	// Admin - Dashboard
 	router.get("/api/admin/dashboard", adminController.getDashboard);

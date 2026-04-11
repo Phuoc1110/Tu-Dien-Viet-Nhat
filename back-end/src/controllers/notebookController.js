@@ -1,0 +1,126 @@
+const notebookService = require("../service/notebookService");
+
+const HandleGetNotebookOverview = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		if (!userId) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const limit = Number(req.query.limit || 6);
+		const data = await notebookService.getNotebookOverview(userId, limit);
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			...data,
+		});
+	} catch (error) {
+		console.error("Error in HandleGetNotebookOverview:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+const HandleGetNotebookDetail = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		if (!userId) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const notebookId = Number(req.params.id);
+		const notebook = await notebookService.getNotebookDetail(notebookId);
+		if (!notebook) {
+			return res.status(404).json({
+				errCode: 1,
+				errMessage: "Notebook not found",
+			});
+		}
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			notebook,
+		});
+	} catch (error) {
+		console.error("Error in HandleGetNotebookDetail:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+const HandleCreateNotebook = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		if (!userId) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const result = await notebookService.createNotebook(userId, req.body);
+		if (result.errCode !== 0) {
+			return res.status(400).json(result);
+		}
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "Notebook created",
+			notebook: result.notebook,
+		});
+	} catch (error) {
+		console.error("Error in HandleCreateNotebook:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+const HandleAddNotebookItem = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		if (!userId) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const notebookId = Number(req.params.id);
+		const result = await notebookService.addItemToNotebook(userId, notebookId, req.body);
+		if (result.errCode !== 0) {
+			return res.status(result.errCode === 3 ? 409 : 400).json(result);
+		}
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "Item added",
+			item: result.item,
+		});
+	} catch (error) {
+		console.error("Error in HandleAddNotebookItem:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+module.exports = {
+	HandleGetNotebookOverview,
+	HandleGetNotebookDetail,
+	HandleCreateNotebook,
+	HandleAddNotebookItem,
+};
