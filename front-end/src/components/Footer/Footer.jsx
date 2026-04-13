@@ -12,7 +12,7 @@ const Footer = () => {
           <a href="#" className="footer-link">Help</a>
         </div>
         <div className="footer-text">
-          © 2024 Bird Social Media
+          © 2026 Jp Dictionary
         </div>
       </div>
     </footer>

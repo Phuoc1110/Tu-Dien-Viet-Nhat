@@ -1,0 +1,240 @@
+.notebook-detail-page {
+  min-height: calc(100vh - 130px);
+  background: #eceff3;
+  padding: 16px;
+}
+
+.notebook-detail-shell {
+  max-width: 1260px;
+  margin: 0 auto;
+}
+
+.notebook-detail-breadcrumb {
+  color: #475569;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.notebook-detail-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+}
+
+.notebook-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.notebook-mode-tabs button {
+  border: 0;
+  border-radius: 14px;
+  height: 50px;
+  background: #2f7ce7;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.notebook-mode-tabs button.active {
+  background: #246bd0;
+}
+
+.notebook-word-panel {
+  background: #f7f8fa;
+  border: 1px solid #dce3eb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.word-panel-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dce3eb;
+}
+
+.tool-left,
+.tool-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-left label {
+  font-size: 14px;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tiny-btn {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.word-loading,
+.word-message,
+.word-empty {
+  padding: 14px;
+  color: #475569;
+}
+
+.word-list-body {
+  max-height: 430px;
+  overflow: auto;
+  padding: 4px 10px 12px;
+}
+
+.word-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 0;
+}
+
+.word-item-card {
+  min-height: 120px;
+}
+
+.word-item-card.placeholder {
+  background: transparent;
+}
+
+.word-main-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+.word-sub {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 18px;
+}
+
+.word-meaning {
+  margin: 4px 0 10px;
+  color: #475569;
+  font-size: 17px;
+}
+
+.add-note-btn {
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.notebook-detail-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-box {
+  background: #f7f8fa;
+  border: 1px solid #dce3eb;
+  border-radius: 14px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.search-box input {
+  border: 0;
+  outline: none;
+  flex: 1;
+  background: transparent;
+}
+
+.notebook-info-card {
+  background: #f7f8fa;
+  border: 1px solid #dce3eb;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.name-row h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 30px;
+}
+
+.name-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tiny-btn.danger {
+  color: #b91c1c;
+}
+
+.notebook-info-card p {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.edit-name-row {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-name-row input {
+  flex: 1;
+  border: 1px solid #cfd8e3;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.edit-name-row button {
+  border: 0;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  padding: 0 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 1000px) {
+  .notebook-detail-main {
+    grid-template-columns: 1fr;
+  }
+
+  .notebook-mode-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .word-row {
+    grid-template-columns: 1fr;
+  }
+}

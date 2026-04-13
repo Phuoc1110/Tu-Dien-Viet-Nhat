@@ -40,9 +40,31 @@ const addNotebookItem = (notebookId, data) => {
 		});
 };
 
+	const updateNotebook = (notebookId, data) => {
+		return axios
+			.put(`/api/notebooks/${notebookId}`, data)
+			.then((response) => response)
+			.catch((error) => {
+				console.error(error);
+				return { errCode: 1, errMessage: "Không sửa được sổ tay" };
+			});
+	};
+
+	const deleteNotebook = (notebookId) => {
+		return axios
+			.delete(`/api/notebooks/${notebookId}`)
+			.then((response) => response)
+			.catch((error) => {
+				console.error(error);
+				return { errCode: 1, errMessage: "Không xóa được sổ tay" };
+			});
+	};
+
 export {
 	getNotebookOverview,
 	getNotebookDetail,
 	createNotebook,
 	addNotebookItem,
+		updateNotebook,
+		deleteNotebook,
 };

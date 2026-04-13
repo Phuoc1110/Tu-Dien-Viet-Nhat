@@ -8,6 +8,7 @@ import KanjiPage from "../pages/Kanji/KanjiPage";
 import SentencePage from "../pages/Sentence/SentencePage";
 import GrammarPage from "../pages/Grammar/GrammarPage";
 import NotebookPage from "../pages/Notebook/NotebookPage";
+import NotebookDetailPage from "../pages/Notebook/NotebookDetailPage";
 import JpltPage from "../pages/Jplt/JpltPage";
 import PrivateRoutes from "./PrivateRoutes";
 import PrivateRoutesRole from "./PrivateRoutesRole";
@@ -34,7 +35,8 @@ const ClientRoute = () => {
 				<Route path="/kanji" component={KanjiPage} />
 				<Route path="/sentence" component={SentencePage} />
 				<Route path="/grammar" component={GrammarPage} />
-				<Route path="/notebook" component={NotebookPage} />
+				<Route path="/notebook" exact component={NotebookPage} />
+				<Route path="/notebook/:id" component={NotebookDetailPage} />
 				<Route path={["/jplt", "/jlpt"]} component={JpltPage} />
 				<Route path="/search-word">
 					<Redirect to="/" />

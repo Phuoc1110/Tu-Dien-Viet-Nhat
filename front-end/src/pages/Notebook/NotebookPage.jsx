@@ -1,106 +1,73 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
-import {
-	BookOpen,
-	Brain,
-	ChevronRight,
-	Layers3,
-	Plus,
-	RotateCcw,
-	Target,
-	ListChecks,
-	Shuffle,
-} from "lucide-react";
-import {
-	createNotebook,
-	getNotebookDetail,
-	getNotebookOverview,
-} from "../../services/notebookService";
+import { Eye, PlusCircle, X } from "lucide-react";
+import { createNotebook, getNotebookOverview } from "../../services/notebookService";
 import "./NotebookPage.css";
 
-const notebookValue = (item) => String(item?.item?.meaning || item?.item?.subtitle || "").trim();
+const premiumSeed = [
+	{ id: "p-1", name: "Từ vựng trung thu", meta: "30 từ", owner: "Mazii Customer Support", views: 3297 },
+	{ id: "p-2", name: "50 bài Minna no Nihongo - N5", meta: "2037 từ / 50 bài", owner: "Mazii Customer Support", views: 107 },
+	{ id: "p-3", name: "50 bài Minna no Nihongo", meta: "2052 từ / 50 bài", owner: "Mazii Customer Support", views: 101 },
+	{ id: "p-4", name: "Từ vựng tiếng nhật chuyên ngành", meta: "85 từ / 3 bài", owner: "Mazii Customer Support", views: 14 },
+	{ id: "p-5", name: "Từ vựng tiếng nhật chuyên ngành y", meta: "81 từ / 2 bài", owner: "Mazii Customer Support", views: 4 },
+	{ id: "p-6", name: "Mimi Kara Oboeru N3", meta: "875 từ / 12 bài", owner: "Mazii Customer Support", views: 3 },
+	{ id: "p-7", name: "Từ vựng tiếng nhật chuyên ngành IT", meta: "66 từ / 3 bài", owner: "Mazii Customer Support", views: 2 },
+	{ id: "p-8", name: "Ngữ pháp JLPT N2", meta: "74 từ / 4 bài", owner: "Mazii Customer Support", views: 1 },
+];
 
-const normalize = (value) => String(value || "").trim().toLowerCase();
+const formatDate = (value) => {
+	if (!value) {
+		return "-";
+	}
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return "-";
+	}
+	return date.toISOString().slice(0, 10);
+};
+
+const pseudoViews = (id) => {
+	const text = String(id || "0");
+	let total = 0;
+	for (let i = 0; i < text.length; i += 1) {
+		total += text.charCodeAt(i);
+	}
+	return 12000 + total * 7;
+};
 
 const NotebookPage = () => {
 	const history = useHistory();
 	const [loading, setLoading] = useState(true);
 	const [overview, setOverview] = useState({ myNotebooks: [], discoverNotebooks: [] });
-	const [selectedNotebook, setSelectedNotebook] = useState(null);
-	const [selectedNotebookDetail, setSelectedNotebookDetail] = useState(null);
 	const [pageMessage, setPageMessage] = useState("");
-	const [createName, setCreateName] = useState("");
+	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+	const [createNotebookName, setCreateNotebookName] = useState("");
 	const [createLoading, setCreateLoading] = useState(false);
-	const [activeMode, setActiveMode] = useState("flashcard");
-	const [flashIndex, setFlashIndex] = useState(0);
-	const [flashRevealed, setFlashRevealed] = useState(false);
-	const [quizIndex, setQuizIndex] = useState(0);
-	const [quizAnswer, setQuizAnswer] = useState("");
-	const [quizFeedback, setQuizFeedback] = useState("");
-	const [miniAnswers, setMiniAnswers] = useState({});
-	const [miniSubmitted, setMiniSubmitted] = useState(false);
 
-	const activeItems = selectedNotebookDetail?.items || [];
-	const miniItems = useMemo(() => activeItems.slice(0, 5), [activeItems]);
-	const flashItem = activeItems.length ? activeItems[flashIndex % activeItems.length] : null;
-	const quizItem = activeItems.length ? activeItems[quizIndex % activeItems.length] : null;
-
-	useEffect(() => {
-		const loadOverview = async () => {
-			setLoading(true);
-			const res = await getNotebookOverview(8);
-			if (res && res.errCode === 0) {
-				const payload = {
-					myNotebooks: Array.isArray(res.myNotebooks) ? res.myNotebooks : [],
-					discoverNotebooks: Array.isArray(res.discoverNotebooks) ? res.discoverNotebooks : [],
-				};
-				setOverview(payload);
-				const firstNotebook = payload.myNotebooks[0] || payload.discoverNotebooks[0] || null;
-				setSelectedNotebook(firstNotebook);
-				if (firstNotebook) {
-					const detail = await getNotebookDetail(firstNotebook.id);
-					if (detail?.errCode === 0) {
-						setSelectedNotebookDetail(detail.notebook);
-					}
-				}
-				setPageMessage("");
-			} else if (res?.errCode === -2) {
-				history.push("/login");
-				return;
-			} else {
-				setPageMessage(res?.errMessage || "Không tải được sổ tay.");
-			}
-			setLoading(false);
-		};
-
-		loadOverview();
+	const loadOverview = useCallback(async () => {
+		setLoading(true);
+		const res = await getNotebookOverview(8);
+		if (res && res.errCode === 0) {
+			setOverview({
+				myNotebooks: Array.isArray(res.myNotebooks) ? res.myNotebooks : [],
+				discoverNotebooks: Array.isArray(res.discoverNotebooks) ? res.discoverNotebooks : [],
+			});
+			setPageMessage("");
+		} else if (res?.errCode === -2) {
+			history.push("/login");
+			return;
+		} else {
+			setPageMessage(res?.errMessage || "Không tải được sổ tay.");
+		}
+		setLoading(false);
 	}, [history]);
 
 	useEffect(() => {
-		setFlashIndex(0);
-		setFlashRevealed(false);
-		setQuizIndex(0);
-		setQuizAnswer("");
-		setQuizFeedback("");
-		setMiniAnswers({});
-		setMiniSubmitted(false);
-	}, [selectedNotebookDetail?.id]);
-
-	const selectNotebook = async (notebook) => {
-		setSelectedNotebook(notebook);
-		setLoading(true);
-		const detail = await getNotebookDetail(notebook.id);
-		if (detail && detail.errCode === 0) {
-			setSelectedNotebookDetail(detail.notebook);
-			setPageMessage("");
-		} else {
-			setPageMessage(detail?.errMessage || "Không mở được sổ tay.");
-		}
-		setLoading(false);
-	};
+		loadOverview();
+	}, [loadOverview]);
 
 	const handleCreateNotebook = async () => {
-		const name = createName.trim();
+		const name = createNotebookName.trim();
 		if (!name) {
 			setPageMessage("Nhập tên sổ tay trước khi tạo.");
 			return;
@@ -109,17 +76,10 @@ const NotebookPage = () => {
 		setCreateLoading(true);
 		const created = await createNotebook({ name });
 		if (created && created.errCode === 0 && created.notebook) {
-			setCreateName("");
+			setCreateNotebookName("");
+			setIsCreateModalOpen(false);
 			setPageMessage("Đã tạo sổ tay mới.");
-			const refreshed = await getNotebookOverview(8);
-			if (refreshed?.errCode === 0) {
-				const payload = {
-					myNotebooks: Array.isArray(refreshed.myNotebooks) ? refreshed.myNotebooks : [],
-					discoverNotebooks: Array.isArray(refreshed.discoverNotebooks) ? refreshed.discoverNotebooks : [],
-				};
-				setOverview(payload);
-				await selectNotebook(created.notebook);
-			}
+			await loadOverview();
 		} else if (created?.errCode === -2) {
 			history.push("/login");
 			return;
@@ -129,261 +89,119 @@ const NotebookPage = () => {
 		setCreateLoading(false);
 	};
 
-	const handleFlashNext = () => {
-		if (!activeItems.length) return;
-		setFlashIndex((prev) => (prev + 1) % activeItems.length);
-		setFlashRevealed(false);
-	};
-
-	const handleQuizCheck = () => {
-		if (!quizItem) return;
-		const expected = normalize(notebookValue(quizItem));
-		const given = normalize(quizAnswer);
-		if (!expected) {
-			setQuizFeedback("Chưa có dữ liệu để kiểm tra.");
-			return;
-		}
-		if (given && (expected.includes(given) || given.includes(expected))) {
-			setQuizFeedback("Đúng rồi.");
-		} else {
-			setQuizFeedback(`Đáp án: ${notebookValue(quizItem)}`);
-		}
-	};
-
-	const handleQuizNext = () => {
-		if (!activeItems.length) return;
-		setQuizIndex((prev) => (prev + 1) % activeItems.length);
-		setQuizAnswer("");
-		setQuizFeedback("");
-	};
-
-	const miniScore = miniItems.reduce((score, item) => {
-		const expected = normalize(notebookValue(item));
-		const given = normalize(miniAnswers[item.id]);
-		if (!expected || !given) {
-			return score;
-		}
-		return score + Number(expected.includes(given) || given.includes(expected));
-	}, 0);
+	const myNotebooks = useMemo(() => overview.myNotebooks.slice(0, 6), [overview.myNotebooks]);
+	const discoverNotebooks = useMemo(
+		() => overview.discoverNotebooks.slice(0, 8),
+		[overview.discoverNotebooks]
+	);
 
 	return (
-		<div className="notebook-page">
-			<section className="notebook-hero">
-				<div className="notebook-hero-copy">
-					<div className="notebook-kicker">
-						<BookOpen size={16} />
-						<span>Notebook</span>
-					</div>
-					<h1>Sổ tay học tập</h1>
-					<p>
-						Lưu từ vựng, kanji và ngữ pháp vào từng sổ tay riêng, rồi học lại bằng
-						flashcard, quizz và mini test ngay trong một màn hình.
-					</p>
-					<div className="notebook-hero-actions">
-						<button type="button" onClick={() => history.push("/")}>Quay về trang chủ</button>
-					</div>
-				</div>
-				<div className="notebook-hero-card">
-					<h2>Tạo sổ tay mới</h2>
-					<p>Nhập tên và bắt đầu lưu các mục từ dictionary, kanji hoặc ngữ pháp.</p>
-					<div className="notebook-create-row">
-						<input
-							type="text"
-							placeholder="Tên sổ tay"
-							value={createName}
-							onChange={(event) => setCreateName(event.target.value)}
-						/>
-						<button type="button" onClick={handleCreateNotebook} disabled={createLoading}>
-							<Plus size={16} />
-							<span>{createLoading ? "Đang tạo..." : "Tạo sổ tay"}</span>
-						</button>
+		<div className="notebook-page overview-only">
+			{isCreateModalOpen && (
+				<div className="create-modal-overlay" onMouseDown={() => setIsCreateModalOpen(false)}>
+					<div className="create-modal" onMouseDown={(event) => event.stopPropagation()}>
+						<div className="create-modal-head">
+							<h3>Tạo sổ tay mới</h3>
+							<button type="button" onClick={() => setIsCreateModalOpen(false)}>
+								<X size={18} />
+							</button>
+						</div>
+						<div className="create-modal-body">
+							<input
+								type="text"
+								placeholder="Nhập tên sổ tay"
+								value={createNotebookName}
+								onChange={(event) => setCreateNotebookName(event.target.value)}
+							/>
+						</div>
+						<div className="create-modal-actions">
+							<button type="button" className="btn-cancel" onClick={() => setIsCreateModalOpen(false)}>
+								Hủy
+							</button>
+							<button type="button" className="btn-save" onClick={handleCreateNotebook} disabled={createLoading}>
+								{createLoading ? "Đang lưu..." : "Lưu"}
+							</button>
+						</div>
 					</div>
 				</div>
-			</section>
+			)}
 
 			{pageMessage && <div className="notebook-message">{pageMessage}</div>}
 
-			<section className="notebook-sections">
-				<div className="notebook-section">
-					<div className="section-head">
-						<h2>Sổ tay của tôi</h2>
-						<span>{overview.myNotebooks.length}</span>
-					</div>
-					<div className="notebook-grid">
-						{overview.myNotebooks.map((notebook) => (
-							<button
-								type="button"
-								className={`notebook-card ${selectedNotebook?.id === notebook.id ? "active" : ""}`}
-								key={notebook.id}
-								onClick={() => selectNotebook(notebook)}
-							>
-								<h3>{notebook.name}</h3>
-								<p>{notebook.description || "Chưa có mô tả"}</p>
-								<small>{notebook.itemsCount} mục</small>
-							</button>
-						))}
-						{!overview.myNotebooks.length && !loading && (
-							<div className="notebook-empty-card">Chưa có sổ tay nào.</div>
-						)}
-					</div>
+			<section className="section-card">
+				<div className="section-title-row">
+					<h2>Sổ tay</h2>
+					<button type="button" className="view-more-btn">Xem thêm</button>
 				</div>
+				<div className="cards-grid my-grid">
+					<button
+						type="button"
+						className="create-notebook-card"
+						onClick={() => setIsCreateModalOpen(true)}
+					>
+						<PlusCircle size={18} />
+						<span>Tạo sổ tay mới</span>
+					</button>
 
-				<div className="notebook-section">
-					<div className="section-head">
-						<h2>Khám phá</h2>
-						<span>{overview.discoverNotebooks.length}</span>
-					</div>
-					<div className="notebook-grid discover-grid">
-						{overview.discoverNotebooks.map((notebook) => (
-							<button
-								type="button"
-								className={`notebook-card discover ${selectedNotebook?.id === notebook.id ? "active" : ""}`}
-								key={notebook.id}
-								onClick={() => selectNotebook(notebook)}
-							>
-								<div className="discover-owner">
-									<span>{notebook.owner?.username || "Ẩn danh"}</span>
-									<ChevronRight size={14} />
-								</div>
-								<h3>{notebook.name}</h3>
-								<p>{notebook.description || "Sổ tay nổi bật"}</p>
-								<small>{notebook.itemsCount} mục</small>
-							</button>
-						))}
-						{!overview.discoverNotebooks.length && !loading && (
-							<div className="notebook-empty-card">Chưa có sổ tay để khám phá.</div>
-						)}
-					</div>
+					{myNotebooks.map((item) => (
+						<button type="button" key={item.id} className="notebook-item-card" onClick={() => history.push(`/notebook/${item.id}`)}>
+							<h3>{item.name}</h3>
+							<p>({item.itemsCount || 0} từ)</p>
+							<div className="card-meta-date">Ngày tạo: {formatDate(item.createdAt)}</div>
+						</button>
+					))}
+
+					{!loading && myNotebooks.length === 0 && (
+						<div className="empty-card">Bạn chưa có sổ tay nào.</div>
+					)}
 				</div>
 			</section>
 
-			<section className="notebook-workbench">
-				<div className="workbench-head">
-					<div>
-						<h2>{selectedNotebookDetail?.name || "Chọn một sổ tay"}</h2>
-						<p>{selectedNotebookDetail?.description || "Mở sổ tay để xem danh sách từ và chế độ học."}</p>
-					</div>
-					<div className="workbench-meta">
-						<span>{activeItems.length} mục</span>
-						<span>{selectedNotebookDetail?.owner?.username || selectedNotebook?.owner?.username || "Bạn"}</span>
-					</div>
+			<section className="section-card">
+				<div className="section-title-row">
+					<h2>Khám phá</h2>
+					<button type="button" className="view-more-btn">Xem thêm</button>
 				</div>
+				<div className="cards-grid discover-grid">
+					{discoverNotebooks.map((item) => (
+						<button
+							type="button"
+							key={item.id}
+							className="discover-item-card"
+							onClick={() => history.push(`/notebook/${item.id}`)}
+						>
+							<h3>{item.name}</h3>
+							<p>({item.itemsCount || 0} từ)</p>
+							<div className="card-meta-row">
+								<span>{item.owner?.username || "Ẩn danh"}</span>
+								<span className="views"><Eye size={14} /> {pseudoViews(item.id)}</span>
+							</div>
+						</button>
+					))}
 
-				<div className="mode-tabs">
-					<button type="button" className={activeMode === "flashcard" ? "active" : ""} onClick={() => setActiveMode("flashcard")}>
-						<Layers3 size={16} />
-						<span>Flashcard</span>
-					</button>
-					<button type="button" className={activeMode === "quiz" ? "active" : ""} onClick={() => setActiveMode("quiz")}>
-						<Brain size={16} />
-						<span>Quizz</span>
-					</button>
-					<button type="button" className={activeMode === "mini" ? "active" : ""} onClick={() => setActiveMode("mini")}>
-						<Target size={16} />
-						<span>Mini Test</span>
-					</button>
+					{!loading && discoverNotebooks.length === 0 && (
+						<div className="empty-card">Chưa có sổ tay khám phá.</div>
+					)}
 				</div>
+			</section>
 
-				{loading && <div className="workbench-empty">Đang tải sổ tay...</div>}
-
-				{!loading && (
-					<>
-						{activeMode === "flashcard" && (
-							<div className="mode-panel flashcard-panel">
-								{flashItem ? (
-									<>
-										<div className="flashcard-card">
-											<div className="flashcard-label">{flashItem.item?.type || "item"}</div>
-											<h3>{flashItem.item?.title || "Không có tiêu đề"}</h3>
-											<p>{flashRevealed ? notebookValue(flashItem) : "Nhấn để xem đáp án"}</p>
-										</div>
-										<div className="mode-actions">
-											<button type="button" onClick={() => setFlashRevealed((prev) => !prev)}>
-												{flashRevealed ? "Ẩn đáp án" : "Lật thẻ"}
-											</button>
-											<button type="button" onClick={handleFlashNext}>
-												<RotateCcw size={16} />
-												<span>Thẻ tiếp</span>
-											</button>
-										</div>
-									</>
-								) : (
-									<div className="workbench-empty">Sổ tay này chưa có mục nào.</div>
-								)}
+			<section className="section-card premium-section">
+				<div className="section-title-row">
+					<h2>Prenium</h2>
+					<button type="button" className="view-more-btn">Xem thêm</button>
+				</div>
+				<div className="cards-grid premium-grid">
+					{premiumSeed.map((item) => (
+						<div key={item.id} className="premium-item-card">
+							<h3>{item.name}</h3>
+							<p>({item.meta})</p>
+							<div className="card-meta-row">
+								<span>{item.owner}</span>
+								<span className="views"><Eye size={14} /> {item.views}</span>
 							</div>
-						)}
-
-						{activeMode === "quiz" && (
-							<div className="mode-panel quiz-panel">
-								{quizItem ? (
-									<>
-										<div className="quiz-card">
-											<div className="quiz-question">Hãy đoán nghĩa của:</div>
-											<h3>{quizItem.item?.title || "Mục hiện tại"}</h3>
-											<p>{quizItem.item?.subtitle || ""}</p>
-											<input
-												type="text"
-												placeholder="Nhập đáp án"
-												value={quizAnswer}
-												onChange={(event) => setQuizAnswer(event.target.value)}
-											/>
-											{quizFeedback && <div className="quiz-feedback">{quizFeedback}</div>}
-										</div>
-										<div className="mode-actions">
-											<button type="button" onClick={handleQuizCheck}>Kiểm tra</button>
-											<button type="button" onClick={handleQuizNext}>
-												<ChevronRight size={16} />
-												<span>Câu tiếp</span>
-											</button>
-										</div>
-									</>
-								) : (
-									<div className="workbench-empty">Sổ tay này chưa có mục nào.</div>
-								)}
-							</div>
-						)}
-
-						{activeMode === "mini" && (
-							<div className="mode-panel mini-panel">
-								{miniItems.length ? (
-									<>
-										<div className="mini-head">
-											<Shuffle size={16} />
-											<span>Làm nhanh 5 câu từ notebook hiện tại</span>
-										</div>
-										<div className="mini-list">
-											{miniItems.map((item, index) => (
-												<label key={item.id} className="mini-item">
-													<div>
-														<strong>{index + 1}. {item.item?.title}</strong>
-														<p>{item.item?.subtitle || item.item?.meaning}</p>
-													</div>
-													<input
-														type="text"
-														placeholder="Đáp án ngắn"
-														value={miniAnswers[item.id] || ""}
-														onChange={(event) =>
-															setMiniAnswers((prev) => ({ ...prev, [item.id]: event.target.value }))
-														}
-													/>
-												</label>
-											))}
-										</div>
-										<div className="mode-actions">
-											<button type="button" onClick={() => setMiniSubmitted(true)}>
-												<ListChecks size={16} />
-												<span>Chấm điểm</span>
-											</button>
-											<div className="mini-score">{miniSubmitted ? `${miniScore}/${miniItems.length}` : "Chưa chấm"}</div>
-										</div>
-									</>
-								) : (
-									<div className="workbench-empty">Sổ tay này chưa có mục nào.</div>
-								)}
-							</div>
-						)}
-					</>
-				)}
+						</div>
+					))}
+				</div>
 			</section>
 		</div>
 	);

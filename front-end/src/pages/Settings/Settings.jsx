@@ -586,7 +586,7 @@ const Settings = () => {
                                 </a>
                                 <div className="app-info">
                                     <p>Version 1.0.0</p>
-                                    <p>© 2024 Bird Social Media</p>
+                                    <p>© 2026 Jp Dictionary</p>
                                 </div>
                             </div>
                         </div>

@@ -118,9 +118,70 @@ const HandleAddNotebookItem = async (req, res) => {
 	}
 };
 
+const HandleUpdateNotebook = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		if (!userId) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const notebookId = Number(req.params.id);
+		const result = await notebookService.updateNotebook(userId, notebookId, req.body);
+		if (result.errCode !== 0) {
+			return res.status(400).json(result);
+		}
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "Notebook updated",
+			notebook: result.notebook,
+		});
+	} catch (error) {
+		console.error("Error in HandleUpdateNotebook:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
+const HandleDeleteNotebook = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		if (!userId) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const notebookId = Number(req.params.id);
+		const result = await notebookService.deleteNotebook(userId, notebookId);
+		if (result.errCode !== 0) {
+			return res.status(400).json(result);
+		}
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "Notebook deleted",
+		});
+	} catch (error) {
+		console.error("Error in HandleDeleteNotebook:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
 module.exports = {
 	HandleGetNotebookOverview,
 	HandleGetNotebookDetail,
 	HandleCreateNotebook,
 	HandleAddNotebookItem,
+	HandleUpdateNotebook,
+	HandleDeleteNotebook,
 };

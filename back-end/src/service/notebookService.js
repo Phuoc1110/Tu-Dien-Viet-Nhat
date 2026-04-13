@@ -218,9 +218,51 @@ const addItemToNotebook = async (userId, notebookId, data) => {
 	return { errCode: 0, item: createdItem.get({ plain: true }) };
 };
 
+const updateNotebook = async (userId, notebookId, data) => {
+	const name = String(data?.name || "").trim();
+	if (!name) {
+		return { errCode: 1, errMessage: "Notebook name is required" };
+	}
+
+	const notebook = await db.Notebook.findOne({
+		where: { id: notebookId, userId },
+	});
+
+	if (!notebook) {
+		return { errCode: 2, errMessage: "Notebook not found" };
+	}
+
+	notebook.name = name;
+	await notebook.save();
+
+	return { errCode: 0, notebook: notebook.get({ plain: true }) };
+};
+
+const deleteNotebook = async (userId, notebookId) => {
+	const notebook = await db.Notebook.findOne({
+		where: { id: notebookId, userId },
+	});
+
+	if (!notebook) {
+		return { errCode: 2, errMessage: "Notebook not found" };
+	}
+
+	await db.NotebookItem.destroy({
+		where: { notebookId },
+	});
+
+	await db.Notebook.destroy({
+		where: { id: notebookId },
+	});
+
+	return { errCode: 0 };
+};
+
 module.exports = {
 	getNotebookOverview,
 	getNotebookDetail,
 	createNotebook,
 	addItemToNotebook,
+	updateNotebook,
+	deleteNotebook,
 };

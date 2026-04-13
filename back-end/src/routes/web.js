@@ -94,6 +94,8 @@ let initWebRoutes = (app) => {
 	router.get("/api/notebooks/:id", notebookController.HandleGetNotebookDetail);
 	router.post("/api/notebooks", notebookController.HandleCreateNotebook);
 	router.post("/api/notebooks/:id/items", notebookController.HandleAddNotebookItem);
+	router.put("/api/notebooks/:id", notebookController.HandleUpdateNotebook);
+	router.delete("/api/notebooks/:id", notebookController.HandleDeleteNotebook);
 
 	// Admin - Dashboard
 	router.get("/api/admin/dashboard", adminController.getDashboard);
