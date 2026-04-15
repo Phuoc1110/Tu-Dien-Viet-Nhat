@@ -344,7 +344,7 @@ const DictionaryPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>Tìm kiếm</button>
+							<button>🔍</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						

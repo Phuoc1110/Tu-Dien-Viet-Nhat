@@ -367,7 +367,7 @@ const KanjiPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>Tìm kiếm</button>
+							<button>🔍</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhật - Việt</button>

@@ -7,6 +7,7 @@ import {
 	LogIn,
 	ChevronDown,
 	Crown,
+	BookOpen,
 	NotebookText,
 	BadgeJapaneseYen,
 } from "lucide-react";
@@ -80,6 +81,14 @@ const Navbar = ({ title = "HomePage" }) => {
 				</div>
 
 				<div className="navbar-shortcuts">
+					<button
+						type="button"
+						className="navbar-shortcut"
+						onClick={() => history.push("/")}
+					>
+						<BookOpen size={16} />
+						<span>Dictionary</span>
+					</button>
 					<button
 						type="button"
 						className="navbar-shortcut"

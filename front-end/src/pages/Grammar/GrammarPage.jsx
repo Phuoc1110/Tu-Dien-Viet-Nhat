@@ -159,7 +159,7 @@ const GrammarPage = () => {
 			<div className="mazii-shell">
 				<div className="mazii-search-wrap" ref={searchWrapRef}>
 					<div className="mazii-search-bar">
-						<div className="search-leading">Ngu phap</div>
+						<div className="search-leading">Ngữ Pháp</div>
 						<input
 							type="text"
 							placeholder="Tra ngu phap"
@@ -169,7 +169,7 @@ const GrammarPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>Tim kiem</button>
+							<button>🔍</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>

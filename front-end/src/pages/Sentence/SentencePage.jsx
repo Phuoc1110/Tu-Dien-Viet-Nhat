@@ -139,7 +139,7 @@ const SentencePage = () => {
 			<div className="mazii-shell">
 				<div className="mazii-search-wrap" ref={searchWrapRef}>
 					<div className="mazii-search-bar">
-						<div className="search-leading">Mau cau</div>
+						<div className="search-leading">Ví Dụ</div>
 						<input
 							type="text"
 							placeholder="Tra mau cau"
@@ -149,7 +149,7 @@ const SentencePage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>Tim kiem</button>
+							<button>🔍</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>

@@ -89,7 +89,11 @@ const NotebookPage = () => {
 		setCreateLoading(false);
 	};
 
-	const myNotebooks = useMemo(() => overview.myNotebooks.slice(0, 6), [overview.myNotebooks]);
+	const myNotebooks = useMemo(() => {
+		return [...overview.myNotebooks]
+			.sort((a, b) => (b.itemsCount || 0) - (a.itemsCount || 0))
+			.slice(0, 5);
+	}, [overview.myNotebooks]);
 	const discoverNotebooks = useMemo(
 		() => overview.discoverNotebooks.slice(0, 8),
 		[overview.discoverNotebooks]
@@ -131,7 +135,13 @@ const NotebookPage = () => {
 			<section className="section-card">
 				<div className="section-title-row">
 					<h2>Sổ tay</h2>
-					<button type="button" className="view-more-btn">Xem thêm</button>
+					<button
+						type="button"
+						className="view-more-btn"
+						onClick={() => history.push("/notebook/list")}
+					>
+						Xem thêm
+					</button>
 				</div>
 				<div className="cards-grid my-grid">
 					<button
@@ -174,7 +184,7 @@ const NotebookPage = () => {
 							<p>({item.itemsCount || 0} từ)</p>
 							<div className="card-meta-row">
 								<span>{item.owner?.username || "Ẩn danh"}</span>
-								<span className="views"><Eye size={14} /> {pseudoViews(item.id)}</span>
+								{/* <span className="views"><Eye size={14} /> {pseudoViews(item.id)}</span> */}
 							</div>
 						</button>
 					))}
