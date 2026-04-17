@@ -303,6 +303,13 @@
   min-height: 94px;
 }
 
+.word-line-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .word-item-card.placeholder {
   background: transparent;
 }
@@ -334,6 +341,12 @@
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.add-note-inline {
+  margin-left: auto;
 }
 
 .word-pagination {

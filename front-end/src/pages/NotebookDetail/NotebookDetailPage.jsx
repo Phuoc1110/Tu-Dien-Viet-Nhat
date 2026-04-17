@@ -49,6 +49,11 @@ const NotebookDetailPage = () => {
 	const [flashIndex, setFlashIndex] = useState(0);
 	const [isCardFlipped, setIsCardFlipped] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [fieldVisibility, setFieldVisibility] = useState({
+		vocabulary: false,
+		reading: false,
+		meaning: false,
+	});
 
 	const currentUserId = user?.account?.id;
 	const isOwner = useMemo(() => {
@@ -196,6 +201,12 @@ const NotebookDetailPage = () => {
 	const gotoPreviousPage = () => setCurrentPage((prev) => Math.max(1, prev - 1));
 	const gotoNextPage = () => setCurrentPage((prev) => Math.min(totalPages, prev + 1));
 	const gotoLastPage = () => setCurrentPage(totalPages);
+	const toggleFieldVisibility = (field) => {
+		setFieldVisibility((prev) => ({
+			...prev,
+			[field]: !prev[field],
+		}));
+	};
 
 	return (
 		<div className="notebook-detail-page">
@@ -330,9 +341,30 @@ const NotebookDetailPage = () => {
 							<div className="notebook-word-panel">
 								<div className="word-panel-tools">
 									<div className="tool-left">
-										<label><input type="checkbox" defaultChecked /> Từ vựng</label>
-										<label><input type="checkbox" defaultChecked /> Phiên âm</label>
-										<label><input type="checkbox" defaultChecked /> Nghĩa</label>
+										<label>
+											<input
+												type="checkbox"
+												checked={fieldVisibility.vocabulary}
+												onChange={() => toggleFieldVisibility("vocabulary")}
+											/>
+											Từ vựng
+										</label>
+										<label>
+											<input
+												type="checkbox"
+												checked={fieldVisibility.reading}
+												onChange={() => toggleFieldVisibility("reading")}
+											/>
+											Phiên âm
+										</label>
+										<label>
+											<input
+												type="checkbox"
+												checked={fieldVisibility.meaning}
+												onChange={() => toggleFieldVisibility("meaning")}
+											/>
+											Nghĩa
+										</label>
 										<button type="button" className="tiny-btn" aria-label="note"><Edit3 size={14} /></button>
 									</div>
 									<div className="tool-right">
@@ -352,13 +384,30 @@ const NotebookDetailPage = () => {
 										<div key={`row-${index}`} className="word-row">
 											{row.map((entry) => (
 												<div key={entry.id} className="word-item-card">
-													<div className="word-main-line">
-														<Volume2 size={18} />
-														<strong>{entry.item?.title || "-"}</strong>
+													{fieldVisibility.vocabulary && (
+														<div className="word-line-row">
+															<div className="word-main-line">
+																<Volume2 size={18} />
+																<strong>{entry.item?.title || "-"}</strong>
+															</div>
+														</div>
+													)}
+													{fieldVisibility.reading && (
+														<div className="word-line-row">
+															<p className="word-sub">{entry.item?.subtitle || "-"}</p>
+														</div>
+													)}
+													{fieldVisibility.meaning && (
+														<div className="word-line-row">
+															<p className="word-meaning">{entry.item?.meaning || "-"}</p>
+														</div>
+													)}
+													{!fieldVisibility.vocabulary && !fieldVisibility.reading && !fieldVisibility.meaning && (
+														<div className="word-empty-line">&nbsp;</div>
+													)}
+													<div className="word-note-row">
+														<button type="button" className="add-note-btn">+ Thêm ghi chú</button>
 													</div>
-													<p className="word-sub">{entry.item?.subtitle || ""}</p>
-													<p className="word-meaning">{entry.item?.meaning || "-"}</p>
-													<button type="button" className="add-note-btn">+ Thêm ghi chú</button>
 												</div>
 											))}
 											{row.length === 1 && <div className="word-item-card placeholder" />}
