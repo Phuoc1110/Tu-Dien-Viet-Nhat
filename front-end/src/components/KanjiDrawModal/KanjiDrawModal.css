@@ -69,12 +69,15 @@
 	touch-action: none;
 	display: block;
 	margin: 0;
+	box-sizing: border-box;
 }
 
 .kanji-draw-actions {
 	margin-top: 8px;
 	display: flex;
-	justify-content: flex-end;
+	justify-content: flex-start;
+	align-items: center;
+	flex-wrap: wrap;
 	gap: 8px;
 }
 
@@ -91,10 +94,11 @@
 }
 
 .kanji-draw-candidates {
-	margin-top: 8px;
+	margin-top: 0;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
+	flex: 1;
 	max-height: 88px;
 	overflow: auto;
 }

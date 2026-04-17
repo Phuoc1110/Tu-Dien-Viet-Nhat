@@ -39,6 +39,8 @@ const defaultForm = {
 	isCommon: false,
 };
 
+const AUDIT_PAGE_SIZE = 20;
+
 const Admin = () => {
 	const history = useHistory();
 	const { logoutAdminContext } = useContext(UserContext);
@@ -59,6 +61,13 @@ const Admin = () => {
 	const [resetPasswordMap, setResetPasswordMap] = useState({});
 
 	const [auditLogs, setAuditLogs] = useState([]);
+	const [auditPage, setAuditPage] = useState(1);
+	const [auditPagination, setAuditPagination] = useState({
+		page: 1,
+		limit: AUDIT_PAGE_SIZE,
+		totalItems: 0,
+		totalPages: 1,
+	});
 
 	const loadDashboard = async () => {
 		const res = await getAdminDashboard();
@@ -91,10 +100,18 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể tải danh sách người dùng");
 	};
 
-	const loadAuditLogs = async () => {
-		const res = await getAdminAuditLogs({ limit: 80 });
+	const loadAuditLogs = async (page = auditPage) => {
+		const res = await getAdminAuditLogs({ page, limit: AUDIT_PAGE_SIZE });
 		if (res?.errCode === 0) {
-			setAuditLogs(res.data || []);
+			setAuditLogs(res.data?.items || []);
+			setAuditPagination(
+				res.data?.pagination || {
+					page,
+					limit: AUDIT_PAGE_SIZE,
+					totalItems: 0,
+					totalPages: 1,
+				}
+			);
 			return;
 		}
 		toast.error(res?.errMessage || "Không thể tải audit logs");
@@ -130,6 +147,13 @@ const Admin = () => {
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [userQuery]);
+
+	useEffect(() => {
+		if (tab === "audit") {
+			loadAuditLogs(auditPage);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [auditPage]);
 
 	const handleLogout = async () => {
 		const res = await LogOutAdmin();
@@ -246,6 +270,18 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể reset mật khẩu");
 	};
 
+	const formatAuditDetails = (details) => {
+		if (!details) {
+			return "-";
+		}
+		try {
+			const parsed = typeof details === "string" ? JSON.parse(details) : details;
+			return JSON.stringify(parsed, null, 2);
+		} catch (_e) {
+			return String(details);
+		}
+	};
+
 	const statsCards = useMemo(() => {
 		const summary = dashboard?.summary || {};
 		return [
@@ -360,7 +396,7 @@ const Admin = () => {
 							<input placeholder="Kanji/Từ" value={vocabularyForm.word} onChange={(e) => setVocabularyForm((p) => ({ ...p, word: e.target.value }))} />
 							<input placeholder="Hiragana/Katakana" value={vocabularyForm.reading} onChange={(e) => setVocabularyForm((p) => ({ ...p, reading: e.target.value }))} />
 							<input placeholder="Romaji" value={vocabularyForm.romaji} onChange={(e) => setVocabularyForm((p) => ({ ...p, romaji: e.target.value }))} />
-							<input placeholder="Từ loại" value={vocabularyForm.partOfSpeech} onChange={(e) => setVocabularyForm((p) => ({ ...p, partOfSpeech: e.target.value }))} />
+							{/* <input placeholder="Từ loại" value={vocabularyForm.partOfSpeech} onChange={(e) => setVocabularyForm((p) => ({ ...p, partOfSpeech: e.target.value }))} /> */}
 							<select value={vocabularyForm.jlptLevel} onChange={(e) => setVocabularyForm((p) => ({ ...p, jlptLevel: e.target.value }))}>
 								<option value="">JLPT</option>
 								<option value="5">N5</option>
@@ -556,11 +592,32 @@ const Admin = () => {
 											<td>{log.admin?.username || log.admin?.email || "Unknown"}</td>
 											<td>{log.actionType}</td>
 											<td>{log.targetType} #{log.targetId || "-"}</td>
-											<td className="log-details">{log.details || "-"}</td>
+											<td className="log-details">{formatAuditDetails(log.details)}</td>
 										</tr>
 									))}
 								</tbody>
 							</table>
+						</div>
+						<div className="admin2-pagination">
+							<button
+								type="button"
+								disabled={auditPagination.page <= 1}
+								onClick={() => setAuditPage((prev) => Math.max(1, prev - 1))}
+							>
+								Trước
+							</button>
+							<span>
+								Trang {auditPagination.page}/{auditPagination.totalPages} • {auditPagination.totalItems} bản ghi
+							</span>
+							<button
+								type="button"
+								disabled={auditPagination.page >= auditPagination.totalPages}
+								onClick={() =>
+									setAuditPage((prev) => Math.min(auditPagination.totalPages, prev + 1))
+								}
+							>
+								Sau
+							</button>
 						</div>
 					</div>
 				</div>

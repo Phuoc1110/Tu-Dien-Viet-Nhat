@@ -283,10 +283,10 @@ const GrammarPage = () => {
 										</div>
 									</div>
 
-									<div className="detail-section contribution-box">
+									{/* <div className="detail-section contribution-box">
 										<h3>Co 7 y kien dong gop</h3>
 										<p>Ban co the them gop y hoac vi du de bo sung muc nay.</p>
-									</div>
+									</div> */}
 								</>
 							)}
 						</div>

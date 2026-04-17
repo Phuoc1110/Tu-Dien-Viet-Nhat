@@ -423,9 +423,18 @@ const resetUserPassword = async ({ adminId, userId, newPassword }) => {
     });
 };
 
-const getAuditLogs = async ({ limit = 50 }) => {
+const getAuditLogs = async ({ page = 1, limit = 50, actionType = "" }) => {
+    const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
     const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 50;
-    const logs = await db.AdminLog.findAll({
+    const offset = (safePage - 1) * safeLimit;
+
+    const where = {};
+    if (actionType) {
+        where.actionType = { [Op.like]: `%${String(actionType).trim()}%` };
+    }
+
+    const { rows, count } = await db.AdminLog.findAndCountAll({
+        where,
         include: [
             {
                 model: db.User,
@@ -436,9 +445,19 @@ const getAuditLogs = async ({ limit = 50 }) => {
         ],
         order: [["createdAt", "DESC"]],
         limit: safeLimit,
+        offset,
+        distinct: true,
     });
 
-    return logs;
+    return {
+        items: rows,
+        pagination: {
+            page: safePage,
+            limit: safeLimit,
+            totalItems: count,
+            totalPages: Math.max(1, Math.ceil(count / safeLimit)),
+        },
+    };
 };
 
 module.exports = {

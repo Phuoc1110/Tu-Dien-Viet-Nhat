@@ -305,6 +305,33 @@
 	word-break: break-word;
 }
 
+.admin2-pagination {
+	margin-top: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.admin2-pagination button {
+	border: 1px solid #dbe4ef;
+	background: #f8fafc;
+	color: #334155;
+	border-radius: 4px;
+	padding: 6px 10px;
+	cursor: pointer;
+}
+
+.admin2-pagination button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.admin2-pagination span {
+	font-size: 0.9rem;
+	color: #334155;
+}
+
 @media (max-width: 1024px) {
 	.admin2-cards {
 		grid-template-columns: repeat(2, minmax(0, 1fr));

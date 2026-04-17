@@ -4,6 +4,7 @@ import "./KanjiDrawModal.css";
 
 const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 	const canvasRef = useRef(null);
+	const boardWrapRef = useRef(null);
 	const ctxRef = useRef(null);
 	const canvasSizeRef = useRef({ width: 280, height: 280 });
 	const drawingRef = useRef(false);
@@ -18,12 +19,12 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 	const [panelStyle, setPanelStyle] = useState(null);
 
 	useEffect(() => {
-		if (!open || !canvasRef.current) {
+		if (!open || !canvasRef.current || !boardWrapRef.current) {
 			return;
 		}
 
-		const anchorWidth = anchorRef?.current?.getBoundingClientRect?.()?.width || 640;
-		const displayWidth = Math.max(280, Math.min(Math.floor(anchorWidth - 36), 1120));
+		const boardInnerWidth = Math.max(180, Math.floor(boardWrapRef.current.clientWidth - 16));
+		const displayWidth = boardInnerWidth;
 		const displayHeight = Math.max(220, Math.min(Math.floor(displayWidth * 0.34), 330));
 		canvasSizeRef.current = { width: displayWidth, height: displayHeight };
 
@@ -51,7 +52,7 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 			clearTimeout(recognizeTimerRef.current);
 			recognizeTimerRef.current = null;
 		}
-	}, [open, anchorRef]);
+	}, [open, anchorRef, panelStyle?.width]);
 
 	useEffect(() => {
 		return () => {
@@ -219,6 +220,7 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 		if (!normalized) {
 			return;
 		}
+		clearCanvas();
 		onPick?.(normalized);
 	};
 
@@ -232,13 +234,13 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 				<div className="kanji-draw-head">
 					<h3>Vẽ chữ Kanji</h3>
 					<button type="button" onClick={onClose}>
-						Dong
+						Close
 					</button>
 				</div>
 
-				<p className="kanji-draw-hint">Hệ thống tự nhận diện sau mỗi nét vẽ.</p>
+				{/* <p className="kanji-draw-hint">Hệ thống tự nhận diện sau mỗi nét vẽ.</p> */}
 
-				<div className="kanji-draw-board-wrap">
+				<div className="kanji-draw-board-wrap" ref={boardWrapRef}>
 					<canvas
 						ref={canvasRef}
 						className="kanji-draw-canvas"
@@ -251,27 +253,28 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 
 				<div className="kanji-draw-actions">
 					<button type="button" onClick={clearCanvas}>
-						Xoa net
+						Delete
 					</button>
+					{candidates.length > 0 && (
+						<div className="kanji-draw-candidates">
+							{candidates.slice(0, 8).map((item, idx) => (
+								<button
+									key={`${item}-${idx}`}
+									type="button"
+									onClick={() => applyPickedChar(item)}
+								>
+									{item}
+								</button>
+							))}
+						</div>
+					)}
 				</div>
 
 				{recognizing}
 
 				{recognizeError && <p className="kanji-draw-error">{recognizeError}</p>}
 
-				{candidates.length > 0 && (
-					<div className="kanji-draw-candidates">
-						{candidates.slice(0, 8).map((item, idx) => (
-							<button
-								key={`${item}-${idx}`}
-								type="button"
-								onClick={() => applyPickedChar(item)}
-							>
-								{item}
-							</button>
-						))}
-					</div>
-				)}
+
 			</div>
 		</div>
 	);
