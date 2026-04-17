@@ -10,6 +10,7 @@ import GrammarPage from "../pages/Grammar/GrammarPage";
 import NotebookPage from "../pages/Notebook/NotebookPage";
 import NotebookListPage from "../pages/NotebookList/NotebookListPage";
 import NotebookDetailPage from "../pages/NotebookDetail/NotebookDetailPage";
+import ExploreNotebookPage from "../pages/ExploreNotebook/ExploreNotebookPage";
 import JpltPage from "../pages/Jplt/JpltPage";
 import PrivateRoutes from "./PrivateRoutes";
 import PrivateRoutesRole from "./PrivateRoutesRole";
@@ -38,6 +39,7 @@ const ClientRoute = () => {
 				<Route path="/grammar" component={GrammarPage} />
 				<Route path="/notebook" exact component={NotebookPage} />
 				<Route path="/notebook/list" component={NotebookListPage} />
+				<Route path="/notebook/explore" component={ExploreNotebookPage} />
 				<Route path="/notebook/:id" component={NotebookDetailPage} />
 				<Route path={["/jplt", "/jlpt"]} component={JpltPage} />
 				<Route path="/search-word">

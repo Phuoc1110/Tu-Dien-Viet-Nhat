@@ -255,7 +255,7 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 					</button>
 				</div>
 
-				{recognizing && <p className="kanji-draw-working">Dang nhan dien...</p>}
+				{recognizing}
 
 				{recognizeError && <p className="kanji-draw-error">{recognizeError}</p>}
 

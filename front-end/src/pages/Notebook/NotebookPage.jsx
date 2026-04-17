@@ -95,7 +95,7 @@ const NotebookPage = () => {
 			.slice(0, 5);
 	}, [overview.myNotebooks]);
 	const discoverNotebooks = useMemo(
-		() => overview.discoverNotebooks.slice(0, 8),
+		() => overview.discoverNotebooks.slice(0, 4),
 		[overview.discoverNotebooks]
 	);
 
@@ -170,7 +170,7 @@ const NotebookPage = () => {
 			<section className="section-card">
 				<div className="section-title-row">
 					<h2>Khám phá</h2>
-					<button type="button" className="view-more-btn">Xem thêm</button>
+					<button type="button" className="view-more-btn" onClick={() => history.push("/notebook/explore")}>Xem thêm</button>
 				</div>
 				<div className="cards-grid discover-grid">
 					{discoverNotebooks.map((item) => (
@@ -178,7 +178,7 @@ const NotebookPage = () => {
 							type="button"
 							key={item.id}
 							className="discover-item-card"
-							onClick={() => history.push(`/notebook/${item.id}`)}
+							onClick={() => history.push(`/notebook/${item.id}`, { fromExplore: true })}
 						>
 							<h3>{item.name}</h3>
 							<p>({item.itemsCount || 0} từ)</p>

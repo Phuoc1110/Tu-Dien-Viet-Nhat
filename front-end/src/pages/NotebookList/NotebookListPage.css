@@ -104,8 +104,8 @@
   gap: 14px;
 }
 
-.my-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.notebook-list-page .my-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .create-notebook-card {
@@ -122,16 +122,16 @@
   cursor: pointer;
 }
 
-.notebook-item-card,
+/* .notebook-item-card,
 .empty-card {
   min-height: 122px;
   border-radius: 16px;
   border: 1px solid #d9e2ec;
   padding: 14px;
   text-align: left;
-}
+} */
 
-.notebook-item-card {
+/* .notebook-item-card {
   background: #f8fafc;
   cursor: pointer;
 }
@@ -151,7 +151,7 @@
   font-style: italic;
   color: #7c8ba1;
   font-size: 1rem;
-}
+} */
 
 .card-meta-date {
   margin-top: 12px;
@@ -257,7 +257,7 @@
 }
 
 @media (max-width: 1160px) {
-  .my-grid {
+  .notebook-list-page .my-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -272,7 +272,7 @@
     min-width: 0;
   }
 
-  .my-grid {
+  .notebook-list-page .my-grid {
     grid-template-columns: 1fr;
   }
 }

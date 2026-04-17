@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory, useLocation, useParams } from "react-router-dom";
 import {
 	ChevronLeft,
 	ChevronRight,
@@ -36,6 +36,7 @@ const WORDS_PER_PAGE = 10;
 
 const NotebookDetailPage = () => {
 	const history = useHistory();
+	const location = useLocation();
 	const { id } = useParams();
 	const { user } = useContext(UserContext);
 	const [loading, setLoading] = useState(true);
@@ -50,10 +51,11 @@ const NotebookDetailPage = () => {
 	const [isCardFlipped, setIsCardFlipped] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [fieldVisibility, setFieldVisibility] = useState({
-		vocabulary: false,
-		reading: false,
-		meaning: false,
+		vocabulary: true,
+		reading: true,
+		meaning: true,
 	});
+	const cameFromExplore = Boolean(location.state?.fromExplore);
 
 	const currentUserId = user?.account?.id;
 	const isOwner = useMemo(() => {
@@ -214,7 +216,13 @@ const NotebookDetailPage = () => {
 				<div className="notebook-detail-breadcrumb">
 					<button type="button" className="breadcrumb-link-btn" onClick={() => history.push("/notebook")}>Từ của tôi</button>
 					<span>/</span>
-					<button type="button" className="breadcrumb-link-btn" onClick={() => history.push("/notebook/list")}>Danh sách sổ tay</button>
+					<button
+						type="button"
+						className="breadcrumb-link-btn"
+						onClick={() => history.push(cameFromExplore ? "/notebook/explore" : "/notebook/list")}
+					>
+						{cameFromExplore ? "Khám phá" : "Danh sách sổ tay"}
+					</button>
 					<span>/</span>
 					{" "}
 					<button
@@ -280,9 +288,9 @@ const NotebookDetailPage = () => {
 								<div className="flashcard-mode-header">
 									<h2>Từ vựng</h2>
 									<div className="flashcard-mode-actions">
-										<select>
+										{/* <select>
 											<option>Tất cả</option>
-										</select>
+										</select> */}
 										<button type="button" className="tiny-btn"><Settings size={18} /></button>
 									</div>
 								</div>
@@ -365,12 +373,12 @@ const NotebookDetailPage = () => {
 											/>
 											Nghĩa
 										</label>
-										<button type="button" className="tiny-btn" aria-label="note"><Edit3 size={14} /></button>
+										{/* <button type="button" className="tiny-btn" aria-label="note"><Edit3 size={14} /></button> */}
 									</div>
 									<div className="tool-right">
-										<button type="button" className="tiny-btn"><RotateCcw size={16} /></button>
+										{/* <button type="button" className="tiny-btn"><RotateCcw size={16} /></button> */}
 										<button type="button" className="tiny-btn"><Download size={16} /></button>
-										<button type="button" className="tiny-btn"><PlusCircle size={16} /></button>
+										{/* <button type="button" className="tiny-btn"><PlusCircle size={16} /></button> */}
 										<button type="button" className="tiny-btn"><Play size={16} /></button>
 										<button type="button" className="tiny-btn"><Shuffle size={16} /></button>
 									</div>
@@ -405,9 +413,9 @@ const NotebookDetailPage = () => {
 													{!fieldVisibility.vocabulary && !fieldVisibility.reading && !fieldVisibility.meaning && (
 														<div className="word-empty-line">&nbsp;</div>
 													)}
-													<div className="word-note-row">
+													{/* <div className="word-note-row">
 														<button type="button" className="add-note-btn">+ Thêm ghi chú</button>
-													</div>
+													</div> */}
 												</div>
 											))}
 											{row.length === 1 && <div className="word-item-card placeholder" />}
