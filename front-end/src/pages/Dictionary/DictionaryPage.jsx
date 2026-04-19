@@ -10,6 +10,7 @@ import {
 import WordImages from "../../components/WordImages/WordImages";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
+import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -599,6 +600,10 @@ const DictionaryPage = () => {
 										</div>
 									</div>
 									<div className="detail-actions">
+										<SpeakButton
+											text={wordDetail.word || wordDetail.reading}
+											title="Đọc từ"
+										/>
 										<button
 											type="button"
 											onClick={() => {

@@ -7,15 +7,15 @@ import {
 	Edit3,
 	Filter,
 	Play,
-	PlusCircle,
-	RotateCcw,
+	// PlusCircle,
+	// RotateCcw,
 	Search,
 	Settings,
 	Shuffle,
 	Trash2,
-	Volume2,
 } from "lucide-react";
 import { UserContext } from "../../Context/UserProvider";
+import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import {
 	deleteNotebook,
 	getNotebookDetail,
@@ -123,6 +123,10 @@ const NotebookDetailPage = () => {
 
 	const backMeaning = useMemo(() => {
 		return activeFlashItem?.item?.meaning || activeFlashItem?.item?.subtitle || "-";
+	}, [activeFlashItem]);
+
+	const flashSpeakText = useMemo(() => {
+		return activeFlashItem?.item?.title || activeFlashItem?.item?.subtitle || "";
 	}, [activeFlashItem]);
 
 	const totalPages = useMemo(() => {
@@ -313,7 +317,13 @@ const NotebookDetailPage = () => {
 												onClick={() => setIsCardFlipped((prev) => !prev)}
 											>
 												<div className="flashcard-face front">
-													<Volume2 size={34} />
+													<SpeakButton
+														text={flashSpeakText}
+														iconSize={34}
+														className="flashcard-speak-btn"
+														preventPropagation
+														title="Đọc từ"
+													/>
 													<h3>{frontText}</h3>
 													<p className="detail-link">Xem chi tiết</p>
 												</div>
@@ -395,7 +405,12 @@ const NotebookDetailPage = () => {
 													{fieldVisibility.vocabulary && (
 														<div className="word-line-row">
 															<div className="word-main-line">
-																<Volume2 size={18} />
+																<SpeakButton
+																	text={entry.item?.title || entry.item?.subtitle || ""}
+																	iconSize={18}
+																	className="tiny-btn"
+																	title="Đọc từ"
+																/>
 																<strong>{entry.item?.title || "-"}</strong>
 															</div>
 														</div>

@@ -163,6 +163,16 @@
   color: #1e3a8a;
 }
 
+.flashcard-speak-btn {
+  border: 0;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .detail-link {
   color: #2563eb;
   font-size: 14px;
