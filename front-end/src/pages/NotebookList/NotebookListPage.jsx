@@ -108,29 +108,57 @@ const NotebookListPage = () => {
 			)}
 
 			<div className="notebook-list-shell">
-				<div className="list-topbar">
-					<div className="breadcrumb-row">
-						<button type="button" className="breadcrumb-link-btn" onClick={() => history.push("/notebook")}>Từ của tôi</button>
-						<span>/</span>
-						<span className="breadcrumb-link-btn current">Danh sách sổ tay</span>
-					</div>
-					<div className="search-box">
-						<Search size={18} />
-						<input
-							type="text"
-							placeholder="Tìm kiếm"
-							value={searchValue}
-							onChange={(event) => setSearchValue(event.target.value)}
-						/>
-						<button type="button" className="tiny-btn"><Filter size={16} /></button>
-					</div>
+				<div className="breadcrumb-row">
+					<button type="button" className="breadcrumb-link-btn" onClick={() => history.push("/notebook")}>Từ của tôi</button>
+					<span>/</span>
+					<span className="breadcrumb-link-btn current">Danh sách sổ tay</span>
 				</div>
+
+				<section className="list-hero">
+					<div className="list-hero-main">
+						<p className="list-kicker">My Learning Collection</p>
+						<h1>Tất cả sổ tay của bạn trong một màn hình</h1>
+						<p>
+							Lọc nhanh theo tên, tạo sổ mới và mở từng bộ từ vựng chỉ với một cú nhấp.
+						</p>
+						<div className="list-topbar">
+							<div className="search-box">
+								<Search size={18} />
+								<input
+									type="text"
+									placeholder="Tìm kiếm tên sổ tay"
+									value={searchValue}
+									onChange={(event) => setSearchValue(event.target.value)}
+								/>
+								<button type="button" className="tiny-btn"><Filter size={16} /></button>
+							</div>
+							<button
+								type="button"
+								className="create-inline-btn"
+								onClick={() => setIsCreateModalOpen(true)}
+							>
+								<PlusCircle size={16} />
+								Tạo sổ mới
+							</button>
+						</div>
+					</div>
+					<div className="list-hero-stats">
+						<div className="list-stat-card">
+							<span>Tổng sổ tay</span>
+							<strong>{overview.myNotebooks.length}</strong>
+						</div>
+						<div className="list-stat-card">
+							<span>Sổ đang hiển thị</span>
+							<strong>{myNotebooks.length}</strong>
+						</div>
+					</div>
+				</section>
 
 				{pageMessage && <div className="notebook-message">{pageMessage}</div>}
 
 				<section className="section-card">
 					<div className="section-title-row">
-						<h2>Sổ tay</h2>
+						<h2>Danh sách sổ tay</h2>
 					</div>
 					<div className="cards-grid my-grid">
 						<button

@@ -11,6 +11,7 @@ import WordImages from "../../components/WordImages/WordImages";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import SpeakButton from "../../components/SpeakButton/SpeakButton";
+import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -249,6 +250,7 @@ const DictionaryPage = () => {
 	const [searchInput, setSearchInput] = useState("");
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [dropdownResults, setDropdownResults] = useState([]);
+	const [highlightedDropdownIndex, setHighlightedDropdownIndex] = useState(-1);
 	const [loadingDropdown, setLoadingDropdown] = useState(false);
 	const [errorDropdown, setErrorDropdown] = useState("");
 	const [contributions, setContributions] = useState([]);
@@ -270,6 +272,10 @@ const DictionaryPage = () => {
 	useEffect(() => {
 		setSearchInput(keyword);
 	}, [keyword]);
+
+	useEffect(() => {
+		setContributionError("");
+	}, [wordDetail?.id]);
 
 	useEffect(() => {
 		if (!wordDetail?.word) {
@@ -351,8 +357,9 @@ const DictionaryPage = () => {
 
 			setLoading(true);
 			setError("");
-			const normalizedKeyword = keyword.trim().toLowerCase();
-			const res = await searchWords(keyword.trim(), 20);
+				const normalizedKeyword = keyword.trim().toLowerCase();
+				const convertedKeyword = normalizeSearchKeyword(keyword.trim());
+				const res = await searchWords(convertedKeyword, 20);
 
 			if (res && res.errCode === 0 && res.words && res.words.length > 0) {
 				const exactMatches = res.words.filter((item) => {
@@ -417,6 +424,7 @@ const DictionaryPage = () => {
 	useEffect(() => {
 		if (!searchInput.trim() || searchInput === keyword) {
 			setDropdownResults([]);
+			setHighlightedDropdownIndex(-1);
 			setErrorDropdown("");
 			return;
 		}
@@ -432,6 +440,7 @@ const DictionaryPage = () => {
 		const handleOutsideClick = (event) => {
 			if (!searchWrapRef.current?.contains(event.target)) {
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		};
 
@@ -440,32 +449,93 @@ const DictionaryPage = () => {
 	}, []);
 
 	const runDropdownSearch = async (query) => {
+		const convertedQuery = normalizeSearchKeyword(query);
 		setLoadingDropdown(true);
 		setErrorDropdown("");
-		const res = await searchWords(query, 8);
+		const res = await searchWords(convertedQuery, 8);
 		if (res && res.errCode === 0) {
 			setDropdownResults(res.words || []);
+			setHighlightedDropdownIndex(-1);
 		} else {
 			setDropdownResults([]);
+			setHighlightedDropdownIndex(-1);
 			setErrorDropdown((res && res.errMessage) || "Search failed");
 		}
 		setLoadingDropdown(false);
 	};
 
 	const handleSearch = (e) => {
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			if (!dropdownResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) {
+					return 0;
+				}
+				return (prev + 1) % dropdownResults.length;
+			});
+			return;
+		}
+
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			if (!dropdownResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) {
+					return dropdownResults.length - 1;
+				}
+				return (prev - 1 + dropdownResults.length) % dropdownResults.length;
+			});
+			return;
+		}
+
+		if (e.key === "Escape") {
+			setIsDropdownOpen(false);
+			setHighlightedDropdownIndex(-1);
+			return;
+		}
+
 		if (e.key === "Enter") {
+			e.preventDefault();
+			if (
+				isDropdownOpen &&
+				highlightedDropdownIndex >= 0 &&
+				highlightedDropdownIndex < dropdownResults.length
+			) {
+				handleSelectWord(dropdownResults[highlightedDropdownIndex]);
+				return;
+			}
+
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
-				history.push(`/dictionary?q=${newKeyword.trim()}`);
+				const convertedKeyword = normalizeSearchKeyword(newKeyword.trim());
+				setSearchInput(convertedKeyword);
+				history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		}
 	};
 
+	const handleSearchInputChange = (event) => {
+		const nextValue = event.target.value;
+		setSearchInput(nextValue);
+		setHighlightedDropdownIndex(-1);
+	};
+
 	const handleSelectWord = (word) => {
 		const selectedQuery = pickBestQueryToken(word, searchInput || keyword);
-		history.push(`/dictionary?q=${encodeURIComponent(selectedQuery)}`);
-		setIsDropdownOpen(true);
+		const convertedQuery = normalizeSearchKeyword(selectedQuery);
+		setSearchInput(convertedQuery);
+		history.push(`/dictionary?q=${encodeURIComponent(convertedQuery)}`);
+		setIsDropdownOpen(false);
+		setHighlightedDropdownIndex(-1);
 	};
 
 	const handleAddContribution = async () => {
@@ -512,12 +582,13 @@ const DictionaryPage = () => {
 
 		return (
 			<div className="dropdown-list">
-				{dropdownResults.map((word) => (
+				{dropdownResults.map((word, index) => (
 					<button
 						type="button"
 						key={word.id}
-						className="dropdown-item"
+						className={`dropdown-item ${highlightedDropdownIndex === index ? "active" : ""}`}
 						onClick={() => handleSelectWord(word)}
+						onMouseEnter={() => setHighlightedDropdownIndex(index)}
 					>
 						<div className="dropdown-item-main">
 							<strong>{word.word}</strong>
@@ -540,15 +611,19 @@ const DictionaryPage = () => {
 							type="text"
 							placeholder="Tra từ điển Nhật - Việt"
 							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
+							onChange={handleSearchInputChange}
 							onFocus={() => setIsDropdownOpen(true)}
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>🔍</button>
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
+							<button type="button" onClick={() => setIsDropdownOpen(true)}>
+								🔍
+							</button>
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
+								A文
+							</button>
 						</div>
-						
+
 						<button className="lang-switch">Nhật - Việt</button>
 					</div>
 					<div className="mazii-mode-tabs">
@@ -568,6 +643,29 @@ const DictionaryPage = () => {
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</div>
+
+				<div className="dictionary-hero">
+					<div>
+						<p className="dictionary-hero-kicker">Tra cứu Nhật - Việt</p>
+						<h2>
+							Tìm nghĩa, ví dụ, kanji và lưu từ ngay trên cùng một màn hình.
+						</h2>
+						<p className="dictionary-hero-copy">
+							Giao diện này ưu tiên tốc độ tra cứu, đọc nhanh, rồi chuyển thẳng sang lưu từ hoặc xem nội dung liên quan.
+						</p>
+					</div>
+					<div className="dictionary-hero-stats">
+						<div className="hero-stat-card">
+							<span>Trạng thái</span>
+							<strong>{isLoggedIn ? "Đã đăng nhập" : "Chế độ khách"}</strong>
+						</div>
+						<div className="hero-stat-card">
+							<span>Từ liên quan</span>
+							<strong>{relatedWords.length}</strong>
+						</div>
+					</div>
+				</div>
+
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
 					onClose={() => setIsKanjiDrawOpen(false)}
@@ -590,8 +688,21 @@ const DictionaryPage = () => {
 					<div className="detail-left">
 						{loading && <div className="detail-card">Đang tải...</div>}
 						{error && <div className="detail-card error">{error}</div>}
+						{!loading && !error && !wordDetail && (
+							<div className="detail-card empty-state-card">
+								<div className="empty-state-visual">辞</div>
+								<h3>Nhập một từ để bắt đầu tra cứu</h3>
+								<p>
+									Bạn có thể tìm theo chữ Nhật, kana, romaji hoặc gõ từ tiếng Việt nếu dữ liệu hỗ trợ.
+								</p>
+							</div>
+						)}
 						{wordDetail && (
 							<div className="detail-card">
+								<div className="detail-topline">
+									<div className="detail-tag">Từ đang xem</div>
+									<div className="detail-tag soft">{wordDetail.word?.length || 0} ký tự</div>
+								</div>
 								<div className="detail-head">
 									<div>
 										<h1>{wordDetail.word}</h1>
@@ -617,27 +728,27 @@ const DictionaryPage = () => {
 											setIsNotebookPickerOpen(true);
 											}}
 										>
-											+
+												Lưu
 										</button>
 									</div>
 								</div>
 								<div className="detail-meta">
 									<span>Cấp độ: {wordDetail.jlptLevel ? `N${wordDetail.jlptLevel}` : "-"}</span>
+									<span>Kanji: {wordDetail.kanjis?.length || 0}</span>
+									<span>Ví dụ: {displayedExamples.length}</span>
 								</div>
-
-								{wordDetail.meanings && wordDetail.meanings.length > 0 && (
-									<div className="detail-section">
-										<h3>Danh từ</h3>
-										<ul>
-											{wordDetail.meanings.map((meaning) => (
-												<li key={meaning.id}>
-													{meaning.partOfSpeech ? `${meaning.partOfSpeech}: ` : ""}
-													{meaning.definition}
-												</li>
-											))}
-										</ul>
+								{Array.isArray(wordDetail.meanings) && wordDetail.meanings.length > 0 && (
+									<div className="meaning-preview-row">
+										{wordDetail.meanings.slice(0, 3).map((meaning) => (
+											<div className="meaning-chip" key={meaning.id}>
+												{/* <span>{meaning.partOfSpeech || "-"}</span> */}
+												<strong>{meaning.definition}</strong>
+											</div>
+										))}
 									</div>
 								)}
+
+								
 
 								{displayedExamples.length > 0 && (
 									<div className="detail-section">
@@ -654,6 +765,7 @@ const DictionaryPage = () => {
 								)}
 
 								<div className="detail-section">
+									<h3>Hình ảnh từ vựng</h3>
 									<WordImages word={wordDetail.word} />
 								</div>
 
@@ -691,10 +803,29 @@ const DictionaryPage = () => {
 										</button>
 									</div>
 								</div>
+
 							</div>
 						)}
 					</div>
 					<div className="detail-right">
+						<div className="lookup-panel quick-summary-panel">
+							<h3>Tổng quan</h3>
+							<div className="summary-grid">
+								<div>
+									<span>Trạng thái</span>
+									<strong>{isLoggedIn ? "Đã đăng nhập" : "Chưa đăng nhập"}</strong>
+								</div>
+								<div>
+									<span>Đóng góp</span>
+									<strong>{contributions.length}</strong>
+								</div>
+								<div>
+									<span>Gợi ý liên quan</span>
+									<strong>{relatedWords.length}</strong>
+								</div>
+							</div>
+						</div>
+
 						{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
 							<div className="lookup-panel">
 								<h3>Các chữ kanji của {wordDetail.word}</h3>
@@ -732,23 +863,25 @@ const DictionaryPage = () => {
 								</div>
 							</div>
 						)}
-						<div className="lookup-panel">
-							<h3>Các từ liên quan tới {keyword}</h3>
-							<div className="related-list">
-								{relatedWords.map((item) => (
-									<button
-										key={item.id}
-										onClick={() => history.push(`/dictionary?q=${item.word}`)}
-									>
-										<strong>{item.word}</strong>
-										<span>{item.reading}</span>
-										{item.meanings && item.meanings.length > 0 && (
-											<p>{item.meanings[0].definition}</p>
-										)}
-									</button>
-								))}
+
+						{relatedWords.length > 0 && (
+							<div className="lookup-panel">
+								<h3>Từ liên quan</h3>
+								<div className="related-list">
+									{relatedWords.map((item) => (
+										<button
+											type="button"
+											key={item.id}
+											onClick={() => history.push(`/dictionary?q=${encodeURIComponent(item.word || item.reading || "")}`)}
+										>
+											<strong>{item.word}</strong>
+											<span>{item.reading || "-"}</span>
+											<p>{item.meanings?.[0]?.definition || "Chưa có nghĩa"}</p>
+										</button>
+									))}
+								</div>
 							</div>
-						</div>
+						)}
 					</div>
 				</div>
 			</div>

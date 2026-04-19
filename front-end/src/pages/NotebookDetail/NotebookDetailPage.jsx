@@ -7,6 +7,7 @@ import {
 	Edit3,
 	Filter,
 	Play,
+	RefreshCw,
 	// PlusCircle,
 	// RotateCcw,
 	Search,
@@ -21,6 +22,7 @@ import {
 	getNotebookDetail,
 	updateNotebook,
 } from "../../services/notebookService";
+import { evaluateQuizAnswer, generateQuiz } from "../../services/quizService";
 import "./NotebookDetailPage.css";
 
 const chunkItems = (items, chunkSize = 2) => {
@@ -55,6 +57,24 @@ const NotebookDetailPage = () => {
 		reading: true,
 		meaning: true,
 	});
+	const [quizQuestionMode, setQuizQuestionMode] = useState("auto");
+	const [quizAnswerMode, setQuizAnswerMode] = useState("Multiple_Choice");
+	const [quizWordIndex, setQuizWordIndex] = useState(0);
+	const [quizData, setQuizData] = useState(null);
+	const [quizAnswer, setQuizAnswer] = useState("");
+	const [quizLoading, setQuizLoading] = useState(false);
+	const [quizEvaluating, setQuizEvaluating] = useState(false);
+	const [quizFeedback, setQuizFeedback] = useState(null);
+	const [quizError, setQuizError] = useState("");
+	const [quizStats, setQuizStats] = useState({ total: 0, correct: 0, wrong: 0 });
+	const [miniTestCount, setMiniTestCount] = useState(5);
+	const [miniTestSession, setMiniTestSession] = useState(null);
+	const [miniTestQuestion, setMiniTestQuestion] = useState(null);
+	const [miniTestAnswer, setMiniTestAnswer] = useState("");
+	const [miniTestLoading, setMiniTestLoading] = useState(false);
+	const [miniTestEvaluating, setMiniTestEvaluating] = useState(false);
+	const [miniTestFeedback, setMiniTestFeedback] = useState(null);
+	const [miniTestError, setMiniTestError] = useState("");
 	const cameFromExplore = Boolean(location.state?.fromExplore);
 
 	const currentUserId = user?.account?.id;
@@ -97,6 +117,12 @@ const NotebookDetailPage = () => {
 			return title.includes(keyword) || meaning.includes(keyword);
 		});
 	}, [notebook?.items, searchKeyword]);
+
+	const quizItems = useMemo(() => {
+		return filteredItems.filter(
+			(entry) => ["word", "kanji", "grammar"].includes(entry?.itemType) && entry?.item?.id
+		);
+	}, [filteredItems]);
 
 	const flashItems = useMemo(() => {
 		return filteredItems.filter((entry) => Boolean(entry?.item?.title));
@@ -146,6 +172,20 @@ const NotebookDetailPage = () => {
 		setFlashIndex(0);
 		setIsCardFlipped(false);
 	}, [searchKeyword, notebook?.id]);
+
+	useEffect(() => {
+		setQuizWordIndex(0);
+		setQuizData(null);
+		setQuizAnswer("");
+		setQuizFeedback(null);
+		setQuizError("");
+		setQuizStats({ total: 0, correct: 0, wrong: 0 });
+		setMiniTestSession(null);
+		setMiniTestQuestion(null);
+		setMiniTestAnswer("");
+		setMiniTestFeedback(null);
+		setMiniTestError("");
+	}, [notebook?.id, searchKeyword]);
 
 	useEffect(() => {
 		setCurrentPage(1);
@@ -214,6 +254,356 @@ const NotebookDetailPage = () => {
 		}));
 	};
 
+	const activeQuizEntry = quizItems.length
+		? quizItems[quizWordIndex % quizItems.length]
+		: null;
+
+	const getSupportedModesByEntry = (entry) => {
+		if (!entry?.itemType) {
+			return ["meaning"];
+		}
+
+		if (entry.itemType === "word") {
+			const title = entry.item?.title || "";
+			if (hasKanjiChar(title)) {
+				return ["meaning", "reading", "kanji"];
+			}
+			return ["meaning"];
+		}
+
+		if (entry.itemType === "kanji") {
+			return ["meaning", "kanji", "reading"];
+		}
+
+		return ["meaning", "grammar"];
+	};
+
+	const buildMiniTestQuestions = (entries, requestedCount) => {
+		const count = Math.max(1, Math.min(Number(requestedCount) || 5, 20));
+		const pool = [];
+
+		entries.forEach((entry) => {
+			const supportedModes = getSupportedModesByEntry(entry);
+			const modes = quizQuestionMode === "auto"
+				? supportedModes
+				: supportedModes.includes(quizQuestionMode)
+				? [quizQuestionMode]
+				: [supportedModes[0]];
+
+			modes.forEach((mode) => {
+				pool.push({ entry, preferredMode: mode });
+			});
+		});
+
+		const shuffledPool = shuffleArray(pool);
+		if (!shuffledPool.length) {
+			return [];
+		}
+
+		if (shuffledPool.length >= count) {
+			return shuffledPool.slice(0, count);
+		}
+
+		const expanded = [...shuffledPool];
+		while (expanded.length < count) {
+			expanded.push(shuffledPool[expanded.length % shuffledPool.length]);
+		}
+		return expanded;
+	};
+
+	const shuffleArray = (list) => {
+		const arr = [...list];
+		for (let i = arr.length - 1; i > 0; i -= 1) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[arr[i], arr[j]] = [arr[j], arr[i]];
+		}
+		return arr;
+	};
+
+	const loadQuizQuestionByEntry = async (entry, preferredMode = quizQuestionMode) => {
+		if (!entry?.item?.id) {
+			return;
+		}
+
+		setQuizLoading(true);
+		setQuizError("");
+		setQuizFeedback(null);
+		setQuizAnswer("");
+
+		const res = await generateQuiz({
+			itemType: entry.itemType,
+			itemId: entry.item.id,
+			wordId: entry.itemType === "word" ? entry.item.id : undefined,
+			mode: preferredMode === "auto" ? undefined : preferredMode,
+			quizMode: quizAnswerMode,
+		});
+
+		if (res?.errCode === 0) {
+			setQuizData(res.data);
+		} else {
+			setQuizData(null);
+			setQuizError(res?.errMessage || "Không tạo được câu hỏi.");
+		}
+
+		setQuizLoading(false);
+	};
+
+	useEffect(() => {
+		if (activeMode !== "quiz" || !activeQuizEntry) {
+			return;
+		}
+
+		setQuizData(null);
+		setQuizAnswer("");
+		setQuizFeedback(null);
+		setQuizError("");
+		loadQuizQuestionByEntry(activeQuizEntry);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [activeMode, activeQuizEntry?.item?.id, activeQuizEntry?.itemType, quizQuestionMode, quizAnswerMode]);
+
+	const handleGenerateQuizForNotebook = async () => {
+		if (!activeQuizEntry) {
+			setQuizError("Notebook chưa có mục học tập để tạo quiz.");
+			return;
+		}
+
+		setQuizData(null);
+		setQuizFeedback(null);
+		await loadQuizQuestionByEntry(activeQuizEntry);
+	};
+
+	const handleEvaluateNotebookQuiz = async () => {
+		if (!quizData?.itemId || !quizData?.itemType || !quizData?.mode) {
+			return;
+		}
+		if (!quizAnswer.trim()) {
+			setQuizError("Vui lòng nhập hoặc chọn đáp án.");
+			return;
+		}
+
+		setQuizEvaluating(true);
+		setQuizError("");
+
+		const res = await evaluateQuizAnswer({
+			itemType: quizData.itemType,
+			itemId: quizData.itemId,
+			wordId: quizData.wordId,
+			userAnswer: quizAnswer,
+			mode: quizData.mode,
+		});
+
+		if (res?.errCode === 0) {
+			setQuizFeedback(res.data);
+			setQuizStats((prev) => ({
+				total: prev.total + 1,
+				correct: prev.correct + (res.data.isCorrect ? 1 : 0),
+				wrong: prev.wrong + (res.data.isCorrect ? 0 : 1),
+			}));
+		} else {
+			setQuizFeedback(null);
+			setQuizError(res?.errMessage || "Không chấm được đáp án.");
+		}
+
+		setQuizEvaluating(false);
+	};
+
+	const goToPrevQuizWord = () => {
+		if (!quizItems.length) return;
+		setQuizWordIndex((prev) => (prev - 1 + quizItems.length) % quizItems.length);
+		setQuizData(null);
+		setQuizAnswer("");
+		setQuizFeedback(null);
+		setQuizError("");
+	};
+
+	const goToNextQuizWord = () => {
+		if (!quizItems.length) return;
+		setQuizWordIndex((prev) => (prev + 1) % quizItems.length);
+		setQuizData(null);
+		setQuizAnswer("");
+		setQuizFeedback(null);
+		setQuizError("");
+	};
+
+	const loadMiniTestQuestion = async (questionItem) => {
+		const entry = questionItem?.entry;
+		if (!entry?.item?.id) {
+			setMiniTestQuestion(null);
+			setMiniTestError("Không có dữ liệu để tạo câu hỏi mini test.");
+			return;
+		}
+
+		setMiniTestLoading(true);
+		setMiniTestError("");
+		setMiniTestFeedback(null);
+		setMiniTestAnswer("");
+
+		const res = await generateQuiz({
+			itemType: entry.itemType,
+			itemId: entry.item.id,
+			wordId: entry.itemType === "word" ? entry.item.id : undefined,
+			mode: questionItem?.preferredMode,
+			quizMode: quizAnswerMode,
+		});
+
+		if (res?.errCode === 0) {
+			setMiniTestQuestion(res.data);
+		} else {
+			setMiniTestQuestion(null);
+			setMiniTestError(res?.errMessage || "Không tạo được câu hỏi mini test.");
+		}
+
+		setMiniTestLoading(false);
+	};
+
+	const handleStartMiniTest = async () => {
+		if (!quizItems.length) {
+			setMiniTestError("Notebook chưa có mục học tập để làm mini test.");
+			return;
+		}
+
+		const selectedEntries = shuffleArray(quizItems);
+		const questions = buildMiniTestQuestions(selectedEntries, miniTestCount);
+
+		if (!questions.length) {
+			setMiniTestError("Không tạo được bộ câu hỏi mini test từ dữ liệu hiện tại.");
+			return;
+		}
+
+		const newSession = {
+			questions,
+			index: 0,
+			score: 0,
+			answers: [],
+		};
+
+		setMiniTestSession(newSession);
+		setMiniTestFeedback(null);
+		await loadMiniTestQuestion(questions[0]);
+	};
+
+	const handleSkipMiniTestQuestion = async () => {
+		if (!miniTestSession || !miniTestQuestion?.itemId) {
+			return;
+		}
+
+		const nextIndex = miniTestSession.index + 1;
+		const updatedAnswers = [
+			...miniTestSession.answers,
+			{
+				itemType: miniTestQuestion.itemType,
+				itemId: miniTestQuestion.itemId,
+				mode: miniTestQuestion.mode,
+				isCorrect: false,
+				skipped: true,
+				userAnswer: "",
+			},
+		];
+
+		setMiniTestFeedback({
+			isCorrect: false,
+			skipped: true,
+			message: "Đã bỏ qua câu này.",
+		});
+		setMiniTestSession((prev) => ({
+			...prev,
+			index: nextIndex,
+			answers: updatedAnswers,
+		}));
+
+		if (nextIndex < miniTestSession.questions.length) {
+			await loadMiniTestQuestion(miniTestSession.questions[nextIndex]);
+		} else {
+			setMiniTestQuestion(null);
+			setMiniTestAnswer("");
+		}
+	};
+
+	const handleSubmitMiniTestAnswer = async () => {
+		if (!miniTestSession || !miniTestQuestion?.itemId || !miniTestQuestion?.itemType || !miniTestQuestion?.mode) {
+			return;
+		}
+		if (!miniTestAnswer.trim()) {
+			setMiniTestError("Vui lòng nhập hoặc chọn đáp án.");
+			return;
+		}
+
+		setMiniTestEvaluating(true);
+		setMiniTestError("");
+
+		const res = await evaluateQuizAnswer({
+			itemType: miniTestQuestion.itemType,
+			itemId: miniTestQuestion.itemId,
+			wordId: miniTestQuestion.wordId,
+			userAnswer: miniTestAnswer,
+			mode: miniTestQuestion.mode,
+		});
+
+		if (res?.errCode !== 0) {
+			setMiniTestError(res?.errMessage || "Không chấm được câu trả lời mini test.");
+			setMiniTestEvaluating(false);
+			return;
+		}
+
+		const result = res.data;
+		setMiniTestFeedback(result);
+
+		const nextIndex = miniTestSession.index + 1;
+		const updatedAnswers = [
+			...miniTestSession.answers,
+			{
+				itemType: miniTestQuestion.itemType,
+				itemId: miniTestQuestion.itemId,
+				mode: miniTestQuestion.mode,
+				isCorrect: Boolean(result.isCorrect),
+				correctAnswer: result.correctAnswer,
+				userAnswer: miniTestAnswer,
+			},
+		];
+
+		const updatedSession = {
+			...miniTestSession,
+			index: nextIndex,
+			score: miniTestSession.score + (result.isCorrect ? 1 : 0),
+			answers: updatedAnswers,
+		};
+
+		setMiniTestSession(updatedSession);
+
+		if (nextIndex < miniTestSession.questions.length) {
+			await loadMiniTestQuestion(miniTestSession.questions[nextIndex]);
+		} else {
+			setMiniTestQuestion(null);
+			setMiniTestAnswer("");
+		}
+
+		setMiniTestEvaluating(false);
+	};
+
+	const miniTestAnsweredCount = miniTestSession?.answers?.length || 0;
+	const miniTestCorrectCount = miniTestSession?.answers?.filter((item) => item.isCorrect).length || 0;
+	const miniTestSkippedCount = miniTestSession?.answers?.filter((item) => item.skipped).length || 0;
+	const miniTestAccuracy = miniTestAnsweredCount
+		? Math.round((miniTestCorrectCount / miniTestAnsweredCount) * 100)
+		: 0;
+	const quizAccuracy = quizStats.total ? Math.round((quizStats.correct / quizStats.total) * 100) : 0;
+
+	const returnToNotebookOverview = () => {
+		setActiveMode("list");
+		setIsFlashcardView(false);
+		setQuizData(null);
+		setQuizAnswer("");
+		setQuizFeedback(null);
+		setQuizError("");
+		setMiniTestSession(null);
+		setMiniTestQuestion(null);
+		setMiniTestAnswer("");
+		setMiniTestFeedback(null);
+		setMiniTestError("");
+		setFlashIndex(0);
+		setIsCardFlipped(false);
+	};
+
 	return (
 		<div className="notebook-detail-page">
 			<div className="notebook-detail-shell">
@@ -228,23 +618,55 @@ const NotebookDetailPage = () => {
 						{cameFromExplore ? "Khám phá" : "Danh sách sổ tay"}
 					</button>
 					<span>/</span>
-					{" "}
-					<button
-						type="button"
-						className="breadcrumb-link-btn"
-						onClick={() => {
-							setIsFlashcardView(false);
-							setActiveMode("list");
-						}}
-					>
+					<button type="button" className="breadcrumb-link-btn breadcrumb-current-btn" onClick={returnToNotebookOverview}>
 						{notebook?.name || "..."}
 					</button>
-					{isFlashcardView ? " / FlashCard" : ""}
 				</div>
+
+				<section className="notebook-detail-hero">
+					<div className="hero-title-wrap">
+						<p className="hero-kicker">Notebook Detail</p>
+						<h1>{notebook?.name || "Sổ tay"}</h1>
+						<p>
+							{notebook?.itemsCount || 0} mục học tập. Bạn có thể chuyển nhanh giữa danh sách, flashcard,
+							quiz và mini test.
+						</p>
+						<div className="hero-chip-row">
+							<span>Danh sách</span>
+							<span>FlashCard</span>
+							<span>Quiz</span>
+							<span>Mini Test</span>
+						</div>
+					</div>
+					<div className="hero-badges">
+						<div className="hero-badge-card">
+							<span>Số mục</span>
+							<strong>{notebook?.itemsCount || 0}</strong>
+						</div>
+						<div className="hero-badge-card">
+							<span>Từ đang lọc</span>
+							<strong>{filteredItems.length}</strong>
+						</div>
+						<div className="hero-badge-card">
+							<span>Quyền chỉnh sửa</span>
+							<strong>{isOwner ? "Chủ sở hữu" : "Chỉ xem"}</strong>
+						</div>
+					</div>
+				</section>
 
 				<div className="notebook-detail-main">
 					<div className="notebook-detail-left">
 						<div className="notebook-mode-tabs">
+							<button
+								type="button"
+								className={activeMode === "list" && !isFlashcardView ? "active" : ""}
+								onClick={() => {
+									setActiveMode("list");
+									setIsFlashcardView(false);
+								}}
+							>
+								List
+							</button>
 							<button
 								type="button"
 								className={isFlashcardView ? "active" : ""}
@@ -263,9 +685,9 @@ const NotebookDetailPage = () => {
 									setIsFlashcardView(false);
 								}}
 							>
-								Quizz
+								Quiz
 							</button>
-							<button
+							{/* <button
 								type="button"
 								className={activeMode === "practice" ? "active" : ""}
 								onClick={() => {
@@ -274,7 +696,7 @@ const NotebookDetailPage = () => {
 								}}
 							>
 								Luyện nói, viết
-							</button>
+							</button> */}
 							<button
 								type="button"
 								className={activeMode === "mini-test" ? "active" : ""}
@@ -285,6 +707,22 @@ const NotebookDetailPage = () => {
 							>
 								Mini Test
 							</button>
+						</div>
+
+						<div className="mode-banner">
+							<div>
+								<span className="mode-banner-label">Chế độ đang mở</span>
+								<strong>
+									{activeMode === "flashcard"
+										? "FlashCard"
+										: activeMode === "quiz"
+										? "Quiz"
+										: activeMode === "mini-test"
+										? "Mini Test"
+										: "Danh sách"}
+								</strong>
+							</div>
+							<p>Giữ các công cụ học tập ở ngay trong cùng một không gian để chuyển chế độ nhanh hơn.</p>
 						</div>
 
 						{isFlashcardView ? (
@@ -354,6 +792,263 @@ const NotebookDetailPage = () => {
 										</div>
 									</div>
 								)}
+							</div>
+						) : activeMode === "quiz" ? (
+							<div className="notebook-word-panel">
+								<div className="quiz-notebook-head">
+									<div className="quiz-mode-picks">
+										<select
+											value={quizQuestionMode}
+											onChange={(event) => setQuizQuestionMode(event.target.value)}
+										>
+											<option value="auto">Tự chọn dạng</option>
+											<option value="reading">Kanji - Cách đọc</option>
+											<option value="meaning">Nghĩa tiếng Việt</option>
+											<option value="kanji">Nhận diện mặt chữ</option>
+											<option value="grammar">Nhận diện mẫu ngữ pháp</option>
+										</select>
+										<select
+											value={quizAnswerMode}
+											onChange={(event) => setQuizAnswerMode(event.target.value)}
+										>
+											<option value="Multiple_Choice">Trắc nghiệm</option>
+											<option value="Typing">Gõ đáp án</option>
+										</select>
+									</div>
+									<div className="quiz-word-nav">
+										<button type="button" className="tiny-btn" onClick={goToPrevQuizWord}>
+											<ChevronLeft size={18} />
+										</button>
+										<span>
+											{quizItems.length ? `${quizWordIndex + 1}/${quizItems.length}` : "0/0"}
+										</span>
+										<button type="button" className="tiny-btn" onClick={goToNextQuizWord}>
+											<ChevronRight size={18} />
+										</button>
+									</div>
+								</div>
+
+								<div className="quiz-summary-strip">
+									<div>
+										<span>Đã làm</span>
+										<strong>{quizStats.total}</strong>
+									</div>
+									<div>
+										<span>Đúng</span>
+										<strong>{quizStats.correct}</strong>
+									</div>
+									<div>
+										<span>Sai</span>
+										<strong>{quizStats.wrong}</strong>
+									</div>
+									<div>
+										<span>Tỉ lệ</span>
+										<strong>{quizAccuracy}%</strong>
+									</div>
+								</div>
+
+								<div className="word-list-body">
+									{!activeQuizEntry ? (
+										<div className="word-empty">Notebook chưa có mục học tập để luyện quiz.</div>
+									) : (
+										<div className="quiz-box">
+											<div className="quiz-card-top">
+												<p className="quiz-current-word">
+													Mục hiện tại ({activeQuizEntry.itemType}): <strong>{activeQuizEntry.item?.title || "-"}</strong>
+												</p>
+												<p className="quiz-helper-text">
+													Câu hỏi sẽ tự sinh lại khi đổi mục, đổi dạng câu hỏi hoặc đổi chế độ trả lời.
+												</p>
+											</div>
+											<div className="quiz-action-row">
+												<button
+													type="button"
+													className="quiz-reroll-btn"
+													onClick={handleGenerateQuizForNotebook}
+													disabled={quizLoading}
+													title="Tạo câu hỏi mới"
+												>
+													<RefreshCw size={16} className={quizLoading ? "spinning" : ""} />
+												</button>
+												<span className="quiz-action-hint">Reroll câu hỏi</span>
+											</div>
+
+											{quizError && <p className="quiz-msg error">{quizError}</p>}
+
+											{quizData && (
+												<div className="quiz-question-card">
+													<div className="quiz-question-head">
+														<span>Dạng câu hỏi</span>
+														<strong>{quizData.mode}</strong>
+														<span className="quiz-mode-chip">{quizData.quizMode === "Typing" ? "Gõ đáp án" : "Trắc nghiệm"}</span>
+													</div>
+													<p className="quiz-question">{quizData.questionText}</p>
+													{Array.isArray(quizData.options) && quizData.options.length > 0 ? (
+														<div className="quiz-option-list">
+															{quizData.options.map((option) => (
+																<button
+																	type="button"
+																	key={option}
+																	className={quizAnswer === option ? "active" : ""}
+																	onClick={() => setQuizAnswer(option)}
+																>
+																	{option}
+																</button>
+															))}
+														</div>
+													) : (
+														<input
+															type="text"
+															value={quizAnswer}
+															onChange={(event) => setQuizAnswer(event.target.value)}
+															placeholder="Nhập đáp án"
+															className="quiz-answer-input"
+														/>
+													)}
+
+													<button
+														type="button"
+														className="quiz-main-btn"
+														onClick={handleEvaluateNotebookQuiz}
+														disabled={quizEvaluating}
+													>
+														{quizEvaluating ? "Đang chấm..." : "Chấm điểm"}
+													</button>
+
+													{quizFeedback && (
+														<div className={`quiz-result-box ${quizFeedback.isCorrect ? "ok" : "wrong"}`}>
+															<p>{quizFeedback.isCorrect ? "Chính xác" : "Sai"} - Stage: {quizFeedback.newStage}</p>
+															{!quizFeedback.isCorrect && <p>Đáp án đúng: {quizFeedback.correctAnswer}</p>}
+														</div>
+													)}
+												</div>
+											)}
+										</div>
+									)}
+								</div>
+							</div>
+						) : activeMode === "mini-test" ? (
+							<div className="notebook-word-panel">
+								<div className="quiz-notebook-head">
+									<div className="quiz-mode-picks">
+										<select
+											value={quizQuestionMode}
+											onChange={(event) => setQuizQuestionMode(event.target.value)}
+										>
+											<option value="auto">Tự chọn dạng</option>
+											<option value="reading">Kanji - Cách đọc</option>
+											<option value="meaning">Nghĩa tiếng Việt</option>
+											<option value="kanji">Nhận diện mặt chữ</option>
+											<option value="grammar">Nhận diện mẫu ngữ pháp</option>
+										</select>
+										<select
+											value={quizAnswerMode}
+											onChange={(event) => setQuizAnswerMode(event.target.value)}
+										>
+											<option value="Multiple_Choice">Trắc nghiệm</option>
+											<option value="Typing">Gõ đáp án</option>
+										</select>
+										<select
+											value={miniTestCount}
+											onChange={(event) => setMiniTestCount(Number(event.target.value))}
+										>
+											<option value={5}>5 câu</option>
+											<option value={10}>10 câu</option>
+											<option value={15}>15 câu</option>
+										</select>
+									</div>
+									<button type="button" className="quiz-main-btn" onClick={handleStartMiniTest}>
+										Bắt đầu Mini Test
+									</button>
+								</div>
+
+								<div className="quiz-summary-strip mini-summary-strip">
+									<div>
+										<span>Đã làm</span>
+										<strong>{miniTestAnsweredCount}</strong>
+									</div>
+									<div>
+										<span>Đúng</span>
+										<strong>{miniTestCorrectCount}</strong>
+									</div>
+									<div>
+										<span>Bỏ qua</span>
+										<strong>{miniTestSkippedCount}</strong>
+									</div>
+									<div>
+										<span>Tỉ lệ</span>
+										<strong>{miniTestAccuracy}%</strong>
+									</div>
+								</div>
+
+								<div className="word-list-body">
+									{miniTestError && <p className="quiz-msg error">{miniTestError}</p>}
+									{!miniTestSession && <div className="word-empty">Chọn cấu hình và bấm bắt đầu để làm bài.</div>}
+
+									{miniTestSession && !miniTestQuestion && miniTestSession.index >= miniTestSession.questions.length && (
+										<div className="mini-test-summary">
+											<h3>Hoàn thành Mini Test</h3>
+											<p>Điểm số: {miniTestSession.score}/{miniTestSession.questions.length}</p>
+											<p>Đúng: {miniTestCorrectCount} | Bỏ qua: {miniTestSkippedCount} | Tỉ lệ: {miniTestAccuracy}%</p>
+											<button type="button" className="quiz-main-btn" onClick={handleStartMiniTest}>
+												Làm lại
+											</button>
+										</div>
+									)}
+
+									{miniTestSession && miniTestQuestion && (
+										<div className="quiz-question-card">
+											<p className="quiz-current-word">
+												Câu {miniTestSession.index + 1}/{miniTestSession.questions.length}
+											</p>
+											<p className="quiz-question">{miniTestQuestion.questionText}</p>
+
+											{Array.isArray(miniTestQuestion.options) && miniTestQuestion.options.length > 0 ? (
+												<div className="quiz-option-list">
+													{miniTestQuestion.options.map((option) => (
+														<button
+															type="button"
+															key={option}
+															className={miniTestAnswer === option ? "active" : ""}
+															onClick={() => setMiniTestAnswer(option)}
+														>
+															{option}
+														</button>
+													))}
+												</div>
+											) : (
+												<input
+													type="text"
+													value={miniTestAnswer}
+													onChange={(event) => setMiniTestAnswer(event.target.value)}
+													placeholder="Nhập đáp án"
+													className="quiz-answer-input"
+												/>
+											)}
+
+											<button
+												type="button"
+												className="quiz-main-btn"
+												onClick={handleSubmitMiniTestAnswer}
+												disabled={miniTestLoading || miniTestEvaluating}
+											>
+												{miniTestLoading || miniTestEvaluating ? "Đang xử lý..." : "Nộp câu trả lời"}
+											</button>
+											<button type="button" className="quiz-secondary-btn" onClick={handleSkipMiniTestQuestion} disabled={miniTestLoading || miniTestEvaluating}>
+												Bỏ qua
+											</button>
+
+											{miniTestFeedback && (
+												<div className={`quiz-result-box ${miniTestFeedback.isCorrect ? "ok" : "wrong"}`}>
+													<p>{miniTestFeedback.skipped ? "Đã bỏ qua" : miniTestFeedback.isCorrect ? "Đúng" : "Sai"}</p>
+														{!miniTestFeedback.isCorrect && !miniTestFeedback.skipped && (
+															<p>Đáp án đúng: {miniTestFeedback.correctAnswer}</p>
+														)}
+												</div>
+											)}
+										</div>
+									)}
+								</div>
 							</div>
 						) : (
 							<div className="notebook-word-panel">

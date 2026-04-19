@@ -132,9 +132,42 @@ const NotebookPage = () => {
 
 			{pageMessage && <div className="notebook-message">{pageMessage}</div>}
 
+			<section className="notebook-hero">
+				<div className="notebook-hero-main">
+					<p className="hero-kicker">Notebook Workspace</p>
+					<h1>Quản lý sổ tay học tập theo cách trực quan hơn</h1>
+					<p>
+						Tạo sổ mới, theo dõi sổ của bạn, khám phá nội dung cộng đồng và học theo bộ premium
+						trong cùng một không gian.
+					</p>
+					<div className="hero-actions">
+						<button type="button" className="hero-primary" onClick={() => setIsCreateModalOpen(true)}>
+							Tạo sổ tay mới
+						</button>
+						<button type="button" className="hero-secondary" onClick={() => history.push("/notebook/explore")}>
+							Khám phá ngay
+						</button>
+					</div>
+				</div>
+				<div className="notebook-hero-stats">
+					<div className="hero-stat-card">
+						<span>Sổ tay của tôi</span>
+						<strong>{overview.myNotebooks.length}</strong>
+					</div>
+					<div className="hero-stat-card">
+						<span>Sổ khám phá</span>
+						<strong>{overview.discoverNotebooks.length}</strong>
+					</div>
+					<div className="hero-stat-card">
+						<span>Gợi ý premium</span>
+						<strong>{premiumSeed.length}</strong>
+					</div>
+				</div>
+			</section>
+
 			<section className="section-card">
 				<div className="section-title-row">
-					<h2>Sổ tay</h2>
+					<h2>Sổ tay của tôi</h2>
 					<button
 						type="button"
 						className="view-more-btn"
@@ -169,7 +202,7 @@ const NotebookPage = () => {
 
 			<section className="section-card">
 				<div className="section-title-row">
-					<h2>Khám phá</h2>
+					<h2>Khám phá cộng đồng</h2>
 					<button type="button" className="view-more-btn" onClick={() => history.push("/notebook/explore")}>Xem thêm</button>
 				</div>
 				<div className="cards-grid discover-grid">
@@ -197,7 +230,7 @@ const NotebookPage = () => {
 
 			<section className="section-card premium-section">
 				<div className="section-title-row">
-					<h2>Prenium</h2>
+					<h2>Premium</h2>
 					<button type="button" className="view-more-btn">Xem thêm</button>
 				</div>
 				<div className="cards-grid premium-grid">

@@ -40,6 +40,18 @@ module.exports = (sequelize, DataTypes) => {
 				type: DataTypes.INTEGER,
 				defaultValue: 0,
 			},
+			srs_stage: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				defaultValue: 0,
+				comment: "SRS stage: 0 (new), 1-5 (learning), 6 (mastered)",
+			},
+			last_mode: {
+				type: DataTypes.ENUM("reading", "meaning", "kanji"),
+				allowNull: true,
+				defaultValue: null,
+				comment: "Last quiz type: reading, meaning, kanji",
+			},
 		},
 		{
 			sequelize,

@@ -10,6 +10,7 @@ import {
 import { getLatestWordContributions } from "../../services/wordContributionService";
 import { UserContext } from "../../Context/UserProvider";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
+import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -45,6 +46,7 @@ const HomePage = () => {
 	const [loadingSearch, setLoadingSearch] = useState(false);
 	const [searchError, setSearchError] = useState("");
 	const [searchResults, setSearchResults] = useState([]);
+	const [highlightedDropdownIndex, setHighlightedDropdownIndex] = useState(-1);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
@@ -65,6 +67,7 @@ const HomePage = () => {
 		if (!searchInput.trim()) {
 			setSearchError("");
 			setSearchResults([]);
+			setHighlightedDropdownIndex(-1);
 			return;
 		}
 
@@ -80,6 +83,7 @@ const HomePage = () => {
 		const handleOutsideClick = (event) => {
 			if (!searchWrapRef.current?.contains(event.target)) {
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		};
 
@@ -129,7 +133,65 @@ const HomePage = () => {
 	const handleSearch = (event) => {
 		event.preventDefault();
 		if (searchInput.trim()) {
-			history.push(`/dictionary?q=${searchInput.trim()}`);
+			const convertedKeyword = normalizeSearchKeyword(searchInput.trim());
+			setSearchInput(convertedKeyword);
+			history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
+			setIsDropdownOpen(false);
+			setHighlightedDropdownIndex(-1);
+		}
+	};
+
+	const handleSearchInputChange = (event) => {
+		const nextValue = event.target.value;
+		setSearchInput(nextValue);
+		setHighlightedDropdownIndex(-1);
+	};
+
+	const handleSearchInputKeyDown = (event) => {
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
+			if (!searchResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) {
+					return 0;
+				}
+				return (prev + 1) % searchResults.length;
+			});
+			return;
+		}
+
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
+			if (!searchResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) {
+					return searchResults.length - 1;
+				}
+				return (prev - 1 + searchResults.length) % searchResults.length;
+			});
+			return;
+		}
+
+		if (event.key === "Escape") {
+			setIsDropdownOpen(false);
+			setHighlightedDropdownIndex(-1);
+			return;
+		}
+
+		if (
+			event.key === "Enter" &&
+			isDropdownOpen &&
+			highlightedDropdownIndex >= 0 &&
+			highlightedDropdownIndex < searchResults.length
+		) {
+			event.preventDefault();
+			handleSelectWord(searchResults[highlightedDropdownIndex]);
 		}
 	};
 
@@ -141,14 +203,18 @@ const HomePage = () => {
 			return;
 		}
 
+		const convertedKeyword = normalizeSearchKeyword(normalized);
+
 		setLoadingSearch(true);
 		setSearchError("");
 
-		const res = await searchWords(normalized, limit);
+		const res = await searchWords(convertedKeyword, limit);
 		if (res && res.errCode === 0) {
 			setSearchResults(res.words || []);
+			setHighlightedDropdownIndex(-1);
 		} else {
 			setSearchResults([]);
+			setHighlightedDropdownIndex(-1);
 			setSearchError((res && res.errMessage) || "Không thể tra từ lúc này.");
 		}
 
@@ -163,7 +229,11 @@ const HomePage = () => {
 
 	const handleSelectWord = (word) => {
 		const selectedQuery = pickBestQueryToken(word, searchInput);
-		history.push(`/dictionary?q=${encodeURIComponent(selectedQuery)}`);
+		const convertedQuery = normalizeSearchKeyword(selectedQuery);
+		setSearchInput(convertedQuery);
+		history.push(`/dictionary?q=${encodeURIComponent(convertedQuery)}`);
+		setIsDropdownOpen(false);
+		setHighlightedDropdownIndex(-1);
 	};
 
 	const openHistoryPopup = () => {
@@ -211,12 +281,13 @@ const HomePage = () => {
 
 		return (
 			<div className="dropdown-list">
-				{searchResults.map((word) => (
+				{searchResults.map((word, index) => (
 					<button
 						type="button"
 						key={word.id}
-						className="dropdown-item"
+						className={`dropdown-item ${highlightedDropdownIndex === index ? "active" : ""}`}
 						onClick={() => handleSelectWord(word)}
+						onMouseEnter={() => setHighlightedDropdownIndex(index)}
 					>
 						<div className="dropdown-item-main">
 							<strong>{word.word}</strong>
@@ -230,32 +301,39 @@ const HomePage = () => {
 	};
 
 	return (
-		<div className="mazii-home">
-			<div className="mazii-shell">
-				<header className="mazii-search-wrap" ref={searchWrapRef}>
-					<form className="mazii-search-bar" onSubmit={handleSearch}>
+		<div className="home-page">
+			<div className="home-shell">
+				<header className="home-search-wrap" ref={searchWrapRef}>
+					<div className="home-search-head">
+						<p className="home-search-kicker">Japanese Toolbox</p>
+						<h1>Tra cứu từ vựng theo cách nhanh và trực quan hơn</h1>
+					</div>
+					<form className="home-search-bar" onSubmit={handleSearch}>
 						<span className="search-leading" aria-hidden="true">
-							🔍
+							辞
 						</span>
 						<input
 							type="text"
 							value={searchInput}
 							onFocus={() => setIsDropdownOpen(true)}
-							onChange={(event) => setSearchInput(event.target.value)}
+							onChange={handleSearchInputChange}
+							onKeyDown={handleSearchInputKeyDown}
 							placeholder="日本, nihon, Nhật Bản"
 						/>
 						<div className="search-actions">
-							{/* <button type="button">↗</button> */}
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
-							{/* <button type="button">Mic</button> */}
-							<button type="button" onClick={openHistoryPopup}>His</button>
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
+								A文
+							</button>
+							<button type="button" onClick={openHistoryPopup}>
+								His
+							</button>
 						</div>
 						<button className="lang-switch" type="submit">
-							Nhật - Việt ▾
+							Nhật - Việt
 						</button>
 					</form>
 
-					<nav className="mazii-mode-tabs">
+					<nav className="home-mode-tabs">
 						<button className="tab-active" type="button">
 							Từ vựng
 						</button>
@@ -277,13 +355,49 @@ const HomePage = () => {
 						>
 							Ngữ pháp
 						</button>
-						{/* <button type="button">Nhật - Nhật</button> */}
 					</nav>
 
 					{isDropdownOpen && searchInput.trim() && (
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
 					)}
 				</header>
+
+				<section className="home-hero-grid">
+					<article className="home-hero-main">
+						<p className="hero-kicker">Trang chủ học tiếng Nhật</p>
+						<h2>Kết hợp tra từ, lịch sử học và góp ý cộng đồng trên cùng một dashboard.</h2>
+						<p>
+							Bắt đầu từ một từ khóa, sau đó mở rộng sang câu, ngữ pháp và kanji chỉ bằng vài cú nhấp.
+						</p>
+						<div className="hero-actions">
+							<button type="button" onClick={() => applyHintAndSearch("景気")}>
+								Thử từ 景気
+							</button>
+							<button type="button" onClick={() => applyHintAndSearch("健康")}>
+								Thử từ 健康
+							</button>
+						</div>
+					</article>
+
+					<div className="home-hero-stats">
+						<div className="hero-stat-card">
+							<span>Tài khoản</span>
+							<strong>{isLoggedIn ? "Đã đăng nhập" : "Chưa đăng nhập"}</strong>
+						</div>
+						<div className="hero-stat-card">
+							<span>Lịch sử gần đây</span>
+							<strong>{historyItems.length}</strong>
+						</div>
+						<div className="hero-stat-card">
+							<span>Từ khóa hot</span>
+							<strong>{hotKeywords.length}</strong>
+						</div>
+						<div className="hero-stat-card">
+							<span>Góp ý cộng đồng</span>
+							<strong>{communityPosts.length}</strong>
+						</div>
+					</div>
+				</section>
 
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
@@ -335,98 +449,90 @@ const HomePage = () => {
 					</div>
 				)}
 
-				<main className={`mazii-content-grid`}>
-					<>
-						<section className="mazii-left-column">
-							<article className="promo-card">
-								<p>Mazii</p>
-								<h2>Dịch bằng hình ảnh - Một chạm làm chủ tiếng Nhật</h2>
-								<button type="button" onClick={() => applyHintAndSearch("景気")}>
-									Thử với 景気
+				<main className="home-content-grid">
+					<section className="home-main-column">
+						<article className="surface-panel tips-panel">
+							<h3>Mẹo tra cứu nhanh</h3>
+							<ul>
+								<li>Gõ kana, romaji hoặc kanji đều được hệ thống gợi ý tức thì.</li>
+								<li>Đăng nhập để lưu lịch sử và tiếp tục học trên thiết bị khác.</li>
+								<li>Dùng từ ngắn trước, sau đó mở rộng bằng từ khóa liên quan.</li>
+							</ul>
+						</article>
+
+						<article className="surface-panel">
+							<div className="panel-head">
+								<h3>Từ khóa hot hôm nay</h3>
+								<button type="button" onClick={() => setSearchInput("")}>
+									Làm mới
 								</button>
-							</article>
+							</div>
+							<div className="chip-list">
+								{hotKeywords.map((word) => (
+									<button key={word} type="button" onClick={() => applyHintAndSearch(word)}>
+										{word}
+									</button>
+								))}
+							</div>
+						</article>
 
-							<article className="tips-card">
-								<h3>Tips</h3>
-								<ul>
-									<li>Đăng nhập để đồng bộ dữ liệu học trên nhiều thiết bị.</li>
-									<li>Tra cứu katakana bằng cách viết hoa: BETONAMU.</li>
-									<li>Dùng mẫu ngắn để có kết quả sát nghĩa hơn.</li>
-								</ul>
-							</article>
+						<article className="surface-panel">
+							<div className="panel-head">
+								<h3>Lịch sử tra cứu</h3>
+								<button type="button" onClick={openHistoryPopup}>
+									Xem tất cả
+								</button>
+							</div>
+							<div className="chip-list">
+								{!isLoggedIn && (
+									<p className="history-preview-empty">Đăng nhập để xem lịch sử tra cứu</p>
+								)}
+								{historyPreviewItems.map((item, index) => (
+									<button
+										key={`${item.word}-${index}`}
+										type="button"
+										onClick={() => handleSelectHistoryItem(item)}
+									>
+										{item.word}
+									</button>
+								))}
+								{isLoggedIn && historyPreviewItems.length === 0 && (
+									<p className="history-preview-empty">Chưa có lịch sử tra cứu</p>
+								)}
+							</div>
+						</article>
 
-							<article className="chip-section">
-								<div className="chip-header">
-									<h3>Lịch sử</h3>
-									<button type="button" onClick={openHistoryPopup}>Xem thêm</button>
-								</div>
-								<div className="chip-list">
-									{!isLoggedIn && (
-										<p className="history-preview-empty">Đăng nhập để xem lịch sử tra cứu</p>
-									)}
-									{historyPreviewItems.map((item, index) => (
-										<button
-											key={`${item.word}-${index}`}
-											type="button"
-											onClick={() => handleSelectHistoryItem(item)}
-										>
-											{item.word}
-										</button>
-									))}
-									{isLoggedIn && historyPreviewItems.length === 0 && (
-										<p className="history-preview-empty">Chưa có lịch sử tra cứu</p>
-									)}
-								</div>
-							</article>
+						<article className="surface-panel jlpt-panel">
+							<h3>JLPT Quick Start</h3>
+							<div className="jlpt-list">
+								<button type="button" onClick={() => applyHintAndSearch("経済")}>N1</button>
+								<button type="button" onClick={() => applyHintAndSearch("期待")}>N2</button>
+								<button type="button" onClick={() => applyHintAndSearch("仕事")}>N3</button>
+								<button type="button" onClick={() => applyHintAndSearch("便利")}>N4</button>
+								<button type="button" onClick={() => applyHintAndSearch("学校")}>N5</button>
+							</div>
+						</article>
+					</section>
 
-							<article className="chip-section">
-								<div className="chip-header">
-									<h3>Từ khóa hot</h3>
-									<button type="button">Hôm nay</button>
-								</div>
-								<div className="chip-list">
-									{hotKeywords.map((word) => (
-										<button key={word} type="button" onClick={() => applyHintAndSearch(word)}>
-											{word}
-										</button>
-									))}
-								</div>
-							</article>
-
-							<article className="chip-section jlpt-section">
-								<h3>JLPT</h3>
-								<div className="jlpt-list">
-									<button type="button">N1</button>
-									<button type="button">N2</button>
-									<button type="button">N3</button>
-									<button type="button">N4</button>
-									<button type="button">N5</button>
-								</div>
-							</article>
-
-
-						</section>
-
-						<aside className="mazii-right-column">
-							<article className="lookup-panel">
-								<h3>Góp ý</h3>
-								<div className="feedback-list">
-									{communityPosts.map((item) => (
-										<div key={`${item.id}-${item.createdAt}`} className="feedback-item">
-											<strong>{item.word}</strong>
-											<p>{item.content}</p>
-											<small className="feedback-meta">
-												{item.author || "Bạn"} • {new Date(item.createdAt).toLocaleString("vi-VN")}
-											</small>
-										</div>
-									))}
-									{communityPosts.length === 0 && (
-										<p className="feedback-empty">Chưa có bình luận nào.</p>
-									)}
-								</div>
-							</article>
-						</aside>
-					</>
+					<aside className="home-side-column">
+						<article className="surface-panel community-panel">
+							<h3>Góp ý cộng đồng</h3>
+							<div className="feedback-list">
+								{communityPosts.map((item) => (
+									<div key={`${item.id}-${item.createdAt}`} className="feedback-item">
+										<strong>{item.word}</strong>
+										<p>{item.content}</p>
+										<small className="feedback-meta">
+											{item.author || "Bạn"} • {new Date(item.createdAt).toLocaleString("vi-VN")}
+										</small>
+									</div>
+								))}
+								{communityPosts.length === 0 && (
+									<p className="feedback-empty">Chưa có bình luận nào.</p>
+								)}
+							</div>
+						</article>
+					</aside>
 				</main>
 			</div>
 		</div>

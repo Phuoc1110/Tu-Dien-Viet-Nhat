@@ -17,6 +17,7 @@ const KanjiPage = () => {
 	const [dropdownResults, setDropdownResults] = useState([]);
 	const [loadingDropdown, setLoadingDropdown] = useState(false);
 	const [errorDropdown, setErrorDropdown] = useState("");
+	const [highlightedDropdownIndex, setHighlightedDropdownIndex] = useState(-1);
 	const searchWrapRef = useRef(null);
 	const [activeKanji, setActiveKanji] = useState(null);
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
@@ -204,6 +205,7 @@ const KanjiPage = () => {
 		if (!searchInput.trim() || searchInput === keyword) {
 			setDropdownResults([]);
 			setErrorDropdown("");
+			setHighlightedDropdownIndex(-1);
 			return;
 		}
 
@@ -218,6 +220,7 @@ const KanjiPage = () => {
 		const handleOutsideClick = (event) => {
 			if (!searchWrapRef.current?.contains(event.target)) {
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		};
 
@@ -231,26 +234,77 @@ const KanjiPage = () => {
 		const res = await searchKanjis(query, 8);
 		if (res && res.errCode === 0) {
 			setDropdownResults(res.kanjis || []);
+			setHighlightedDropdownIndex(-1);
 		} else {
 			setDropdownResults([]);
+			setHighlightedDropdownIndex(-1);
 			setErrorDropdown((res && res.errMessage) || "Search failed");
 		}
 		setLoadingDropdown(false);
 	};
 
 	const handleSearch = (e) => {
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			if (!dropdownResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) return 0;
+				return (prev + 1) % dropdownResults.length;
+			});
+			return;
+		}
+
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			if (!dropdownResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) return dropdownResults.length - 1;
+				return (prev - 1 + dropdownResults.length) % dropdownResults.length;
+			});
+			return;
+		}
+
+		if (e.key === "Escape") {
+			setIsDropdownOpen(false);
+			setHighlightedDropdownIndex(-1);
+			return;
+		}
+
 		if (e.key === "Enter") {
+			e.preventDefault();
+			if (
+				isDropdownOpen &&
+				highlightedDropdownIndex >= 0 &&
+				highlightedDropdownIndex < dropdownResults.length
+			) {
+				handleSelectKanji(dropdownResults[highlightedDropdownIndex]);
+				return;
+			}
+
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
 				history.push(`/kanji?q=${newKeyword.trim()}`);
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		}
+	};
+
+	const handleSearchInputChange = (event) => {
+		setSearchInput(event.target.value);
+		setHighlightedDropdownIndex(-1);
 	};
 
 	const handleSelectKanji = (kanji) => {
 		history.push(`/kanji?q=${kanji.characterKanji}`);
 		setIsDropdownOpen(false);
+		setHighlightedDropdownIndex(-1);
 	};
 
 	const handleSelectRelatedKanji = (kanji) => {
@@ -286,12 +340,13 @@ const KanjiPage = () => {
 
 		return (
 			<div className="dropdown-list">
-				{dropdownResults.map((item) => (
+				{dropdownResults.map((item, index) => (
 					<button
 						type="button"
 						key={item.id}
-						className="kanji-dropdown-item"
+						className={`kanji-dropdown-item ${highlightedDropdownIndex === index ? "active" : ""}`}
 						onClick={() => handleSelectKanji(item)}
+						onMouseEnter={() => setHighlightedDropdownIndex(index)}
 					>
 						<div className="dropdown-item-main">
 							<strong>{item.characterKanji}</strong>
@@ -362,7 +417,7 @@ const KanjiPage = () => {
 							type="text"
 							placeholder="Tra Hán tự"
 							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
+							onChange={handleSearchInputChange}
 							onFocus={() => setIsDropdownOpen(true)}
 							onKeyDown={handleSearch}
 						/>

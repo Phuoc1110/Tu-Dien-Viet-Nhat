@@ -3,6 +3,7 @@ import userController from "../controllers/userController";
 import dictionaryController from "../controllers/dictionaryController";
 import adminController from "../controllers/adminController";
 import notebookController from "../controllers/notebookController";
+import quizController from "../controllers/quizController";
 import { checkUserJWT } from "../middleware/JWT_Action";
 import { uploadCloud } from "../middleware/Cloudinary_Multer";
 import {
@@ -96,6 +97,12 @@ let initWebRoutes = (app) => {
 	router.post("/api/notebooks/:id/items", notebookController.HandleAddNotebookItem);
 	router.put("/api/notebooks/:id", notebookController.HandleUpdateNotebook);
 	router.delete("/api/notebooks/:id", notebookController.HandleDeleteNotebook);
+
+	// Quiz & SRS
+	router.post("/api/quiz/generate", quizController.HandleGenerateQuiz);
+	router.post("/api/quiz/evaluate", quizController.HandleEvaluateAnswer);
+	router.get("/api/quiz/due-words", quizController.HandleGetDueWords);
+	router.get("/api/quiz/stats", quizController.HandleGetSRSStats);
 
 	// Admin - Dashboard
 	router.get("/api/admin/dashboard", adminController.getDashboard);

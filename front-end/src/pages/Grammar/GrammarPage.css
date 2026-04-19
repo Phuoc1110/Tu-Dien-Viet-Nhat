@@ -165,6 +165,10 @@
 	background: #f8fafc;
 }
 
+.grammar-dropdown-item.active {
+	background: #e0f2fe;
+}
+
 .grammar-dropdown-item:last-child {
 	border-bottom: none;
 }

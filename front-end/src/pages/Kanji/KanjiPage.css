@@ -131,6 +131,10 @@
 	background: #f8fafc;
 }
 
+.kanji-dropdown-item.active {
+	background: #e0f2fe;
+}
+
 .kanji-dropdown-item:last-child {
 	border-bottom: none;
 }

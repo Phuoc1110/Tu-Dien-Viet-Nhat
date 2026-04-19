@@ -15,6 +15,7 @@ const GrammarPage = () => {
 	const [loadingDropdown, setLoadingDropdown] = useState(false);
 	const [errorDropdown, setErrorDropdown] = useState("");
 	const [dropdownResults, setDropdownResults] = useState([]);
+	const [highlightedDropdownIndex, setHighlightedDropdownIndex] = useState(-1);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [grammars, setGrammars] = useState([]);
@@ -66,6 +67,7 @@ const GrammarPage = () => {
 		if (!searchInput.trim() || searchInput === keyword) {
 			setDropdownResults([]);
 			setErrorDropdown("");
+			setHighlightedDropdownIndex(-1);
 			return;
 		}
 
@@ -75,8 +77,10 @@ const GrammarPage = () => {
 			const res = await searchGrammars(searchInput.trim(), 8);
 			if (res && res.errCode === 0) {
 				setDropdownResults(res.grammars || []);
+				setHighlightedDropdownIndex(-1);
 			} else {
 				setDropdownResults([]);
+				setHighlightedDropdownIndex(-1);
 				setErrorDropdown((res && res.errMessage) || "Search failed");
 			}
 			setLoadingDropdown(false);
@@ -89,6 +93,7 @@ const GrammarPage = () => {
 		const handleOutsideClick = (event) => {
 			if (!searchWrapRef.current?.contains(event.target)) {
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		};
 
@@ -97,18 +102,67 @@ const GrammarPage = () => {
 	}, []);
 
 	const handleSearch = (e) => {
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			if (!dropdownResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) return 0;
+				return (prev + 1) % dropdownResults.length;
+			});
+			return;
+		}
+
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			if (!dropdownResults.length) {
+				return;
+			}
+			setIsDropdownOpen(true);
+			setHighlightedDropdownIndex((prev) => {
+				if (prev < 0) return dropdownResults.length - 1;
+				return (prev - 1 + dropdownResults.length) % dropdownResults.length;
+			});
+			return;
+		}
+
+		if (e.key === "Escape") {
+			setIsDropdownOpen(false);
+			setHighlightedDropdownIndex(-1);
+			return;
+		}
+
 		if (e.key === "Enter") {
+			e.preventDefault();
+			if (
+				isDropdownOpen &&
+				highlightedDropdownIndex >= 0 &&
+				highlightedDropdownIndex < dropdownResults.length
+			) {
+				handleSelectGrammar(dropdownResults[highlightedDropdownIndex]);
+				return;
+			}
+
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
 				history.push(`/grammar?q=${newKeyword.trim()}`);
 				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
 			}
 		}
+	};
+
+	const handleSearchInputChange = (event) => {
+		setSearchInput(event.target.value);
+		setHighlightedDropdownIndex(-1);
 	};
 
 	const handleSelectGrammar = (item) => {
 		history.push(`/grammar?q=${item.title}`);
 		setIsDropdownOpen(false);
+		setHighlightedDropdownIndex(-1);
 	};
 
 	const toBulletLines = (value) => {
@@ -136,12 +190,13 @@ const GrammarPage = () => {
 
 		return (
 			<div className="dropdown-list">
-				{dropdownResults.map((item) => (
+				{dropdownResults.map((item, index) => (
 					<button
 						type="button"
 						key={item.id}
-						className="grammar-dropdown-item"
+						className={`grammar-dropdown-item ${highlightedDropdownIndex === index ? "active" : ""}`}
 						onClick={() => handleSelectGrammar(item)}
+						onMouseEnter={() => setHighlightedDropdownIndex(index)}
 					>
 						<div className="dropdown-item-main">
 							<strong>{item.title}</strong>
@@ -164,7 +219,7 @@ const GrammarPage = () => {
 							type="text"
 							placeholder="Tra ngu phap"
 							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
+							onChange={handleSearchInputChange}
 							onFocus={() => setIsDropdownOpen(true)}
 							onKeyDown={handleSearch}
 						/>
