@@ -77,7 +77,7 @@ const Navbar = ({ title = "HomePage" }) => {
 					<div className="brand-logo">
 						<img src={logo} alt="SocialHub Logo" className="logo-image" />
 					</div>
-					<span className="brand-name">MAZII</span>
+					<span className="brand-name">JP_DICT</span>
 				</div>
 
 				<div className="navbar-shortcuts">

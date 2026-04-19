@@ -51,6 +51,192 @@ const getReadingItems = (value) => {
 		.filter(Boolean);
 };
 
+const getMeaningTexts = (entry) => {
+	if (!Array.isArray(entry?.meanings)) {
+		return [];
+	}
+	return entry.meanings
+		.map((item) => String(item?.definition || "").trim())
+		.filter(Boolean);
+};
+
+const getRomajiItems = (value) => {
+	if (!value) {
+		return [];
+	}
+	return String(value)
+		.split(/[;；,，、|/]+/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+};
+
+const tokenizeMeaning = (value) =>
+	String(value || "")
+		.toLowerCase()
+		.split(/[\s,.;:!?()\[\]{}\-_/\\]+/)
+		.map((token) => token.trim())
+		.filter((token) => token.length >= 2);
+
+const buildBigrams = (value) => {
+	const text = String(value || "").trim().toLowerCase();
+	if (!text) {
+		return new Set();
+	}
+	if (text.length === 1) {
+		return new Set([text]);
+	}
+	const grams = new Set();
+	for (let i = 0; i < text.length - 1; i += 1) {
+		grams.add(text.slice(i, i + 2));
+	}
+	return grams;
+};
+
+const jaccardScore = (setA, setB) => {
+	if (!setA.size || !setB.size) {
+		return 0;
+	}
+	let intersection = 0;
+	setA.forEach((item) => {
+		if (setB.has(item)) {
+			intersection += 1;
+		}
+	});
+	const union = setA.size + setB.size - intersection;
+	return union ? intersection / union : 0;
+};
+
+const readingSimilarity = (mainReadings, candidateReadings) => {
+	if (!mainReadings.length || !candidateReadings.length) {
+		return 0;
+	}
+	let best = 0;
+	mainReadings.forEach((mainToken) => {
+		const mainSet = buildBigrams(mainToken);
+		candidateReadings.forEach((candidateToken) => {
+			const candidateSet = buildBigrams(candidateToken);
+			const score = jaccardScore(mainSet, candidateSet);
+			if (score > best) {
+				best = score;
+			}
+		});
+	});
+	return best;
+};
+
+const romajiSimilarity = (mainRomaji, candidateRomaji) => {
+	if (!mainRomaji.length || !candidateRomaji.length) {
+		return 0;
+	}
+	let best = 0;
+	mainRomaji.forEach((mainToken) => {
+		const mainSet = buildBigrams(mainToken);
+		candidateRomaji.forEach((candidateToken) => {
+			const candidateSet = buildBigrams(candidateToken);
+			const score = jaccardScore(mainSet, candidateSet);
+			if (score > best) {
+				best = score;
+			}
+		});
+	});
+	return best;
+};
+
+const meaningSimilarity = (mainMeanings, candidateMeanings) => {
+	if (!mainMeanings.length || !candidateMeanings.length) {
+		return 0;
+	}
+	let best = 0;
+	mainMeanings.forEach((mainText) => {
+		const mainSet = new Set(tokenizeMeaning(mainText));
+		candidateMeanings.forEach((candidateText) => {
+			const candidateSet = new Set(tokenizeMeaning(candidateText));
+			const score = jaccardScore(mainSet, candidateSet);
+			if (score > best) {
+				best = score;
+			}
+		});
+	});
+	return best;
+};
+
+const pickRelatedWords = (mainWord, pool) => {
+	if (!mainWord || !Array.isArray(pool) || !pool.length) {
+		return [];
+	}
+
+	const mainReadings = getReadingItems(mainWord.reading);
+	const mainMeanings = getMeaningTexts(mainWord);
+	const mainRomaji = getRomajiItems(mainWord.romaji);
+	const mainWordToken = normalize(mainWord.word);
+	const mainReadingToken = normalize(mainReadings[0] || mainWord.reading || "");
+	const simpleMeaningTokens = tokenizeMeaning(mainMeanings.join(" ")).slice(0, 6);
+
+	const scored = pool
+		.filter((item) => item?.id && item.id !== mainWord.id)
+		.map((item) => {
+			const candidateReadings = getReadingItems(item.reading);
+			const candidateMeanings = getMeaningTexts(item);
+			const candidateRomaji = getRomajiItems(item.romaji);
+			const readingScore = readingSimilarity(mainReadings, candidateReadings);
+			const romajiScore = romajiSimilarity(mainRomaji, candidateRomaji);
+			const meaningScore = meaningSimilarity(mainMeanings, candidateMeanings);
+			const score = readingScore * 0.45 + romajiScore * 0.2 + meaningScore * 0.35;
+			return { item, score, readingScore, romajiScore, meaningScore };
+		})
+		.sort((a, b) => b.score - a.score);
+
+	const strongMatch = scored.filter(
+		(entry) => entry.readingScore >= 0.42 || entry.romajiScore >= 0.42 || entry.meaningScore >= 0.28
+	);
+
+	const pickedEntries = [];
+	const pickedIds = new Set();
+
+	const pushEntry = (entry) => {
+		if (!entry?.item?.id || pickedIds.has(entry.item.id)) {
+			return;
+		}
+		pickedEntries.push(entry);
+		pickedIds.add(entry.item.id);
+	};
+
+	strongMatch.forEach(pushEntry);
+
+	if (pickedEntries.length < 5) {
+		const simpleFallback = scored.filter((entry) => {
+			const item = entry.item;
+			const itemWord = normalize(item.word);
+			const itemReading = normalize(item.reading);
+			const itemRomaji = normalize(item.romaji);
+			const itemMeanings = getMeaningTexts(item).map((text) => normalize(text));
+
+			const byReading =
+				mainReadingToken.length >= 2 && itemReading.includes(mainReadingToken.slice(0, 2));
+			const byRomaji =
+				mainRomaji[0] && itemRomaji.includes(normalize(mainRomaji[0]).slice(0, 2));
+			const byWord =
+				mainWordToken.length >= 1 &&
+				(itemWord.includes(mainWordToken.slice(0, 1)) || mainWordToken.includes(itemWord));
+			const byMeaning = simpleMeaningTokens.some((token) =>
+				itemMeanings.some((meaning) => meaning.includes(token))
+			);
+
+			return byReading || byRomaji || byWord || byMeaning;
+		});
+
+		simpleFallback.forEach(pushEntry);
+	}
+
+	if (pickedEntries.length < 5) {
+		scored.forEach(pushEntry);
+	}
+
+	const picked = pickedEntries.slice(0, 5).map((entry) => entry.item);
+
+	return picked;
+};
+
 const DictionaryPage = () => {
 	const { search } = useLocation();
 	const history = useHistory();
@@ -193,14 +379,28 @@ const DictionaryPage = () => {
 						meaning: mainWord.meanings?.[0]?.definition || "",
 					});
 				}
-				// Fetch related words
-				const relatedRes = await searchWords(keyword.trim(), 6);
-				if (relatedRes && relatedRes.errCode === 0) {
-					const related = (relatedRes.words || []).filter(
-						(item) => item.id !== mainWord.id
-					);
-					setRelatedWords(related.slice(0, 5));
+
+				const candidateMap = new Map();
+				(res.words || []).forEach((item) => {
+					if (item?.id) {
+						candidateMap.set(item.id, item);
+					}
+				});
+
+				const firstReading = getReadingItems(mainWord.reading)[0];
+				if (firstReading) {
+					const byReadingRes = await searchWords(firstReading, 30);
+					if (byReadingRes?.errCode === 0) {
+						(byReadingRes.words || []).forEach((item) => {
+							if (item?.id) {
+								candidateMap.set(item.id, item);
+							}
+						});
+					}
 				}
+
+				const related = pickRelatedWords(mainWord, Array.from(candidateMap.values()));
+				setRelatedWords(related);
 			} else {
 				setWordDetail(null);
 				setRelatedWords([]);
