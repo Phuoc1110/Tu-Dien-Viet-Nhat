@@ -481,74 +481,9 @@ const evaluateAnswer = async (userId, itemIdOrPayload, userAnswer, mode, itemTyp
 	}
 };
 
-const getDueWords = async (userId, limit = 20) => {
-	try {
-		const dueReviews = await db.UserReview.findAll({
-			where: {
-				userId,
-				itemType: "word",
-				nextReviewAt: { [Op.lte]: new Date() },
-			},
-			attributes: ["itemId", "nextReviewAt", "srs_stage"],
-			order: [["nextReviewAt", "ASC"]],
-			limit,
-			raw: true,
-		});
-
-		return dueReviews.map((r) => ({
-			wordId: r.itemId,
-			stage: r.srs_stage,
-		}));
-	} catch (e) {
-		console.error("getDueWords error:", e);
-		return [];
-	}
-};
-
-const getSRSStats = async (userId) => {
-	try {
-		const stats = await db.UserReview.findAll({
-			where: {
-				userId,
-				itemType: "word",
-			},
-			attributes: [
-				"srs_stage",
-				[db.sequelize.fn("COUNT", db.sequelize.col("id")), "count"],
-			],
-			group: ["srs_stage"],
-			raw: true,
-		});
-
-		const result = {
-			total: 0,
-			stage0: 0,
-			stage1: 0,
-			stage2: 0,
-			stage3: 0,
-			stage4: 0,
-			stage5: 0,
-			stage6: 0,
-		};
-
-		stats.forEach((s) => {
-			const stage = `stage${s.srs_stage}`;
-			result[stage] = parseInt(s.count, 10);
-			result.total += parseInt(s.count, 10);
-		});
-
-		return result;
-	} catch (e) {
-		console.error("getSRSStats error:", e);
-		return {};
-	}
-};
-
 export default {
 	generateQuiz,
 	evaluateAnswer,
-	getDueWords,
-	getSRSStats,
 	hasKanji,
 	isHiragana,
 	isKatakana,

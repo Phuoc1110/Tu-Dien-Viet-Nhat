@@ -101,8 +101,6 @@ let initWebRoutes = (app) => {
 	// Quiz & SRS
 	router.post("/api/quiz/generate", quizController.HandleGenerateQuiz);
 	router.post("/api/quiz/evaluate", quizController.HandleEvaluateAnswer);
-	router.get("/api/quiz/due-words", quizController.HandleGetDueWords);
-	router.get("/api/quiz/stats", quizController.HandleGetSRSStats);
 
 	// Admin - Dashboard
 	router.get("/api/admin/dashboard", adminController.getDashboard);
