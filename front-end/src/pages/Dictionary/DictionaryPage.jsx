@@ -21,6 +21,12 @@ const splitVariants = (raw) =>
 		.filter(Boolean);
 
 const normalize = (raw) => String(raw || "").trim().toLowerCase();
+const KANJI_CHAR_REGEX = /[\u4E00-\u9FFF]/g;
+
+const getKanjiChars = (raw) => {
+	const chars = String(raw || "").match(KANJI_CHAR_REGEX) || [];
+	return [...new Set(chars)];
+};
 
 const pickBestQueryToken = (entry, typedValue) => {
 	const typed = normalize(typedValue);
@@ -239,6 +245,29 @@ const pickRelatedWords = (mainWord, pool) => {
 	return picked;
 };
 
+const pickWordsBySharedKanji = (mainWord, pool) => {
+	if (!mainWord || !Array.isArray(pool) || !pool.length) {
+		return [];
+	}
+
+	const mainKanjiChars = getKanjiChars(mainWord.word);
+	if (!mainKanjiChars.length) {
+		return [];
+	}
+
+	const scored = pool
+		.filter((item) => item?.id && item.id !== mainWord.id)
+		.map((item) => {
+			const itemKanjiChars = getKanjiChars(item.word);
+			const sharedCount = itemKanjiChars.filter((char) => mainKanjiChars.includes(char)).length;
+			return { item, sharedCount };
+		})
+		.filter((entry) => entry.sharedCount > 0)
+		.sort((a, b) => b.sharedCount - a.sharedCount);
+
+	return scored.slice(0, 5).map((entry) => entry.item);
+};
+
 const DictionaryPage = () => {
 	const { search } = useLocation();
 	const history = useHistory();
@@ -407,7 +436,26 @@ const DictionaryPage = () => {
 					}
 				}
 
-				const related = pickRelatedWords(mainWord, Array.from(candidateMap.values()));
+				let related = pickRelatedWords(mainWord, Array.from(candidateMap.values()));
+
+				if (!related.length) {
+					const kanjiChars = getKanjiChars(mainWord.word).slice(0, 3);
+					await Promise.all(
+						kanjiChars.map(async (kanjiChar) => {
+							const byKanjiRes = await searchWords(kanjiChar, 30);
+							if (byKanjiRes?.errCode === 0) {
+								(byKanjiRes.words || []).forEach((item) => {
+									if (item?.id) {
+										candidateMap.set(item.id, item);
+									}
+								});
+							}
+						})
+					);
+
+					related = pickWordsBySharedKanji(mainWord, Array.from(candidateMap.values()));
+				}
+
 				setRelatedWords(related);
 			} else {
 				setWordDetail(null);
@@ -530,7 +578,7 @@ const DictionaryPage = () => {
 	};
 
 	const handleSelectWord = (word) => {
-		const selectedQuery = pickBestQueryToken(word, searchInput || keyword);
+		const selectedQuery = String(word?.word || "").trim() || pickBestQueryToken(word, searchInput || keyword);
 		const convertedQuery = normalizeSearchKeyword(selectedQuery);
 		setSearchInput(convertedQuery);
 		history.push(`/dictionary?q=${encodeURIComponent(convertedQuery)}`);
