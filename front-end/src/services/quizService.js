@@ -32,4 +32,19 @@ const evaluateQuizAnswer = ({ itemType, itemId, wordId, userAnswer, mode }) => {
 		});
 };
 
-export { generateQuiz, evaluateQuizAnswer };
+const reviewFlashcard = ({ itemType, itemId, wordId, action }) => {
+	return axios
+		.post("/api/quiz/flashcard-review", {
+			itemType,
+			itemId,
+			wordId,
+			action,
+		})
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Flashcard review error:", err);
+			return { errCode: 1, errMessage: "Flashcard review failed" };
+		});
+};
+
+export { generateQuiz, evaluateQuizAnswer, reviewFlashcard };

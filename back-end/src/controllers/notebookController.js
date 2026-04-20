@@ -37,7 +37,7 @@ const HandleGetNotebookDetail = async (req, res) => {
 		}
 
 		const notebookId = Number(req.params.id);
-		const notebook = await notebookService.getNotebookDetail(notebookId);
+		const notebook = await notebookService.getNotebookDetail(notebookId, userId);
 		if (!notebook) {
 			return res.status(404).json({
 				errCode: 1,

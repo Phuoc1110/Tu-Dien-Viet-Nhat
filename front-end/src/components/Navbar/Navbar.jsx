@@ -1,7 +1,5 @@
 import React, { useContext, useState } from "react";
 import {
-	Search,
-	Bell,
 	Settings,
 	LogOut,
 	LogIn,

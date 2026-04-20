@@ -4,7 +4,6 @@ import { Op } from "sequelize";
 const VALID_ITEM_TYPES = ["word", "kanji", "grammar"];
 const VALID_QUESTION_MODES = ["reading", "meaning", "kanji", "grammar"];
 const VALID_QUIZ_MODES = ["Multiple_Choice", "Typing"];
-const VALID_LAST_MODES = ["reading", "meaning", "kanji"];
 
 const hasKanji = (word) => /[\u4E00-\u9FFF]/g.test(String(word || ""));
 
@@ -59,17 +58,6 @@ const buildOptions = (correctAnswer, distractors = [], total = 4) => {
 		}
 	}
 	return shuffle(choices.slice(0, total));
-};
-
-const getDaysForStage = (stage) => {
-	const stageToDays = {
-		1: 1,
-		2: 3,
-		3: 7,
-		4: 14,
-		5: 30,
-	};
-	return stageToDays[stage] || 1;
 };
 
 const getDistractorWords = async (excludeId, jlptLevel, count = 3) => {
@@ -386,6 +374,68 @@ const getCorrectAnswerByMode = (item, mode) => {
 	return item.meaning || "";
 };
 
+const updateFlashcardReview = async (userId, itemIdOrPayload, action = "known", itemType = "word") => {
+	try {
+		let payload;
+		if (typeof itemIdOrPayload === "object" && itemIdOrPayload !== null) {
+			payload = {
+				itemType: itemIdOrPayload.itemType,
+				itemId: itemIdOrPayload.itemId,
+				wordId: itemIdOrPayload.wordId,
+				action: itemIdOrPayload.action,
+			};
+		} else {
+			payload = {
+				itemType,
+				itemId: itemIdOrPayload,
+				wordId: itemType === "word" ? itemIdOrPayload : null,
+				action,
+			};
+		}
+
+		const normalizedAction = String(payload.action || "").trim().toLowerCase();
+		if (!["known", "unknown"].includes(normalizedAction)) {
+			throw new Error("Invalid flashcard action. Supported: known, unknown");
+		}
+
+		const { itemType: resolvedType, itemId: resolvedId } = resolveItemTypeAndId(payload);
+		await loadQuizItem(resolvedType, resolvedId);
+
+		let userReview = await db.UserFlashcardStatus.findOne({
+			where: {
+				userId,
+				itemType: resolvedType,
+				itemId: resolvedId,
+			},
+		});
+
+		if (!userReview) {
+			userReview = await db.UserFlashcardStatus.create({
+				userId,
+				itemType: resolvedType,
+				itemId: resolvedId,
+				srs_stage: 0,
+			});
+		}
+
+		const isRemembered = normalizedAction === "known";
+
+		await userReview.update({
+			srs_stage: isRemembered ? 1 : 0,
+			lastReviewedAt: new Date(),
+		});
+
+		return {
+			action: normalizedAction,
+			isRemembered,
+			message: normalizedAction === "known" ? "Đã ghi nhận là đã thuộc." : "Đã ghi nhận là chưa thuộc.",
+		};
+	} catch (e) {
+		console.error("updateFlashcardReview error:", e);
+		throw e;
+	}
+};
+
 const evaluateAnswer = async (userId, itemIdOrPayload, userAnswer, mode, itemType = "word") => {
 	try {
 		let payload;
@@ -423,7 +473,7 @@ const evaluateAnswer = async (userId, itemIdOrPayload, userAnswer, mode, itemTyp
 		const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
 		const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
 
-		let userReview = await db.UserReview.findOne({
+		let userReview = await db.UserFlashcardStatus.findOne({
 			where: {
 				userId,
 				itemType: resolvedType,
@@ -431,49 +481,27 @@ const evaluateAnswer = async (userId, itemIdOrPayload, userAnswer, mode, itemTyp
 			},
 		});
 
-		const persistedMode = VALID_LAST_MODES.includes(payload.mode) ? payload.mode : "meaning";
-
 		if (!userReview) {
-			userReview = await db.UserReview.create({
+			userReview = await db.UserFlashcardStatus.create({
 				userId,
 				itemType: resolvedType,
 				itemId: resolvedId,
 				srs_stage: 0,
-				last_mode: persistedMode,
-				nextReviewAt: new Date(),
 			});
 		}
 
-		let newStage = userReview.srs_stage || 0;
-		let nextReviewDate;
-
-		if (isCorrect) {
-			newStage = Math.min(newStage + 1, 6);
-			if (newStage >= 6) {
-				nextReviewDate = null;
-			} else {
-				nextReviewDate = new Date();
-				nextReviewDate.setDate(nextReviewDate.getDate() + getDaysForStage(newStage));
-			}
-		} else {
-			newStage = 0;
-			nextReviewDate = new Date();
-		}
+		const isRemembered = Boolean(isCorrect);
 
 		await userReview.update({
-			srs_stage: newStage,
-			last_mode: persistedMode,
-			nextReviewAt: nextReviewDate,
+			srs_stage: isRemembered ? 1 : 0,
 			lastReviewedAt: new Date(),
-			reviewCount: (userReview.reviewCount || 0) + 1,
 		});
 
 		return {
 			isCorrect,
-			newStage,
-			nextReviewDate,
+			isRemembered,
 			correctAnswer,
-			message: isCorrect ? `Chính xác! Stage tăng lên ${newStage}` : "Sai rồi, reset về stage 0",
+			message: isCorrect ? "Chính xác." : "Sai rồi.",
 		};
 	} catch (e) {
 		console.error("evaluateAnswer error:", e);
@@ -484,6 +512,7 @@ const evaluateAnswer = async (userId, itemIdOrPayload, userAnswer, mode, itemTyp
 export default {
 	generateQuiz,
 	evaluateAnswer,
+	updateFlashcardReview,
 	hasKanji,
 	isHiragana,
 	isKatakana,

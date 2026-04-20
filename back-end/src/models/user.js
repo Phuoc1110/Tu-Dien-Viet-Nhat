@@ -23,8 +23,8 @@ module.exports = (sequelize, DataTypes) => {
 			User.hasMany(models.UserContribution, { foreignKey: "userId", as: "contributions" });
 			User.hasMany(models.UserContribution, { foreignKey: "reviewedBy", as: "reviewedContributions" });
 
-			// SRS Reviews
-			User.hasMany(models.UserReview, { foreignKey: "userId", as: "reviews" });
+			// Flashcard status
+			User.hasMany(models.UserFlashcardStatus, { foreignKey: "userId", as: "flashcardStatuses" });
 		}
 	}
 	User.init(

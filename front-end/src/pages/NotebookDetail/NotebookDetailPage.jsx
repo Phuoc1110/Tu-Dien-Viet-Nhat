@@ -22,7 +22,7 @@ import {
 	getNotebookDetail,
 	updateNotebook,
 } from "../../services/notebookService";
-import { evaluateQuizAnswer, generateQuiz } from "../../services/quizService";
+import { evaluateQuizAnswer, generateQuiz, reviewFlashcard } from "../../services/quizService";
 import "./NotebookDetailPage.css";
 
 const chunkItems = (items, chunkSize = 2) => {
@@ -78,6 +78,8 @@ const NotebookDetailPage = () => {
 	const [miniTestFeedback, setMiniTestFeedback] = useState(null);
 	const [miniTestError, setMiniTestError] = useState("");
 	const [isPlayingList, setIsPlayingList] = useState(false);
+	const [flashcardReviewLoading, setFlashcardReviewLoading] = useState(false);
+	const [flashcardFilter, setFlashcardFilter] = useState("unremembered");
 	const playSessionRef = useRef({ active: false, token: 0 });
 	const cameFromExplore = Boolean(location.state?.fromExplore);
 
@@ -118,6 +120,12 @@ const NotebookDetailPage = () => {
 	}, [notebook?.id, notebook?.items]);
 
 	useEffect(() => {
+		setFlashcardFilter("unremembered");
+		setFlashIndex(0);
+		setIsCardFlipped(false);
+	}, [notebook?.id]);
+
+	useEffect(() => {
 		return () => {
 			playSessionRef.current = { active: false, token: playSessionRef.current.token + 1 };
 			if (window?.speechSynthesis) {
@@ -149,8 +157,21 @@ const NotebookDetailPage = () => {
 		return filteredItems.filter((entry) => Boolean(entry?.item?.title));
 	}, [filteredItems]);
 
+	const flashcardItems = useMemo(() => {
+		return flashItems.filter((entry) => {
+			const remembered = Boolean(entry?.isRemembered);
+			if (flashcardFilter === "remembered") {
+				return remembered;
+			}
+			if (flashcardFilter === "all") {
+				return true;
+			}
+			return !remembered;
+		});
+	}, [flashItems, flashcardFilter]);
+
 	const activeFlashItem =
-		flashItems.length > 0 ? flashItems[flashIndex % flashItems.length] : null;
+		flashcardItems.length > 0 ? flashcardItems[flashIndex % flashcardItems.length] : null;
 
 	const frontText = useMemo(() => {
 		const title = activeFlashItem?.item?.title || "";
@@ -249,18 +270,26 @@ const NotebookDetailPage = () => {
 	};
 
 	const handlePrevFlash = () => {
-		if (!flashItems.length) {
+		if (!flashcardItems.length) {
 			return;
 		}
-		setFlashIndex((prev) => (prev - 1 + flashItems.length) % flashItems.length);
+		setFlashIndex((prev) => (prev - 1 + flashcardItems.length) % flashcardItems.length);
 		setIsCardFlipped(false);
 	};
 
 	const handleNextFlash = () => {
-		if (!flashItems.length) {
+		if (!flashcardItems.length) {
 			return;
 		}
-		setFlashIndex((prev) => (prev + 1) % flashItems.length);
+		setFlashIndex((prev) => (prev + 1) % flashcardItems.length);
+		setIsCardFlipped(false);
+	};
+
+	const advanceFlashcard = () => {
+		if (!flashcardItems.length) {
+			return;
+		}
+		setFlashIndex((prev) => (prev + 1) % flashcardItems.length);
 		setIsCardFlipped(false);
 	};
 
@@ -358,6 +387,61 @@ const NotebookDetailPage = () => {
 		};
 
 		speakNext(0);
+	};
+
+	const handleFlashcardReview = async (action) => {
+		if (!activeFlashItem?.itemType || !activeFlashItem?.itemId) {
+			return;
+		}
+
+		setFlashcardReviewLoading(true);
+		setMessage("");
+
+		const res = await reviewFlashcard({
+			itemType: activeFlashItem.itemType,
+			itemId: activeFlashItem.itemId,
+			action,
+		});
+
+		if (res?.errCode === 0) {
+			const isRemembered = Boolean(res?.data?.isRemembered ?? (action === "known"));
+			setOrderedItems((prev) =>
+				(prev || []).map((entry) => {
+					if (entry.id !== activeFlashItem.id) {
+						return entry;
+					}
+					return {
+						...entry,
+						isRemembered,
+						reviewState: isRemembered ? "remembered" : "unremembered",
+					};
+				})
+			);
+			setNotebook((prev) => {
+				if (!prev?.items) {
+					return prev;
+				}
+				return {
+					...prev,
+					items: (prev.items || []).map((entry) => {
+						if (entry.id !== activeFlashItem.id) {
+							return entry;
+						}
+						return {
+							...entry,
+							isRemembered,
+							reviewState: isRemembered ? "remembered" : "unremembered",
+						};
+					}),
+				};
+			});
+			setMessage(action === "known" ? "Đã ghi nhận là đã thuộc." : "Đã ghi nhận là chưa thuộc.");
+			advanceFlashcard();
+		} else {
+			setMessage(res?.errMessage || "Không cập nhật được trạng thái flashcard.");
+		}
+
+		setFlashcardReviewLoading(false);
 	};
 
 	const handleShuffleVisibleWords = () => {
@@ -748,6 +832,7 @@ const NotebookDetailPage = () => {
 		setMiniTestError("");
 		setFlashIndex(0);
 		setIsCardFlipped(false);
+		setFlashcardFilter("unremembered");
 	};
 
 	return (
@@ -876,9 +961,44 @@ const NotebookDetailPage = () => {
 								<div className="flashcard-mode-header">
 									<h2>Từ vựng</h2>
 									<div className="flashcard-mode-actions">
-										{/* <select>
-											<option>Tất cả</option>
-										</select> */}
+										<div className="flashcard-filter-group">
+											<button
+												type="button"
+												className={flashcardFilter === "unremembered" ? "tiny-btn is-active" : "tiny-btn"}
+												onClick={() => {
+													setFlashcardFilter("unremembered");
+													setFlashIndex(0);
+													setIsCardFlipped(false);
+												}}
+												title="Chỉ hiện từ chưa nhớ"
+											>
+												Chưa nhớ
+											</button>
+											<button
+												type="button"
+												className={flashcardFilter === "remembered" ? "tiny-btn is-active" : "tiny-btn"}
+												onClick={() => {
+													setFlashcardFilter("remembered");
+													setFlashIndex(0);
+													setIsCardFlipped(false);
+												}}
+												title="Chỉ hiện từ đã nhớ"
+											>
+												Đã nhớ
+											</button>
+											<button
+												type="button"
+												className={flashcardFilter === "all" ? "tiny-btn is-active" : "tiny-btn"}
+												onClick={() => {
+													setFlashcardFilter("all");
+													setFlashIndex(0);
+													setIsCardFlipped(false);
+												}}
+												title="Hiện toàn bộ từ"
+											>
+												Toàn bộ
+											</button>
+										</div>
 										<button type="button" className="tiny-btn"><Settings size={18} /></button>
 									</div>
 								</div>
@@ -886,8 +1006,8 @@ const NotebookDetailPage = () => {
 								<div className="flashcard-board">
 									{loading && <div className="word-loading">Đang tải sổ tay...</div>}
 									{message && !loading && <div className="word-message">{message}</div>}
-									{!loading && !flashItems.length && (
-										<div className="word-empty">Sổ tay này chưa có từ nào.</div>
+									{!loading && !flashcardItems.length && (
+										<div className="word-empty">Không có từ phù hợp với bộ lọc flashcard này.</div>
 									)}
 
 									{!loading && Boolean(activeFlashItem) && (
@@ -927,14 +1047,28 @@ const NotebookDetailPage = () => {
 								{Boolean(activeFlashItem) && (
 									<div className="flashcard-bottom-actions">
 										<div className="flash-progress">
-											{flashItems.length ? `${flashIndex + 1}/${flashItems.length}` : "0/0"}
+											{flashcardItems.length ? `${flashIndex + 1}/${flashcardItems.length}` : "0/0"}
 										</div>
 										<button type="button" className="flip-btn" onClick={() => setIsCardFlipped((prev) => !prev)}>
 											Mặt sau
 										</button>
 										<div className="learning-state-row">
-											<button type="button" className="known-btn">Đã thuộc</button>
-											<button type="button" className="unknown-btn">Chưa thuộc</button>
+											<button
+												type="button"
+												className="known-btn"
+												onClick={() => handleFlashcardReview("known")}
+												disabled={flashcardReviewLoading}
+											>
+												{flashcardReviewLoading ? "Đang lưu..." : "Đã thuộc"}
+											</button>
+											<button
+												type="button"
+												className="unknown-btn"
+												onClick={() => handleFlashcardReview("unknown")}
+												disabled={flashcardReviewLoading}
+											>
+												{flashcardReviewLoading ? "Đang lưu..." : "Chưa thuộc"}
+											</button>
 										</div>
 									</div>
 								)}
@@ -1063,7 +1197,7 @@ const NotebookDetailPage = () => {
 
 													{quizFeedback && (
 														<div className={`quiz-result-box ${quizFeedback.isCorrect ? "ok" : "wrong"}`}>
-															<p>{quizFeedback.isCorrect ? "Chính xác" : "Sai"} - Stage: {quizFeedback.newStage}</p>
+															<p>{quizFeedback.isCorrect ? "Chính xác" : "Sai"}</p>
 															{!quizFeedback.isCorrect && <p>Đáp án đúng: {quizFeedback.correctAnswer}</p>}
 														</div>
 													)}

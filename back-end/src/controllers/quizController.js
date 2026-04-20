@@ -81,8 +81,7 @@ let HandleEvaluateAnswer = async (req, res) => {
 			errMessage: result.message,
 			data: {
 				isCorrect: result.isCorrect,
-				newStage: result.newStage,
-				nextReviewDate: result.nextReviewDate,
+				isRemembered: result.isRemembered,
 				correctAnswer: result.correctAnswer,
 			},
 		});
@@ -95,7 +94,51 @@ let HandleEvaluateAnswer = async (req, res) => {
 	}
 };
 
+/**
+ * Handler: Cập nhật trạng thái flashcard (đã thuộc / chưa thuộc)
+ * POST /api/quiz/flashcard-review
+ * Body: { itemType?, itemId?, wordId?, action }
+ */
+let HandleFlashcardReview = async (req, res) => {
+	try {
+		const userId = req.user?.id;
+		const { itemType, itemId, wordId, action } = req.body;
+		const resolvedItemId = itemId || wordId;
+		const resolvedItemType = itemType || (wordId ? "word" : null);
+
+		if (!userId || !resolvedItemId || !resolvedItemType || !action) {
+			return res.status(400).json({
+				errCode: 1,
+				errMessage: "Missing required fields: userId, itemType/itemId (or wordId), action",
+			});
+		}
+
+		const result = await quizService.updateFlashcardReview(userId, {
+			itemType: resolvedItemType,
+			itemId: resolvedItemId,
+			wordId,
+			action,
+		});
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: result.message,
+			data: {
+				action: result.action,
+				isRemembered: result.isRemembered,
+			},
+		});
+	} catch (e) {
+		console.error("HandleFlashcardReview error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: e.message || "Internal server error",
+		});
+	}
+};
+
 export default {
 	HandleGenerateQuiz,
 	HandleEvaluateAnswer,
+	HandleFlashcardReview,
 };

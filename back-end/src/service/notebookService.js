@@ -28,7 +28,7 @@ const buildGrammarPreview = (grammar) => ({
 	jlptLevel: grammar.jlptLevel || null,
 });
 
-const loadItemPreviews = async (items) => {
+const loadItemPreviews = async (items, userId = null) => {
 	const groupedIds = {
 		word: [],
 		kanji: [],
@@ -65,6 +65,25 @@ const loadItemPreviews = async (items) => {
 	const grammarMap = new Map(
 		grammars.map((item) => [item.id, buildGrammarPreview(item.get({ plain: true }))])
 	);
+	const reviewMap = new Map();
+
+	if (userId && (items || []).length) {
+		const reviews = await db.UserFlashcardStatus.findAll({
+			where: {
+				userId,
+				[Op.or]: (items || []).map((item) => ({
+					itemType: item.itemType,
+					itemId: item.itemId,
+				})),
+			},
+			attributes: ["itemType", "itemId", "srs_stage", "lastReviewedAt"],
+		});
+
+		for (const review of reviews) {
+			const plain = review.get({ plain: true });
+			reviewMap.set(`${plain.itemType}:${plain.itemId}`, plain);
+		}
+	}
 
 	return (items || []).map((item) => {
 		let preview = null;
@@ -76,6 +95,9 @@ const loadItemPreviews = async (items) => {
 			preview = grammarMap.get(item.itemId) || null;
 		}
 
+		const review = reviewMap.get(`${item.itemType}:${item.itemId}`) || null;
+		const isRemembered = Number(review?.srs_stage || 0) > 0;
+
 		return {
 			id: item.id,
 			notebookId: item.notebookId,
@@ -83,15 +105,17 @@ const loadItemPreviews = async (items) => {
 			itemId: item.itemId,
 			addedAt: item.addedAt,
 			item: preview,
+			isRemembered,
+			reviewState: isRemembered ? "remembered" : "unremembered",
 		};
 	});
 };
 
-const formatNotebook = async (notebook, itemLimit = null) => {
+const formatNotebook = async (notebook, itemLimit = null, userId = null) => {
 	const plainNotebook = notebook.get({ plain: true });
 	const items = Array.isArray(plainNotebook.items) ? plainNotebook.items : [];
 	const selectedItems = typeof itemLimit === "number" ? items.slice(0, itemLimit) : items;
-	const previewItems = await loadItemPreviews(selectedItems);
+	const previewItems = await loadItemPreviews(selectedItems, userId);
 
 	return {
 		id: plainNotebook.id,
@@ -152,7 +176,7 @@ const getNotebookOverview = async (userId, limit = 6) => {
 	};
 };
 
-const getNotebookDetail = async (notebookId) => {
+const getNotebookDetail = async (notebookId, userId = null) => {
 	const notebook = await db.Notebook.findOne({
 		where: { id: notebookId },
 		include: [
@@ -165,7 +189,7 @@ const getNotebookDetail = async (notebookId) => {
 		return null;
 	}
 
-	return formatNotebook(notebook);
+	return formatNotebook(notebook, null, userId);
 };
 
 const createNotebook = async (userId, data) => {
