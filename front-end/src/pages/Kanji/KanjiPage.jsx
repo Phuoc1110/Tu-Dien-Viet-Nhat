@@ -202,7 +202,7 @@ const KanjiPage = () => {
 	}, [keyword]);
 
 	useEffect(() => {
-		if (!searchInput.trim() || searchInput === keyword) {
+		if (!searchInput.trim()) {
 			setDropdownResults([]);
 			setErrorDropdown("");
 			setHighlightedDropdownIndex(-1);

@@ -62,6 +62,10 @@
 	color: #0d3b66;
 }
 
+.home-search-input-zone {
+	position: relative;
+}
+
 .home-search-bar {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -166,11 +170,12 @@
 	color: var(--home-primary);
 }
 
-.mazii-dropdown {
+.home-dropdown {
 	position: absolute;
-	left: 12px;
-	right: 12px;
-	top: 112px;
+	left: 0;
+	right: 0;
+	top: calc(100% + 8px);
+	z-index: 50;
 	background: #fff;
 	border: 1px solid #d9d2c3;
 	border-radius: 14px;
@@ -647,8 +652,8 @@
 		gap: 6px;
 	}
 
-	.mazii-dropdown {
-		top: 136px;
+	.home-dropdown {
+		top: calc(100% + 8px);
 	}
 
 	.home-hero-main {

@@ -228,7 +228,7 @@ const HomePage = () => {
 	};
 
 	const handleSelectWord = (word) => {
-		const selectedQuery = pickBestQueryToken(word, searchInput);
+		const selectedQuery = String(word?.word || "").trim() || pickBestQueryToken(word, searchInput);
 		const convertedQuery = normalizeSearchKeyword(selectedQuery);
 		setSearchInput(convertedQuery);
 		history.push(`/dictionary?q=${encodeURIComponent(convertedQuery)}`);
@@ -308,30 +308,36 @@ const HomePage = () => {
 						<p className="home-search-kicker">Japanese Toolbox</p>
 						<h1>Tra cứu từ vựng theo cách nhanh và trực quan hơn</h1>
 					</div>
-					<form className="home-search-bar" onSubmit={handleSearch}>
-						<span className="search-leading" aria-hidden="true">
-							辞
-						</span>
-						<input
-							type="text"
-							value={searchInput}
-							onFocus={() => setIsDropdownOpen(true)}
-							onChange={handleSearchInputChange}
-							onKeyDown={handleSearchInputKeyDown}
-							placeholder="日本, nihon, Nhật Bản"
-						/>
-						<div className="search-actions">
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
-								A文
+					<div className="home-search-input-zone">
+						<form className="home-search-bar" onSubmit={handleSearch}>
+							<span className="search-leading" aria-hidden="true">
+								辞
+							</span>
+							<input
+								type="text"
+								value={searchInput}
+								onFocus={() => setIsDropdownOpen(true)}
+								onChange={handleSearchInputChange}
+								onKeyDown={handleSearchInputKeyDown}
+								placeholder="日本, nihon, Nhật Bản"
+							/>
+							<div className="search-actions">
+								<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
+									A文
+								</button>
+								<button type="button" onClick={openHistoryPopup}>
+									His
+								</button>
+							</div>
+							<button className="lang-switch" type="submit">
+								Nhật - Việt
 							</button>
-							<button type="button" onClick={openHistoryPopup}>
-								His
-							</button>
-						</div>
-						<button className="lang-switch" type="submit">
-							Nhật - Việt
-						</button>
-					</form>
+						</form>
+
+						{isDropdownOpen && searchInput.trim() && (
+							<div className="home-dropdown">{renderDropdownBody()}</div>
+						)}
+					</div>
 
 					<nav className="home-mode-tabs">
 						<button className="tab-active" type="button">
@@ -357,9 +363,6 @@ const HomePage = () => {
 						</button>
 					</nav>
 
-					{isDropdownOpen && searchInput.trim() && (
-						<div className="mazii-dropdown">{renderDropdownBody()}</div>
-					)}
 				</header>
 
 				<section className="home-hero-grid">
