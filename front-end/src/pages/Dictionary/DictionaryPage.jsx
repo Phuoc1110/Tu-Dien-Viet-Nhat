@@ -692,28 +692,6 @@ const DictionaryPage = () => {
 					)}
 				</div>
 
-				<div className="dictionary-hero">
-					<div>
-						<p className="dictionary-hero-kicker">Tra cứu Nhật - Việt</p>
-						<h2>
-							Tìm nghĩa, ví dụ, kanji và lưu từ ngay trên cùng một màn hình.
-						</h2>
-						<p className="dictionary-hero-copy">
-							Giao diện này ưu tiên tốc độ tra cứu, đọc nhanh, rồi chuyển thẳng sang lưu từ hoặc xem nội dung liên quan.
-						</p>
-					</div>
-					<div className="dictionary-hero-stats">
-						<div className="hero-stat-card">
-							<span>Trạng thái</span>
-							<strong>{isLoggedIn ? "Đã đăng nhập" : "Chế độ khách"}</strong>
-						</div>
-						<div className="hero-stat-card">
-							<span>Từ liên quan</span>
-							<strong>{relatedWords.length}</strong>
-						</div>
-					</div>
-				</div>
-
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
 					onClose={() => setIsKanjiDrawOpen(false)}
@@ -856,24 +834,6 @@ const DictionaryPage = () => {
 						)}
 					</div>
 					<div className="detail-right">
-						<div className="lookup-panel quick-summary-panel">
-							<h3>Tổng quan</h3>
-							<div className="summary-grid">
-								<div>
-									<span>Trạng thái</span>
-									<strong>{isLoggedIn ? "Đã đăng nhập" : "Chưa đăng nhập"}</strong>
-								</div>
-								<div>
-									<span>Đóng góp</span>
-									<strong>{contributions.length}</strong>
-								</div>
-								<div>
-									<span>Gợi ý liên quan</span>
-									<strong>{relatedWords.length}</strong>
-								</div>
-							</div>
-						</div>
-
 						{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
 							<div className="lookup-panel">
 								<h3>Các chữ kanji của {wordDetail.word}</h3>

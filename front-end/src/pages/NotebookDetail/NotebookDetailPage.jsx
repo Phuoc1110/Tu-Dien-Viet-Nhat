@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useHistory, useLocation, useParams } from "react-router-dom";
 import {
 	ChevronLeft,
@@ -34,6 +34,7 @@ const chunkItems = (items, chunkSize = 2) => {
 };
 
 const hasKanjiChar = (text) => /[\u4E00-\u9FFF]/.test(String(text || ""));
+const hasJapaneseChar = (text) => /[\u3040-\u30FF\u4E00-\u9FFF]/.test(String(text || ""));
 const WORDS_PER_PAGE = 10;
 
 const NotebookDetailPage = () => {
@@ -43,6 +44,7 @@ const NotebookDetailPage = () => {
 	const { user } = useContext(UserContext);
 	const [loading, setLoading] = useState(true);
 	const [notebook, setNotebook] = useState(null);
+	const [orderedItems, setOrderedItems] = useState([]);
 	const [message, setMessage] = useState("");
 	const [searchKeyword, setSearchKeyword] = useState("");
 	const [isEditingName, setIsEditingName] = useState(false);
@@ -75,6 +77,8 @@ const NotebookDetailPage = () => {
 	const [miniTestEvaluating, setMiniTestEvaluating] = useState(false);
 	const [miniTestFeedback, setMiniTestFeedback] = useState(null);
 	const [miniTestError, setMiniTestError] = useState("");
+	const [isPlayingList, setIsPlayingList] = useState(false);
+	const playSessionRef = useRef({ active: false, token: 0 });
 	const cameFromExplore = Boolean(location.state?.fromExplore);
 
 	const currentUserId = user?.account?.id;
@@ -91,6 +95,7 @@ const NotebookDetailPage = () => {
 			const res = await getNotebookDetail(id);
 			if (res?.errCode === 0 && res.notebook) {
 				setNotebook(res.notebook);
+				setOrderedItems(Array.isArray(res.notebook.items) ? res.notebook.items : []);
 				setEditingName(res.notebook.name || "");
 				setMessage("");
 			} else if (res?.errCode === -2) {
@@ -105,8 +110,24 @@ const NotebookDetailPage = () => {
 		load();
 	}, [history, id]);
 
+	useEffect(() => {
+		if (!notebook?.id) {
+			return;
+		}
+		setOrderedItems(Array.isArray(notebook.items) ? notebook.items : []);
+	}, [notebook?.id, notebook?.items]);
+
+	useEffect(() => {
+		return () => {
+			playSessionRef.current = { active: false, token: playSessionRef.current.token + 1 };
+			if (window?.speechSynthesis) {
+				window.speechSynthesis.cancel();
+			}
+		};
+	}, []);
+
 	const filteredItems = useMemo(() => {
-		const rawItems = notebook?.items || [];
+		const rawItems = orderedItems || [];
 		const keyword = searchKeyword.trim().toLowerCase();
 		if (!keyword) {
 			return rawItems;
@@ -116,7 +137,7 @@ const NotebookDetailPage = () => {
 			const meaning = String(entry?.item?.meaning || "").toLowerCase();
 			return title.includes(keyword) || meaning.includes(keyword);
 		});
-	}, [notebook?.items, searchKeyword]);
+	}, [orderedItems, searchKeyword]);
 
 	const quizItems = useMemo(() => {
 		return filteredItems.filter(
@@ -247,6 +268,130 @@ const NotebookDetailPage = () => {
 	const gotoPreviousPage = () => setCurrentPage((prev) => Math.max(1, prev - 1));
 	const gotoNextPage = () => setCurrentPage((prev) => Math.min(totalPages, prev + 1));
 	const gotoLastPage = () => setCurrentPage(totalPages);
+
+	const stopReadingList = () => {
+		playSessionRef.current = { active: false, token: playSessionRef.current.token + 1 };
+		if (window?.speechSynthesis) {
+			window.speechSynthesis.cancel();
+		}
+		setIsPlayingList(false);
+	};
+
+	const handleDownloadVisibleWords = () => {
+		if (!filteredItems.length) {
+			setMessage("Không có từ nào để tải xuống.");
+			return;
+		}
+
+		const text = filteredItems
+			.map((entry, index) => {
+				const title = entry?.item?.title || "";
+				const subtitle = entry?.item?.subtitle || "";
+				const meaning = entry?.item?.meaning || "";
+				const line = [title, subtitle, meaning].filter(Boolean).join(" | ");
+				return `${index + 1}. ${line || "-"}`;
+			})
+			.join("\n");
+
+		const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+		const url = window.URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		const safeName = String(notebook?.name || `notebook-${id}`)
+			.trim()
+			.replace(/[^a-zA-Z0-9-_\s]/g, "")
+			.replace(/\s+/g, "-")
+			.toLowerCase();
+
+		link.href = url;
+		link.download = `${safeName || `notebook-${id}`}-visible-words.txt`;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		window.URL.revokeObjectURL(url);
+	};
+
+	const handlePlayVisibleWords = () => {
+		if (!filteredItems.length) {
+			setMessage("Không có từ nào để đọc.");
+			return;
+		}
+
+		if (!window?.speechSynthesis) {
+			setMessage("Trình duyệt chưa hỗ trợ chức năng phát âm tự động.");
+			return;
+		}
+
+		if (isPlayingList) {
+			stopReadingList();
+			return;
+		}
+
+		window.speechSynthesis.cancel();
+		const token = playSessionRef.current.token + 1;
+		playSessionRef.current = { active: true, token };
+		setIsPlayingList(true);
+
+		const speakNext = (index) => {
+			if (!playSessionRef.current.active || playSessionRef.current.token !== token) {
+				return;
+			}
+
+			if (index >= filteredItems.length) {
+				setIsPlayingList(false);
+				playSessionRef.current = { active: false, token };
+				return;
+			}
+
+			const current = filteredItems[index];
+			const text = current?.item?.title || current?.item?.subtitle || current?.item?.meaning || "";
+			if (!text) {
+				speakNext(index + 1);
+				return;
+			}
+
+			const utterance = new SpeechSynthesisUtterance(text);
+			utterance.lang = hasJapaneseChar(text) ? "ja-JP" : "vi-VN";
+			utterance.rate = 0.92;
+			utterance.onend = () => speakNext(index + 1);
+			utterance.onerror = () => speakNext(index + 1);
+			window.speechSynthesis.speak(utterance);
+		};
+
+		speakNext(0);
+	};
+
+	const handleShuffleVisibleWords = () => {
+		if (filteredItems.length < 2) {
+			setMessage("Cần ít nhất 2 từ để trộn thứ tự.");
+			return;
+		}
+
+		const keyword = searchKeyword.trim().toLowerCase();
+		if (!keyword) {
+			setOrderedItems((prev) => shuffleArray(prev));
+			setCurrentPage(1);
+			return;
+		}
+
+		setOrderedItems((prev) => {
+			const matched = [];
+			const unmatched = [];
+
+			(prev || []).forEach((entry) => {
+				const title = String(entry?.item?.title || "").toLowerCase();
+				const meaning = String(entry?.item?.meaning || "").toLowerCase();
+				if (title.includes(keyword) || meaning.includes(keyword)) {
+					matched.push(entry);
+				} else {
+					unmatched.push(entry);
+				}
+			});
+
+			return [...shuffleArray(matched), ...unmatched];
+		});
+		setCurrentPage(1);
+	};
+
 	const toggleFieldVisibility = (field) => {
 		setFieldVisibility((prev) => ({
 			...prev,
@@ -589,6 +734,7 @@ const NotebookDetailPage = () => {
 	const quizAccuracy = quizStats.total ? Math.round((quizStats.correct / quizStats.total) * 100) : 0;
 
 	const returnToNotebookOverview = () => {
+		stopReadingList();
 		setActiveMode("list");
 		setIsFlashcardView(false);
 		setQuizData(null);
@@ -1082,10 +1228,31 @@ const NotebookDetailPage = () => {
 									</div>
 									<div className="tool-right">
 										{/* <button type="button" className="tiny-btn"><RotateCcw size={16} /></button> */}
-										<button type="button" className="tiny-btn"><Download size={16} /></button>
+										<button
+											type="button"
+											className="tiny-btn"
+											title="Tải từ đang hiển thị"
+											onClick={handleDownloadVisibleWords}
+										>
+											<Download size={16} />
+										</button>
 										{/* <button type="button" className="tiny-btn"><PlusCircle size={16} /></button> */}
-										<button type="button" className="tiny-btn"><Play size={16} /></button>
-										<button type="button" className="tiny-btn"><Shuffle size={16} /></button>
+										<button
+											type="button"
+											className={`tiny-btn ${isPlayingList ? "is-active" : ""}`}
+											title={isPlayingList ? "Dừng đọc" : "Đọc lần lượt"}
+											onClick={handlePlayVisibleWords}
+										>
+											<Play size={16} />
+										</button>
+										<button
+											type="button"
+											className="tiny-btn"
+											title="Trộn từ đang hiển thị"
+											onClick={handleShuffleVisibleWords}
+										>
+											<Shuffle size={16} />
+										</button>
 									</div>
 								</div>
 

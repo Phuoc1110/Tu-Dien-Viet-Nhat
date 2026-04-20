@@ -282,6 +282,12 @@
   cursor: pointer;
 }
 
+.tiny-btn.is-active {
+  border-color: #93c5fd;
+  background: #eaf4ff;
+  color: #0f4c81;
+}
+
 .tiny-btn.danger {
   color: var(--nbd-danger);
   border-color: rgba(220, 38, 38, 0.35);
