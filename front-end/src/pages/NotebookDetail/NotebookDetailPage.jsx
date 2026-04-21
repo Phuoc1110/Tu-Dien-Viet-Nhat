@@ -172,6 +172,8 @@ const NotebookDetailPage = () => {
 
 	const activeFlashItem =
 		flashcardItems.length > 0 ? flashcardItems[flashIndex % flashcardItems.length] : null;
+	const canGoPrevFlash = flashIndex > 0;
+	const canGoNextFlash = flashIndex < flashcardItems.length - 1;
 
 	const frontText = useMemo(() => {
 		const title = activeFlashItem?.item?.title || "";
@@ -214,6 +216,18 @@ const NotebookDetailPage = () => {
 		setFlashIndex(0);
 		setIsCardFlipped(false);
 	}, [searchKeyword, notebook?.id]);
+
+	useEffect(() => {
+		if (!flashcardItems.length) {
+			setFlashIndex(0);
+			setIsCardFlipped(false);
+			return;
+		}
+		if (flashIndex > flashcardItems.length - 1) {
+			setFlashIndex(flashcardItems.length - 1);
+			setIsCardFlipped(false);
+		}
+	}, [flashcardItems.length, flashIndex]);
 
 	useEffect(() => {
 		setQuizWordIndex(0);
@@ -270,18 +284,18 @@ const NotebookDetailPage = () => {
 	};
 
 	const handlePrevFlash = () => {
-		if (!flashcardItems.length) {
+		if (!flashcardItems.length || !canGoPrevFlash) {
 			return;
 		}
-		setFlashIndex((prev) => (prev - 1 + flashcardItems.length) % flashcardItems.length);
+		setFlashIndex((prev) => Math.max(0, prev - 1));
 		setIsCardFlipped(false);
 	};
 
 	const handleNextFlash = () => {
-		if (!flashcardItems.length) {
+		if (!flashcardItems.length || !canGoNextFlash) {
 			return;
 		}
-		setFlashIndex((prev) => (prev + 1) % flashcardItems.length);
+		setFlashIndex((prev) => Math.min(flashcardItems.length - 1, prev + 1));
 		setIsCardFlipped(false);
 	};
 
@@ -289,7 +303,7 @@ const NotebookDetailPage = () => {
 		if (!flashcardItems.length) {
 			return;
 		}
-		setFlashIndex((prev) => (prev + 1) % flashcardItems.length);
+		setFlashIndex((prev) => Math.min(flashcardItems.length - 1, prev + 1));
 		setIsCardFlipped(false);
 	};
 
@@ -405,6 +419,9 @@ const NotebookDetailPage = () => {
 
 		if (res?.errCode === 0) {
 			const isRemembered = Boolean(res?.data?.isRemembered ?? (action === "known"));
+			const removedFromCurrentFilter =
+				(flashcardFilter === "unremembered" && isRemembered) ||
+				(flashcardFilter === "remembered" && !isRemembered);
 			setOrderedItems((prev) =>
 				(prev || []).map((entry) => {
 					if (entry.id !== activeFlashItem.id) {
@@ -435,8 +452,9 @@ const NotebookDetailPage = () => {
 					}),
 				};
 			});
-			setMessage(action === "known" ? "Đã ghi nhận là đã thuộc." : "Đã ghi nhận là chưa thuộc.");
-			advanceFlashcard();
+			if (!removedFromCurrentFilter) {
+				advanceFlashcard();
+			}
 		} else {
 			setMessage(res?.errMessage || "Không cập nhật được trạng thái flashcard.");
 		}
@@ -1012,7 +1030,12 @@ const NotebookDetailPage = () => {
 
 									{!loading && Boolean(activeFlashItem) && (
 										<div className="flashcard-stage">
-											<button type="button" className="nav-arrow left" onClick={handlePrevFlash}>
+											<button
+												type="button"
+												className="nav-arrow left"
+												onClick={handlePrevFlash}
+												disabled={!canGoPrevFlash}
+											>
 												<ChevronLeft size={24} />
 											</button>
 
@@ -1037,7 +1060,12 @@ const NotebookDetailPage = () => {
 												</div>
 											</div>
 
-											<button type="button" className="nav-arrow right" onClick={handleNextFlash}>
+											<button
+												type="button"
+												className="nav-arrow right"
+												onClick={handleNextFlash}
+												disabled={!canGoNextFlash}
+											>
 												<ChevronRight size={24} />
 											</button>
 										</div>

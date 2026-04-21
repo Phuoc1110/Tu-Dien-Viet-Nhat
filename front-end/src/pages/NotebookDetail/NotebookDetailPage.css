@@ -340,6 +340,11 @@
   justify-content: center;
 }
 
+.nav-arrow:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .nav-arrow.left {
   left: 0;
 }
