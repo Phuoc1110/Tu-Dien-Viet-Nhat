@@ -20,7 +20,7 @@ const searchKanjis = (query, limit = 30) => {
 		});
 };
 
-const recognizeKanjiInk = ({ ink, width = 280, height = 280, numResults = 8 }) => {
+const recognizeKanjiInk = ({ ink, width = 280, height = 280, numResults = 20 }) => {
 	return axios
 		.post(`/api/dictionary/kanji/recognize`, {
 			ink,

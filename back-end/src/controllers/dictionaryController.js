@@ -125,7 +125,7 @@ let HandleRecognizeKanji = async (req, res) => {
 		const ink = req.body?.ink;
 		const width = req.body?.width || 280;
 		const height = req.body?.height || 280;
-		const numResults = req.body?.numResults || 8;
+		const numResults = req.body?.numResults || 20;
 
 		if (!Array.isArray(ink) || ink.length === 0) {
 			return res.status(200).json({

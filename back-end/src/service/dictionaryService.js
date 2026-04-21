@@ -1,6 +1,5 @@
 import db from "../models/index";
 import { Op } from "sequelize";
-import axios from "axios";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -29,6 +28,556 @@ const parseLimit = (limit, fallback = 20, max = 100) => {
 		return fallback;
 	}
 	return Math.max(1, Math.min(+limit, max));
+};
+
+const clamp01 = (value) => Math.max(0, Math.min(1, value));
+
+const kanjiStrokeCache = new Map();
+
+const toPoint = (x, y) => ({ x: Number(x), y: Number(y) });
+
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+const normalizeInkPayload = (ink) => {
+	if (!Array.isArray(ink)) {
+		return [];
+	}
+
+	return ink
+		.map((stroke) => {
+			if (!Array.isArray(stroke) || stroke.length < 2) {
+				return [];
+			}
+
+			const xs = Array.isArray(stroke[0]) ? stroke[0] : [];
+			const ys = Array.isArray(stroke[1]) ? stroke[1] : [];
+			const size = Math.min(xs.length, ys.length);
+			const points = [];
+
+			for (let i = 0; i < size; i += 1) {
+				const p = toPoint(xs[i], ys[i]);
+				if (Number.isFinite(p.x) && Number.isFinite(p.y)) {
+					points.push(p);
+				}
+			}
+
+			return points;
+		})
+		.filter((stroke) => stroke.length >= 2);
+};
+
+const flattenStrokePaths = (value, out = []) => {
+	if (!value) {
+		return out;
+	}
+
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (!trimmed) {
+			return out;
+		}
+
+		try {
+			return flattenStrokePaths(JSON.parse(trimmed), out);
+		} catch (error) {
+			out.push(trimmed);
+			return out;
+		}
+	}
+
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			flattenStrokePaths(item, out);
+		}
+		return out;
+	}
+
+	if (typeof value === "object") {
+		if (typeof value.d === "string") {
+			out.push(value.d);
+			return out;
+		}
+		if (typeof value.path === "string") {
+			out.push(value.path);
+			return out;
+		}
+		if (Array.isArray(value.paths)) {
+			flattenStrokePaths(value.paths, out);
+			return out;
+		}
+
+		for (const nested of Object.values(value)) {
+			flattenStrokePaths(nested, out);
+		}
+	}
+
+	return out;
+};
+
+const lerpPoint = (a, b, t) => ({
+	x: a.x + (b.x - a.x) * t,
+	y: a.y + (b.y - a.y) * t,
+});
+
+const sampleLine = (start, end, segments = 10) => {
+	const pts = [];
+	for (let i = 0; i <= segments; i += 1) {
+		pts.push(lerpPoint(start, end, i / segments));
+	}
+	return pts;
+};
+
+const sampleQuadratic = (start, control, end, segments = 14) => {
+	const pts = [];
+	for (let i = 0; i <= segments; i += 1) {
+		const t = i / segments;
+		const u = 1 - t;
+		pts.push({
+			x: u * u * start.x + 2 * u * t * control.x + t * t * end.x,
+			y: u * u * start.y + 2 * u * t * control.y + t * t * end.y,
+		});
+	}
+	return pts;
+};
+
+const sampleCubic = (start, c1, c2, end, segments = 18) => {
+	const pts = [];
+	for (let i = 0; i <= segments; i += 1) {
+		const t = i / segments;
+		const u = 1 - t;
+		pts.push({
+			x:
+				u * u * u * start.x +
+				3 * u * u * t * c1.x +
+				3 * u * t * t * c2.x +
+				t * t * t * end.x,
+			y:
+				u * u * u * start.y +
+				3 * u * u * t * c1.y +
+				3 * u * t * t * c2.y +
+				t * t * t * end.y,
+		});
+	}
+	return pts;
+};
+
+const svgPathToPoints = (d) => {
+	const tokens = String(d || "").match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/g) || [];
+	if (!tokens.length) {
+		return [];
+	}
+
+	let idx = 0;
+	let cmd = "";
+	let cur = { x: 0, y: 0 };
+	let subStart = { x: 0, y: 0 };
+	let prevCubicControl = null;
+	let prevQuadControl = null;
+	const points = [];
+
+	const read = () => {
+		const n = Number(tokens[idx]);
+		idx += 1;
+		return Number.isFinite(n) ? n : 0;
+	};
+
+	const pushPoints = (strokePts) => {
+		if (!Array.isArray(strokePts) || !strokePts.length) {
+			return;
+		}
+		if (!points.length) {
+			points.push(...strokePts);
+			return;
+		}
+		const last = points[points.length - 1];
+		const first = strokePts[0];
+		if (Math.abs(last.x - first.x) < 1e-7 && Math.abs(last.y - first.y) < 1e-7) {
+			points.push(...strokePts.slice(1));
+			return;
+		}
+		points.push(...strokePts);
+	};
+
+	while (idx < tokens.length) {
+		const tk = tokens[idx];
+		if (/^[a-zA-Z]$/.test(tk)) {
+			cmd = tk;
+			idx += 1;
+		} else if (!cmd) {
+			break;
+		}
+
+		switch (cmd) {
+			case "M":
+			case "m": {
+				let first = true;
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const x = read();
+					const y = read();
+					const next = cmd === "m" ? { x: cur.x + x, y: cur.y + y } : { x, y };
+					if (first) {
+						cur = next;
+						subStart = next;
+						points.push({ ...next });
+						first = false;
+					} else {
+						pushPoints(sampleLine(cur, next));
+						cur = next;
+					}
+				}
+				prevCubicControl = null;
+				prevQuadControl = null;
+				break;
+			}
+			case "L":
+			case "l": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const x = read();
+					const y = read();
+					const next = cmd === "l" ? { x: cur.x + x, y: cur.y + y } : { x, y };
+					pushPoints(sampleLine(cur, next));
+					cur = next;
+				}
+				prevCubicControl = null;
+				prevQuadControl = null;
+				break;
+			}
+			case "H":
+			case "h": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const x = read();
+					const next = cmd === "h" ? { x: cur.x + x, y: cur.y } : { x, y: cur.y };
+					pushPoints(sampleLine(cur, next));
+					cur = next;
+				}
+				prevCubicControl = null;
+				prevQuadControl = null;
+				break;
+			}
+			case "V":
+			case "v": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const y = read();
+					const next = cmd === "v" ? { x: cur.x, y: cur.y + y } : { x: cur.x, y };
+					pushPoints(sampleLine(cur, next));
+					cur = next;
+				}
+				prevCubicControl = null;
+				prevQuadControl = null;
+				break;
+			}
+			case "C":
+			case "c": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const c1 = cmd === "c" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					const c2 = cmd === "c" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					const end = cmd === "c" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					pushPoints(sampleCubic(cur, c1, c2, end));
+					cur = end;
+					prevCubicControl = c2;
+					prevQuadControl = null;
+				}
+				break;
+			}
+			case "S":
+			case "s": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const c1 = prevCubicControl
+						? { x: cur.x * 2 - prevCubicControl.x, y: cur.y * 2 - prevCubicControl.y }
+						: { ...cur };
+					const c2 = cmd === "s" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					const end = cmd === "s" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					pushPoints(sampleCubic(cur, c1, c2, end));
+					cur = end;
+					prevCubicControl = c2;
+					prevQuadControl = null;
+				}
+				break;
+			}
+			case "Q":
+			case "q": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const c = cmd === "q" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					const end = cmd === "q" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					pushPoints(sampleQuadratic(cur, c, end));
+					cur = end;
+					prevQuadControl = c;
+					prevCubicControl = null;
+				}
+				break;
+			}
+			case "T":
+			case "t": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					const c = prevQuadControl
+						? { x: cur.x * 2 - prevQuadControl.x, y: cur.y * 2 - prevQuadControl.y }
+						: { ...cur };
+					const end = cmd === "t" ? { x: cur.x + read(), y: cur.y + read() } : { x: read(), y: read() };
+					pushPoints(sampleQuadratic(cur, c, end));
+					cur = end;
+					prevQuadControl = c;
+					prevCubicControl = null;
+				}
+				break;
+			}
+			case "A":
+			case "a": {
+				while (idx < tokens.length && !/^[a-zA-Z]$/.test(tokens[idx])) {
+					read();
+					read();
+					read();
+					read();
+					read();
+					const x = read();
+					const y = read();
+					const end = cmd === "a" ? { x: cur.x + x, y: cur.y + y } : { x, y };
+					pushPoints(sampleLine(cur, end));
+					cur = end;
+				}
+				prevCubicControl = null;
+				prevQuadControl = null;
+				break;
+			}
+			case "Z":
+			case "z": {
+				pushPoints(sampleLine(cur, subStart));
+				cur = { ...subStart };
+				prevCubicControl = null;
+				prevQuadControl = null;
+				break;
+			}
+			default:
+				idx += 1;
+				break;
+		}
+	}
+
+	if (points.length < 2) {
+		return [];
+	}
+
+	const deduped = [points[0]];
+	for (let i = 1; i < points.length; i += 1) {
+		const prev = deduped[deduped.length - 1];
+		const curPoint = points[i];
+		if (Math.abs(prev.x - curPoint.x) > 1e-6 || Math.abs(prev.y - curPoint.y) > 1e-6) {
+			deduped.push(curPoint);
+		}
+	}
+
+	return deduped.length >= 2 ? deduped : [];
+};
+
+const normalizeStrokes = (strokes) => {
+	if (!Array.isArray(strokes) || !strokes.length) {
+		return [];
+	}
+
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+
+	for (const stroke of strokes) {
+		for (const p of stroke) {
+			minX = Math.min(minX, p.x);
+			minY = Math.min(minY, p.y);
+			maxX = Math.max(maxX, p.x);
+			maxY = Math.max(maxY, p.y);
+		}
+	}
+
+	if (!Number.isFinite(minX)) {
+		return [];
+	}
+
+	const cx = (minX + maxX) / 2;
+	const cy = (minY + maxY) / 2;
+	const size = Math.max(maxX - minX, maxY - minY, 1);
+
+	return strokes
+		.map((stroke) => stroke.map((p) => ({ x: (p.x - cx) / size + 0.5, y: (p.y - cy) / size + 0.5 })))
+		.filter((stroke) => stroke.length >= 2);
+};
+
+const resampleStroke = (stroke, count = 20) => {
+	if (!Array.isArray(stroke) || stroke.length < 2) {
+		return [];
+	}
+
+	const cumulative = [0];
+	let total = 0;
+	for (let i = 1; i < stroke.length; i += 1) {
+		total += distance(stroke[i - 1], stroke[i]);
+		cumulative.push(total);
+	}
+
+	if (total <= 1e-8) {
+		return Array.from({ length: count }, () => ({ ...stroke[0] }));
+	}
+
+	const result = [];
+	const step = total / Math.max(1, count - 1);
+	let seg = 1;
+
+	for (let k = 0; k < count; k += 1) {
+		const target = Math.min(total, k * step);
+		while (seg < cumulative.length && cumulative[seg] < target) {
+			seg += 1;
+		}
+
+		if (seg >= cumulative.length) {
+			result.push({ ...stroke[stroke.length - 1] });
+			continue;
+		}
+
+		const prevLen = cumulative[seg - 1];
+		const nextLen = cumulative[seg];
+		const ratio = nextLen > prevLen ? (target - prevLen) / (nextLen - prevLen) : 0;
+		const a = stroke[seg - 1];
+		const b = stroke[seg];
+		result.push({ x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio });
+	}
+
+	return result;
+};
+
+const scoreStrokePair = (leftStroke, rightStroke) => {
+	const left = resampleStroke(leftStroke, 20);
+	const right = resampleStroke(rightStroke, 20);
+	if (!left.length || !right.length) {
+		return 0;
+	}
+
+	let total = 0;
+	for (let i = 0; i < left.length; i += 1) {
+		total += distance(left[i], right[i]);
+	}
+
+	const mean = total / left.length;
+	return clamp01(1 - mean / 0.55);
+};
+
+const greedyScore = (userStrokes, refStrokes) => {
+	if (!userStrokes.length || !refStrokes.length) {
+		return 0;
+	}
+
+	const pairs = [];
+	for (let i = 0; i < userStrokes.length; i += 1) {
+		for (let j = 0; j < refStrokes.length; j += 1) {
+			pairs.push({ i, j, score: scoreStrokePair(userStrokes[i], refStrokes[j]) });
+		}
+	}
+
+	pairs.sort((a, b) => b.score - a.score);
+	const usedLeft = new Set();
+	const usedRight = new Set();
+	let sum = 0;
+	let matched = 0;
+
+	for (const pair of pairs) {
+		if (usedLeft.has(pair.i) || usedRight.has(pair.j)) {
+			continue;
+		}
+		usedLeft.add(pair.i);
+		usedRight.add(pair.j);
+		sum += pair.score;
+		matched += 1;
+		if (matched === Math.min(userStrokes.length, refStrokes.length)) {
+			break;
+		}
+	}
+
+	if (!matched) {
+		return 0;
+	}
+
+	const coveragePenalty =
+		Math.abs(userStrokes.length - refStrokes.length) /
+		Math.max(userStrokes.length, refStrokes.length, 1);
+
+	return clamp01((sum / matched) * (1 - coveragePenalty * 0.35));
+};
+
+const buildPointCloud = (strokes, perStroke = 10, maxPoints = 220) => {
+	if (!Array.isArray(strokes) || !strokes.length) {
+		return [];
+	}
+
+	const cloud = [];
+	for (const stroke of strokes) {
+		const samples = resampleStroke(stroke, perStroke);
+		for (const point of samples) {
+			cloud.push(point);
+			if (cloud.length >= maxPoints) {
+				return cloud;
+			}
+		}
+	}
+
+	return cloud;
+};
+
+const oneWayNearestAverage = (fromPoints, toPoints) => {
+	if (!fromPoints.length || !toPoints.length) {
+		return Infinity;
+	}
+
+	let total = 0;
+	for (const point of fromPoints) {
+		let best = Infinity;
+		for (const target of toPoints) {
+			const d = distance(point, target);
+			if (d < best) {
+				best = d;
+			}
+		}
+		total += best;
+	}
+
+	return total / fromPoints.length;
+};
+
+const cloudSimilarity = (leftCloud, rightCloud) => {
+	if (!leftCloud.length || !rightCloud.length) {
+		return 0;
+	}
+
+	const forward = oneWayNearestAverage(leftCloud, rightCloud);
+	const backward = oneWayNearestAverage(rightCloud, leftCloud);
+	const chamfer = (forward + backward) / 2;
+	return clamp01(1 - chamfer / 0.26);
+};
+
+const getKanjiReference = (record) => {
+	const cacheKey = record?.id || record?.characterKanji;
+	if (!cacheKey) {
+		return null;
+	}
+
+	if (kanjiStrokeCache.has(cacheKey)) {
+		return kanjiStrokeCache.get(cacheKey);
+	}
+
+	const paths = flattenStrokePaths(record?.strokePaths);
+	const rawStrokes = paths.map((item) => svgPathToPoints(item)).filter((stroke) => stroke.length >= 2);
+	const strokes = normalizeStrokes(rawStrokes);
+
+	if (!strokes.length) {
+		kanjiStrokeCache.set(cacheKey, null);
+		return null;
+	}
+
+	const reference = {
+		kanji: String(record?.characterKanji || "").trim(),
+		strokeCount: Number(record?.strokeCount) || strokes.length,
+		strokes,
+		cloud: buildPointCloud(strokes, 10, 220),
+	};
+
+	kanjiStrokeCache.set(cacheKey, reference);
+	return reference;
 };
 
 const resolveWordByKeyword = async (rawWord) => {
@@ -610,50 +1159,102 @@ let getLatestWordContributions = async (limit = 6) => {
 		.filter((item) => item.word);
 };
 
-let recognizeKanjiFromInk = async ({ ink, width = 280, height = 280, numResults = 8 }) => {
-	const safeNumResults = parseLimit(numResults, 8, 20);
-	const safeWidth = parseLimit(width, 280, 1000);
-	const safeHeight = parseLimit(height, 280, 1000);
+let recognizeKanjiFromInk = async ({ ink, width = 280, height = 280, numResults = 20 }) => {
+	const safeNumResults = parseLimit(numResults, 20, 30);
+	const userRawStrokes = normalizeInkPayload(ink);
 
-	if (!Array.isArray(ink) || ink.length === 0) {
+	if (!userRawStrokes.length) {
 		return [];
 	}
 
-	const requestPayload = {
-		input_type: 0,
-		requests: [
-			{
-				language: "ja",
-				writing_guide: {
-					writing_area_width: safeWidth,
-					writing_area_height: safeHeight,
-				},
-				ink,
-				num_results: safeNumResults,
-			},
-		],
+	const userStrokes = normalizeStrokes(userRawStrokes);
+	if (!userStrokes.length) {
+		return [];
+	}
+	const userCloud = buildPointCloud(userStrokes, 10, 220);
+	const userStrokeCount = userStrokes.length;
+	const primaryStrokeGap = 3;
+	const secondaryStrokeGap = 6;
+	const maxCandidatesForScoring = 260;
+
+	const baseWhere = {
+		strokePaths: {
+			[Op.ne]: null,
+		},
 	};
 
-	const { data } = await axios.post(
-		"https://inputtools.google.com/request?itc=ja-t-i0-handwrit&app=translate",
-		requestPayload,
-		{
-			headers: { "Content-Type": "application/json" },
-			timeout: 8000,
+	let kanjiRows = await db.Kanji.findAll({
+		where: {
+			...baseWhere,
+			strokeCount: {
+				[Op.between]: [Math.max(1, userStrokeCount - primaryStrokeGap), userStrokeCount + primaryStrokeGap],
+			},
+		},
+		attributes: ["id", "characterKanji", "strokeCount", "strokePaths"],
+		raw: true,
+	});
+
+	if (kanjiRows.length < Math.max(40, safeNumResults * 8)) {
+		kanjiRows = await db.Kanji.findAll({
+			where: {
+				...baseWhere,
+				strokeCount: {
+					[Op.between]: [Math.max(1, userStrokeCount - secondaryStrokeGap), userStrokeCount + secondaryStrokeGap],
+				},
+			},
+			attributes: ["id", "characterKanji", "strokeCount", "strokePaths"],
+			raw: true,
+		});
+	}
+
+	if (kanjiRows.length > maxCandidatesForScoring) {
+		kanjiRows = kanjiRows
+			.sort((a, b) => {
+				const aGap = Math.abs((Number(a.strokeCount) || userStrokeCount) - userStrokeCount);
+				const bGap = Math.abs((Number(b.strokeCount) || userStrokeCount) - userStrokeCount);
+				if (aGap !== bGap) {
+					return aGap - bGap;
+				}
+				return String(a.characterKanji || "").localeCompare(String(b.characterKanji || ""));
+			})
+			.slice(0, maxCandidatesForScoring);
+	}
+
+	const scored = [];
+	for (const row of kanjiRows) {
+		const ref = getKanjiReference(row);
+		if (!ref?.kanji || !ref.strokes?.length) {
+			continue;
 		}
-	);
+		if (Math.abs(userStrokes.length - ref.strokeCount) > secondaryStrokeGap) {
+			continue;
+		}
 
-	if (!Array.isArray(data) || data[0] !== "SUCCESS") {
-		return [];
+		const shapeScore = greedyScore(userStrokes, ref.strokes);
+		const cloudScore = cloudSimilarity(userCloud, ref.cloud || []);
+		const countScore = clamp01(
+			1 - Math.abs(userStrokes.length - ref.strokeCount) / Math.max(userStrokes.length, ref.strokeCount, 1)
+		);
+		const finalScore = cloudScore * 0.62 + shapeScore * 0.18 + countScore * 0.20;
+
+		if (!Number.isFinite(finalScore)) {
+			continue;
+		}
+
+		scored.push({ kanji: ref.kanji, score: finalScore, strokeCount: ref.strokeCount });
 	}
 
-	const candidates = data?.[1]?.[0]?.[1];
-	if (!Array.isArray(candidates)) {
-		return [];
-	}
-
-	return candidates
-		.map((item) => String(item || "").trim())
+	return scored
+		.sort((a, b) => {
+			if (b.score !== a.score) {
+				return b.score - a.score;
+			}
+			if (a.strokeCount !== b.strokeCount) {
+				return a.strokeCount - b.strokeCount;
+			}
+			return a.kanji.localeCompare(b.kanji);
+		})
+		.map((item) => item.kanji)
 		.filter(Boolean)
 		.slice(0, safeNumResults);
 };

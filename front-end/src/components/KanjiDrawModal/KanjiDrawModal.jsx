@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { recognizeKanjiInk } from "../../services/dictionaryService";
 import "./KanjiDrawModal.css";
 
+const KANJI_CANDIDATE_LIMIT = 20;
+
 const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 	const canvasRef = useRef(null);
 	const boardWrapRef = useRef(null);
@@ -196,7 +198,7 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 			ink,
 			width: canvasSizeRef.current.width,
 			height: canvasSizeRef.current.height,
-			numResults: 8,
+			numResults: KANJI_CANDIDATE_LIMIT,
 		});
 
 		if (requestId !== recognizeRequestIdRef.current) {
@@ -257,7 +259,7 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 					</button>
 					{candidates.length > 0 && (
 						<div className="kanji-draw-candidates">
-							{candidates.slice(0, 8).map((item, idx) => (
+							{candidates.slice(0, KANJI_CANDIDATE_LIMIT).map((item, idx) => (
 								<button
 									key={`${item}-${idx}`}
 									type="button"
