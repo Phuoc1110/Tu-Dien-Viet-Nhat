@@ -168,12 +168,17 @@ let HandleGetSearchHistory = async (req, res) => {
 		}
 
 		const limit = req.query.limit || 80;
-		const history = await dictionaryService.getSearchHistory(req.user.id, limit);
+		const offset = req.query.offset || 0;
+		const [history, total] = await Promise.all([
+			dictionaryService.getSearchHistory(req.user.id, limit, offset),
+			dictionaryService.getSearchHistoryTotal(req.user.id),
+		]);
 
 		return res.status(200).json({
 			errCode: 0,
 			errMessage: "OK",
 			history,
+			total,
 		});
 	} catch (e) {
 		console.error("HandleGetSearchHistory error:", e);
@@ -345,12 +350,17 @@ let HandleAddWordContribution = async (req, res) => {
 let HandleGetLatestWordContributions = async (req, res) => {
 	try {
 		const limit = req.query.limit || 6;
-		const contributions = await dictionaryService.getLatestWordContributions(limit);
+		const offset = req.query.offset || 0;
+		const [contributions, total] = await Promise.all([
+			dictionaryService.getLatestWordContributions(limit, offset),
+			dictionaryService.getLatestWordContributionsTotal(),
+		]);
 
 		return res.status(200).json({
 			errCode: 0,
 			errMessage: "OK",
 			contributions,
+			total,
 		});
 	} catch (e) {
 		console.error("HandleGetLatestWordContributions error:", e);

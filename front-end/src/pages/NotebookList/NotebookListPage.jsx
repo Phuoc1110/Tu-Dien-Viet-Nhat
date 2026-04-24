@@ -159,6 +159,13 @@ const NotebookListPage = () => {
 				<section className="section-card">
 					<div className="section-title-row">
 						<h2>Danh sách sổ tay</h2>
+						<button
+							type="button"
+							className="view-more-btn"
+							onClick={() => history.push("/notebook/explore")}
+						>
+							Xem thêm
+						</button>
 					</div>
 					<div className="cards-grid my-grid">
 						<button

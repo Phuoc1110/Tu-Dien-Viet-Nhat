@@ -40,9 +40,9 @@ const shouldSkipDuplicateWrite = (word) => {
 	return false;
 };
 
-const getWordSearchHistory = async (limit = 80) => {
+const getWordSearchHistory = async (limit = 80, offset = 0) => {
 	return axios
-		.get(`/api/dictionary/history?limit=${limit}`)
+		.get(`/api/dictionary/history?limit=${limit}&offset=${offset}`)
 		.then((res) => {
 			if (res && res.errCode === 0) {
 				return res.history || [];
@@ -52,6 +52,24 @@ const getWordSearchHistory = async (limit = 80) => {
 		.catch((err) => {
 			console.error("Get search history error:", err);
 			return [];
+		});
+};
+
+const getWordSearchHistoryPage = async (limit = 80, offset = 0) => {
+	return axios
+		.get(`/api/dictionary/history?limit=${limit}&offset=${offset}`)
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return {
+					items: res.history || [],
+					total: Number(res.total) || 0,
+				};
+			}
+			return { items: [], total: 0 };
+		})
+		.catch((err) => {
+			console.error("Get paged search history error:", err);
+			return { items: [], total: 0 };
 		});
 };
 
@@ -106,4 +124,5 @@ export {
 	getTopSearchKeywordsToday,
 	addWordSearchHistory,
 	clearWordSearchHistory,
+	getWordSearchHistoryPage,
 };

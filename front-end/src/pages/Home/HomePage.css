@@ -598,6 +598,14 @@
 	color: #64748b;
 }
 
+.history-loading-more {
+	margin: 0;
+	padding: 10px 16px 14px;
+	text-align: center;
+	font-size: 0.86rem;
+	color: #64748b;
+}
+
 @keyframes homeFadeIn {
 	from {
 		opacity: 0;

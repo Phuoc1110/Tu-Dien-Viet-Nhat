@@ -182,13 +182,28 @@
   border-bottom: 1px solid #ece5d8;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .section-title-row h2 {
   margin: 0;
   font-size: 1.35rem;
   color: #0d3b66;
+  text-align: left;
+}
+
+.view-more-btn {
+  margin-left: auto;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid #d7d0c1;
+  background: #fff;
+  color: var(--nbl-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .cards-grid {

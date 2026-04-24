@@ -26,9 +26,9 @@ const getWordContributions = async ({ word, wordId }, limit = 100) => {
 		});
 };
 
-const getLatestWordContributions = async (limit = 6) => {
+const getLatestWordContributions = async (limit = 6, offset = 0) => {
 	return axios
-		.get(`/api/dictionary/contributions/latest?limit=${limit}`)
+		.get(`/api/dictionary/contributions/latest?limit=${limit}&offset=${offset}`)
 		.then((res) => {
 			if (res && res.errCode === 0) {
 				return res.contributions || [];
@@ -38,6 +38,24 @@ const getLatestWordContributions = async (limit = 6) => {
 		.catch((err) => {
 			console.error("Get latest contributions error:", err);
 			return [];
+		});
+};
+
+const getLatestWordContributionsPage = async (limit = 6, offset = 0) => {
+	return axios
+		.get(`/api/dictionary/contributions/latest?limit=${limit}&offset=${offset}`)
+		.then((res) => {
+			if (res && res.errCode === 0) {
+				return {
+					items: res.contributions || [],
+					total: Number(res.total) || 0,
+				};
+			}
+			return { items: [], total: 0 };
+		})
+		.catch((err) => {
+			console.error("Get paged latest contributions error:", err);
+			return { items: [], total: 0 };
 		});
 };
 
@@ -68,4 +86,9 @@ const addWordContribution = async ({ word, wordId, content }) => {
 		});
 };
 
-export { getWordContributions, getLatestWordContributions, addWordContribution };
+export {
+	getWordContributions,
+	getLatestWordContributions,
+	getLatestWordContributionsPage,
+	addWordContribution,
+};

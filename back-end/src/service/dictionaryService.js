@@ -30,6 +30,13 @@ const parseLimit = (limit, fallback = 20, max = 100) => {
 	return Math.max(1, Math.min(+limit, max));
 };
 
+const parseOffset = (offset, fallback = 0, max = 100000) => {
+	if (!Number.isFinite(+offset)) {
+		return fallback;
+	}
+	return Math.max(0, Math.min(+offset, max));
+};
+
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
 
 const kanjiStrokeCache = new Map();
@@ -959,19 +966,21 @@ let addSearchHistory = async (userId, searchTerm) => {
 	});
 };
 
-let getSearchHistory = async (userId, limit = 80) => {
+let getSearchHistory = async (userId, limit = 80, offset = 0) => {
 	const normalizedUserId = Number(userId);
 	if (!normalizedUserId) {
 		return [];
 	}
 
 	const safeLimit = parseLimit(limit, 80, 200);
+	const safeOffset = parseOffset(offset, 0, 200000);
 
 	const rows = await db.SearchHistory.findAll({
 		where: { userId: normalizedUserId },
 		attributes: ["id", "searchTerm", "searchedAt"],
 		order: [["searchedAt", "DESC"], ["id", "DESC"]],
 		limit: safeLimit,
+		offset: safeOffset,
 		raw: true,
 	});
 
@@ -981,6 +990,19 @@ let getSearchHistory = async (userId, limit = 80) => {
 		meaning: "",
 		searchedAt: item.searchedAt,
 	}));
+};
+
+let getSearchHistoryTotal = async (userId) => {
+	const normalizedUserId = Number(userId);
+	if (!normalizedUserId) {
+		return 0;
+	}
+
+	const total = await db.SearchHistory.count({
+		where: { userId: normalizedUserId },
+	});
+
+	return Number(total) || 0;
 };
 
 let clearSearchHistory = async (userId) => {
@@ -1114,8 +1136,9 @@ let getWordContributions = async ({ word, wordId } = {}, limit = 100) => {
 	}));
 };
 
-let getLatestWordContributions = async (limit = 6) => {
+let getLatestWordContributions = async (limit = 6, offset = 0) => {
 	const safeLimit = parseLimit(limit, 6, 100);
+	const safeOffset = parseOffset(offset, 0, 200000);
 
 	const rows = await db.Comment.findAll({
 		where: {
@@ -1133,6 +1156,7 @@ let getLatestWordContributions = async (limit = 6) => {
 		],
 		order: [["createdAt", "DESC"], ["id", "DESC"]],
 		limit: safeLimit,
+		offset: safeOffset,
 		raw: true,
 	});
 
@@ -1157,6 +1181,17 @@ let getLatestWordContributions = async (limit = 6) => {
 			upvotes: item.upvotes || 0,
 		}))
 		.filter((item) => item.word);
+};
+
+let getLatestWordContributionsTotal = async () => {
+	const total = await db.Comment.count({
+		where: {
+			targetType: "word",
+			isHidden: false,
+		},
+	});
+
+	return Number(total) || 0;
 };
 
 let recognizeKanjiFromInk = async ({ ink, width = 280, height = 280, numResults = 20 }) => {
@@ -1267,9 +1302,11 @@ module.exports = {
 	recognizeKanjiFromInk,
 	addSearchHistory,
 	getSearchHistory,
+	getSearchHistoryTotal,
 	getTopSearchKeywordsToday,
 	clearSearchHistory,
 	addWordContribution,
 	getWordContributions,
 	getLatestWordContributions,
+	getLatestWordContributionsTotal,
 };

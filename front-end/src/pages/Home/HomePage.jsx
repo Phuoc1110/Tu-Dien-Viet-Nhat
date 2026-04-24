@@ -5,9 +5,13 @@ import { useHistory } from "react-router-dom";
 import {
 	clearWordSearchHistory,
 	getWordSearchHistory,
+	getWordSearchHistoryPage,
 	getTopSearchKeywordsToday,
 } from "../../services/searchHistoryService";
-import { getLatestWordContributions } from "../../services/wordContributionService";
+import {
+	getLatestWordContributions,
+	getLatestWordContributionsPage,
+} from "../../services/wordContributionService";
 import { UserContext } from "../../Context/UserProvider";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
@@ -42,6 +46,9 @@ const pickBestQueryToken = (entry, typedValue) => {
 };
 
 const HomePage = () => {
+	const HISTORY_PAGE_SIZE = 20;
+	const COMMUNITY_PAGE_SIZE = 20;
+
 	const [searchInput, setSearchInput] = useState("");
 	const [loadingSearch, setLoadingSearch] = useState(false);
 	const [searchError, setSearchError] = useState("");
@@ -51,9 +58,19 @@ const HomePage = () => {
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [historyItems, setHistoryItems] = useState([]);
+	const [historyTotal, setHistoryTotal] = useState(0);
+	const [historyOffset, setHistoryOffset] = useState(0);
+	const [historyHasMore, setHistoryHasMore] = useState(true);
+	const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
 	const [communityPosts, setCommunityPosts] = useState([]);
+	const [communityTotal, setCommunityTotal] = useState(0);
+	const [communityOffset, setCommunityOffset] = useState(0);
+	const [communityHasMore, setCommunityHasMore] = useState(true);
+	const [communityLoadingMore, setCommunityLoadingMore] = useState(false);
 	const [hotKeywords, setHotKeywords] = useState([]);
 	const searchWrapRef = useRef(null);
+	const historyListRef = useRef(null);
+	const communityListRef = useRef(null);
 	const history = useHistory();
 	const { user } = useContext(UserContext);
 	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
@@ -91,19 +108,96 @@ const HomePage = () => {
 		return () => document.removeEventListener("mousedown", handleOutsideClick);
 	}, []);
 
+	const loadHistoryPage = async (reset = false) => {
+		if (!isLoggedIn || historyLoadingMore) {
+			return;
+		}
+
+		if (!reset && !historyHasMore) {
+			return;
+		}
+
+		setHistoryLoadingMore(true);
+		const nextOffset = reset ? 0 : historyOffset;
+		const response = await getWordSearchHistoryPage(HISTORY_PAGE_SIZE, nextOffset);
+		const safeItems = Array.isArray(response?.items) ? response.items : [];
+		setHistoryTotal(Number(response?.total) || 0);
+
+		setHistoryItems((prev) => {
+			if (reset) {
+				return safeItems;
+			}
+
+			const seen = new Set(prev.map((item) => `${item.id}-${item.searchedAt}`));
+			const merged = [...prev];
+			safeItems.forEach((item) => {
+				const key = `${item.id}-${item.searchedAt}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					merged.push(item);
+				}
+			});
+			return merged;
+		});
+
+		setHistoryOffset(nextOffset + safeItems.length);
+		setHistoryHasMore(safeItems.length >= HISTORY_PAGE_SIZE);
+		setHistoryLoadingMore(false);
+	};
+
+	const loadCommunityPage = async (reset = false) => {
+		if (communityLoadingMore) {
+			return;
+		}
+
+		if (!reset && !communityHasMore) {
+			return;
+		}
+
+		setCommunityLoadingMore(true);
+		const nextOffset = reset ? 0 : communityOffset;
+		const response = await getLatestWordContributionsPage(COMMUNITY_PAGE_SIZE, nextOffset);
+		const safeItems = Array.isArray(response?.items) ? response.items : [];
+		setCommunityTotal(Number(response?.total) || 0);
+
+		setCommunityPosts((prev) => {
+			if (reset) {
+				return safeItems;
+			}
+
+			const seen = new Set(prev.map((item) => `${item.id}-${item.createdAt}`));
+			const merged = [...prev];
+			safeItems.forEach((item) => {
+				const key = `${item.id}-${item.createdAt}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					merged.push(item);
+				}
+			});
+			return merged;
+		});
+
+		setCommunityOffset(nextOffset + safeItems.length);
+		setCommunityHasMore(safeItems.length >= COMMUNITY_PAGE_SIZE);
+		setCommunityLoadingMore(false);
+	};
+
 	useEffect(() => {
 		const syncLocalData = () => {
 			if (isLoggedIn) {
-				getWordSearchHistory(80).then((items) => {
-					setHistoryItems(Array.isArray(items) ? items : []);
-				});
+				setHistoryOffset(0);
+				setHistoryHasMore(true);
+				loadHistoryPage(true);
 			} else {
 				setHistoryItems([]);
+				setHistoryTotal(0);
+				setHistoryOffset(0);
+				setHistoryHasMore(false);
 			}
 
-			getLatestWordContributions(20).then((items) => {
-				setCommunityPosts(Array.isArray(items) ? items : []);
-			});
+			setCommunityOffset(0);
+			setCommunityHasMore(true);
+			loadCommunityPage(true);
 		};
 
 		syncLocalData();
@@ -115,6 +209,7 @@ const HomePage = () => {
 			window.removeEventListener("focus", syncLocalData);
 			window.removeEventListener("storage", syncLocalData);
 		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isLoggedIn]);
 
 	useEffect(() => {
@@ -241,10 +336,10 @@ const HomePage = () => {
 			history.push("/login");
 			return;
 		}
-		getWordSearchHistory(80).then((items) => {
-			setHistoryItems(Array.isArray(items) ? items : []);
-			setIsHistoryOpen(true);
-		});
+		setHistoryOffset(0);
+		setHistoryHasMore(true);
+		setIsHistoryOpen(true);
+		loadHistoryPage(true);
 	};
 
 	const handleSelectHistoryItem = (item) => {
@@ -258,10 +353,37 @@ const HomePage = () => {
 		}
 		clearWordSearchHistory().then(() => {
 			setHistoryItems([]);
+			setHistoryTotal(0);
+			setHistoryOffset(0);
+			setHistoryHasMore(false);
 		});
-		getLatestWordContributions(20).then((items) => {
-			setCommunityPosts(Array.isArray(items) ? items : []);
-		});
+		setCommunityOffset(0);
+		setCommunityHasMore(true);
+		loadCommunityPage(true);
+	};
+
+	const handleHistoryListScroll = () => {
+		const el = historyListRef.current;
+		if (!el || historyLoadingMore || !historyHasMore) {
+			return;
+		}
+
+		const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+		if (nearBottom) {
+			loadHistoryPage(false);
+		}
+	};
+
+	const handleCommunityListScroll = () => {
+		const el = communityListRef.current;
+		if (!el || communityLoadingMore || !communityHasMore) {
+			return;
+		}
+
+		const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+		if (nearBottom) {
+			loadCommunityPage(false);
+		}
 	};
 
 	const historyPreviewItems = historyItems.slice(0, 8);
@@ -389,7 +511,7 @@ const HomePage = () => {
 						</div>
 						<div className="hero-stat-card">
 							<span>Lịch sử gần đây</span>
-							<strong>{historyItems.length}</strong>
+							<strong>{historyTotal}</strong>
 						</div>
 						<div className="hero-stat-card">
 							<span>Từ khóa hot</span>
@@ -397,7 +519,7 @@ const HomePage = () => {
 						</div>
 						<div className="hero-stat-card">
 							<span>Góp ý cộng đồng</span>
-							<strong>{communityPosts.length}</strong>
+							<strong>{communityTotal}</strong>
 						</div>
 					</div>
 				</section>
@@ -427,7 +549,7 @@ const HomePage = () => {
 									</button>
 								</div>
 							</div>
-							<div className="history-modal-list">
+							<div className="history-modal-list" ref={historyListRef} onScroll={handleHistoryListScroll}>
 								{historyItems.length === 0 && (
 									<p className="history-empty">Chưa có từ nào trong lịch sử.</p>
 								)}
@@ -447,6 +569,10 @@ const HomePage = () => {
 										{item.meaning && <p>{item.meaning}</p>}
 									</button>
 								))}
+								{historyLoadingMore && <p className="history-loading-more">Đang tải thêm...</p>}
+								{!historyHasMore && historyItems.length > 0 && (
+									<p className="history-loading-more">Đã tải hết lịch sử.</p>
+								)}
 							</div>
 						</div>
 					</div>
@@ -487,6 +613,9 @@ const HomePage = () => {
 								</button>
 							</div>
 							<div className="chip-list">
+								{/* {isLoggedIn && historyTotal > 0 && (
+									<p className="history-preview-empty">Tổng: {historyTotal}</p>
+								)} */}
 								{!isLoggedIn && (
 									<p className="history-preview-empty">Đăng nhập để xem lịch sử tra cứu</p>
 								)}
@@ -505,7 +634,7 @@ const HomePage = () => {
 							</div>
 						</article>
 
-						<article className="surface-panel jlpt-panel">
+						{/* <article className="surface-panel jlpt-panel">
 							<h3>JLPT Quick Start</h3>
 							<div className="jlpt-list">
 								<button type="button" onClick={() => applyHintAndSearch("経済")}>N1</button>
@@ -514,13 +643,13 @@ const HomePage = () => {
 								<button type="button" onClick={() => applyHintAndSearch("便利")}>N4</button>
 								<button type="button" onClick={() => applyHintAndSearch("学校")}>N5</button>
 							</div>
-						</article>
+						</article> */}
 					</section>
 
 					<aside className="home-side-column">
 						<article className="surface-panel community-panel">
-							<h3>Góp ý cộng đồng</h3>
-							<div className="feedback-list">
+							<h3>Góp ý cộng đồng </h3>
+							<div className="feedback-list" ref={communityListRef} onScroll={handleCommunityListScroll}>
 								{communityPosts.map((item) => (
 									<div key={`${item.id}-${item.createdAt}`} className="feedback-item">
 										<strong>{item.word}</strong>
@@ -532,6 +661,10 @@ const HomePage = () => {
 								))}
 								{communityPosts.length === 0 && (
 									<p className="feedback-empty">Chưa có bình luận nào.</p>
+								)}
+								{communityLoadingMore && <p className="feedback-empty">Đang tải thêm...</p>}
+								{!communityHasMore && communityPosts.length > 0 && (
+									<p className="feedback-empty">Đã tải hết góp ý.</p>
 								)}
 							</div>
 						</article>
