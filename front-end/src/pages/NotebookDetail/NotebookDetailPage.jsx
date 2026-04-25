@@ -46,6 +46,7 @@ const NotebookDetailPage = () => {
 	const [notebook, setNotebook] = useState(null);
 	const [orderedItems, setOrderedItems] = useState([]);
 	const [message, setMessage] = useState("");
+	const [loadError, setLoadError] = useState(false);
 	const [searchKeyword, setSearchKeyword] = useState("");
 	const [isEditingName, setIsEditingName] = useState(false);
 	const [editingName, setEditingName] = useState("");
@@ -94,17 +95,20 @@ const NotebookDetailPage = () => {
 	useEffect(() => {
 		const load = async () => {
 			setLoading(true);
+			setLoadError(false);
 			const res = await getNotebookDetail(id);
 			if (res?.errCode === 0 && res.notebook) {
 				setNotebook(res.notebook);
 				setOrderedItems(Array.isArray(res.notebook.items) ? res.notebook.items : []);
 				setEditingName(res.notebook.name || "");
 				setMessage("");
+				setLoadError(false);
 			} else if (res?.errCode === -2) {
 				history.push("/login");
 				return;
 			} else {
 				setMessage(res?.errMessage || "Không tải được sổ tay");
+				setLoadError(true);
 			}
 			setLoading(false);
 		};
@@ -1024,7 +1028,7 @@ const NotebookDetailPage = () => {
 								<div className="flashcard-board">
 									{loading && <div className="word-loading">Đang tải sổ tay...</div>}
 									{message && !loading && <div className="word-message">{message}</div>}
-									{!loading && !flashcardItems.length && (
+									{!loading && !loadError && !flashcardItems.length && (
 										<div className="word-empty">Không có từ phù hợp với bộ lọc flashcard này.</div>
 									)}
 
@@ -1460,7 +1464,7 @@ const NotebookDetailPage = () => {
 											{row.length === 1 && <div className="word-item-card placeholder" />}
 										</div>
 									))}
-									{!loading && filteredItems.length === 0 && (
+									{!loading && !loadError && filteredItems.length === 0 && (
 										<div className="word-empty">Sổ tay này chưa có từ nào.</div>
 									)}
 								</div>

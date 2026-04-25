@@ -30,6 +30,16 @@ const createNotebook = (data) => {
 		});
 };
 
+const getCuratedNotebookCollections = (limit = 12) => {
+	return axios
+		.get(`/api/notebooks/curated?limit=${limit}`)
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+			return { errCode: 1, errMessage: "Không tải được bộ sổ tay biên soạn", curatedNotebooks: [] };
+		});
+};
+
 const addNotebookItem = (notebookId, data) => {
 	return axios
 		.post(`/api/notebooks/${notebookId}/items`, data)
@@ -64,6 +74,7 @@ export {
 	getNotebookOverview,
 	getNotebookDetail,
 	createNotebook,
+	getCuratedNotebookCollections,
 	addNotebookItem,
 		updateNotebook,
 		deleteNotebook,

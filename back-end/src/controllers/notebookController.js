@@ -26,6 +26,25 @@ const HandleGetNotebookOverview = async (req, res) => {
 	}
 };
 
+const HandleGetCuratedNotebookCollections = async (req, res) => {
+	try {
+		const limit = Number(req.query.limit || 12);
+		const curatedNotebooks = await notebookService.getCuratedNotebookCollections(limit);
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			curatedNotebooks,
+		});
+	} catch (error) {
+		console.error("Error in HandleGetCuratedNotebookCollections:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			curatedNotebooks: [],
+		});
+	}
+};
+
 const HandleGetNotebookDetail = async (req, res) => {
 	try {
 		const userId = req.user?.id;
@@ -179,6 +198,7 @@ const HandleDeleteNotebook = async (req, res) => {
 
 module.exports = {
 	HandleGetNotebookOverview,
+	HandleGetCuratedNotebookCollections,
 	HandleGetNotebookDetail,
 	HandleCreateNotebook,
 	HandleAddNotebookItem,

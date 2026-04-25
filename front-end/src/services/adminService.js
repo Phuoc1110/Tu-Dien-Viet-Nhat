@@ -47,6 +47,18 @@ const resetAdminUserPassword = (id, newPassword) =>
 const getAdminAuditLogs = (params = {}) =>
 	axios.get("/api/admin/audit-logs", { params });
 
+const getAdminNotebookCollections = (params = {}) =>
+	axios.get("/api/admin/notebook-collections", { params });
+
+const createAdminNotebookCollection = (data) =>
+	axios.post("/api/admin/notebook-collections", data);
+
+const updateAdminNotebookCollection = (id, data) =>
+	axios.put(`/api/admin/notebook-collections/${id}`, data);
+
+const deleteAdminNotebookCollection = (id) =>
+	axios.delete(`/api/admin/notebook-collections/${id}`);
+
 export {
     HandleAdminLogin,
     getAdminAccount,
@@ -62,4 +74,8 @@ export {
     updateAdminUserStatus,
     resetAdminUserPassword,
     getAdminAuditLogs,
+	getAdminNotebookCollections,
+	createAdminNotebookCollection,
+	updateAdminNotebookCollection,
+	deleteAdminNotebookCollection,
 };

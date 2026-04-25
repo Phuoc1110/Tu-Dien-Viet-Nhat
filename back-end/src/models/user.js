@@ -25,6 +25,16 @@ module.exports = (sequelize, DataTypes) => {
 
 			// Flashcard status
 			User.hasMany(models.UserFlashcardStatus, { foreignKey: "userId", as: "flashcardStatuses" });
+
+			// Reading practice
+			User.hasMany(models.ReadingPassage, {
+				foreignKey: "createdByAdminId",
+				as: "createdReadingPassages",
+			});
+			User.hasMany(models.UserReadingProgress, {
+				foreignKey: "userId",
+				as: "readingProgresses",
+			});
 		}
 	}
 	User.init(

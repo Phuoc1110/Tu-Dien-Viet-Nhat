@@ -15,13 +15,17 @@ import { useHistory } from "react-router-dom";
 import { UserContext } from "../../Context/UserProvider";
 import {
 	LogOutAdmin,
+	createAdminNotebookCollection,
 	createAdminVocabulary,
+	deleteAdminNotebookCollection,
+	getAdminNotebookCollections,
 	deleteAdminVocabulary,
 	getAdminAuditLogs,
 	getAdminDashboard,
 	getAdminUsers,
 	getAdminVocabularies,
 	resetAdminUserPassword,
+	updateAdminNotebookCollection,
 	updateAdminUserRole,
 	updateAdminUserStatus,
 	updateAdminVocabulary,
@@ -37,6 +41,15 @@ const defaultForm = {
 	partOfSpeech: "",
 	jlptLevel: "",
 	isCommon: false,
+};
+
+const defaultCollectionForm = {
+	title: "",
+	meta: "",
+	ownerName: "Ban quan tri",
+	views: "0",
+	sortOrder: "0",
+	isActive: true,
 };
 
 const AUDIT_PAGE_SIZE = 20;
@@ -55,6 +68,9 @@ const Admin = () => {
 	const [vocabularies, setVocabularies] = useState([]);
 	const [editingVocabularyId, setEditingVocabularyId] = useState(null);
 	const [vocabularyForm, setVocabularyForm] = useState(defaultForm);
+	const [collections, setCollections] = useState([]);
+	const [collectionForm, setCollectionForm] = useState(defaultCollectionForm);
+	const [editingCollectionId, setEditingCollectionId] = useState(null);
 
 	const [users, setUsers] = useState([]);
 	const [userQuery, setUserQuery] = useState("");
@@ -100,6 +116,15 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể tải danh sách người dùng");
 	};
 
+	const loadNotebookCollections = async () => {
+		const res = await getAdminNotebookCollections({ includeInactive: true });
+		if (res?.errCode === 0) {
+			setCollections(res.data || []);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải danh sách bộ sổ tay biên soạn");
+	};
+
 	const loadAuditLogs = async (page = auditPage) => {
 		const res = await getAdminAuditLogs({ page, limit: AUDIT_PAGE_SIZE });
 		if (res?.errCode === 0) {
@@ -121,7 +146,9 @@ const Admin = () => {
 		setLoading(true);
 		try {
 			if (tab === "dashboard") await loadDashboard();
-			if (tab === "content") await loadVocabularies();
+			if (tab === "content") {
+				await Promise.all([loadVocabularies(), loadNotebookCollections()]);
+			}
 			if (tab === "users") await loadUsers();
 			if (tab === "audit") await loadAuditLogs();
 		} finally {
@@ -137,6 +164,7 @@ const Admin = () => {
 	useEffect(() => {
 		if (tab === "content") {
 			loadVocabularies();
+			loadNotebookCollections();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [vocabularyQuery, vocabularyJlpt]);
@@ -229,6 +257,83 @@ const Admin = () => {
 			return;
 		}
 		toast.error(res?.errMessage || "Không thể cập nhật JLPT");
+	};
+
+	const handleEditCollection = (item) => {
+		setEditingCollectionId(item.id);
+		setCollectionForm({
+			title: item.title || "",
+			meta: item.meta || "",
+			ownerName: item.ownerName || "Ban quan tri",
+			views: String(item.views ?? 0),
+			sortOrder: String(item.sortOrder ?? 0),
+			isActive: Boolean(item.isActive),
+		});
+	};
+
+	const resetCollectionForm = () => {
+		setEditingCollectionId(null);
+		setCollectionForm(defaultCollectionForm);
+	};
+
+	const handleSaveCollection = async () => {
+		if (!collectionForm.title.trim()) {
+			toast.error("Tiêu đề bộ sổ tay là bắt buộc");
+			return;
+		}
+
+		const payload = {
+			title: collectionForm.title.trim(),
+			meta: collectionForm.meta.trim(),
+			ownerName: collectionForm.ownerName.trim() || "Ban quan tri",
+			views: Number(collectionForm.views) || 0,
+			sortOrder: Number(collectionForm.sortOrder) || 0,
+			isActive: Boolean(collectionForm.isActive),
+		};
+
+		const res = editingCollectionId
+			? await updateAdminNotebookCollection(editingCollectionId, payload)
+			: await createAdminNotebookCollection(payload);
+
+		if (res?.errCode === 0) {
+			toast.success(editingCollectionId ? "Đã cập nhật bộ sổ tay" : "Đã tạo bộ sổ tay");
+			resetCollectionForm();
+			await loadNotebookCollections();
+			await loadAuditLogs();
+			return;
+		}
+
+		toast.error(res?.errMessage || "Không thể lưu bộ sổ tay");
+	};
+
+	const handleDeleteCollection = async (id) => {
+		if (!window.confirm("Xóa bộ sổ tay này?")) {
+			return;
+		}
+		const res = await deleteAdminNotebookCollection(id);
+		if (res?.errCode === 0) {
+			toast.success("Đã xóa bộ sổ tay");
+			if (editingCollectionId === id) {
+				resetCollectionForm();
+			}
+			await loadNotebookCollections();
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể xóa bộ sổ tay");
+	};
+
+	const handleToggleCollectionActive = async (item) => {
+		const res = await updateAdminNotebookCollection(item.id, {
+			isActive: !item.isActive,
+		});
+		if (res?.errCode === 0) {
+			toast.success("Đã cập nhật trạng thái hiển thị");
+			await loadNotebookCollections();
+			await loadAuditLogs();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể cập nhật trạng thái");
 	};
 
 	const handleUpdateRole = async (id, role) => {
@@ -486,6 +591,102 @@ const Admin = () => {
 												<div className="row-actions">
 													<button type="button" onClick={() => handleEditVocabulary(item)}>Sửa</button>
 													<button type="button" className="danger" onClick={() => handleDeleteVocabulary(item.id)}>Xóa</button>
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Bộ sổ tay biên soạn</h3>
+						<div className="admin2-form-grid">
+							<input
+								placeholder="Tiêu đề"
+								value={collectionForm.title}
+								onChange={(e) => setCollectionForm((p) => ({ ...p, title: e.target.value }))}
+							/>
+							<input
+								placeholder="Mô tả ngắn (meta)"
+								value={collectionForm.meta}
+								onChange={(e) => setCollectionForm((p) => ({ ...p, meta: e.target.value }))}
+							/>
+							<input
+								placeholder="Tên đơn vị biên soạn"
+								value={collectionForm.ownerName}
+								onChange={(e) => setCollectionForm((p) => ({ ...p, ownerName: e.target.value }))}
+							/>
+							<input
+								type="number"
+								placeholder="Lượt xem"
+								value={collectionForm.views}
+								onChange={(e) => setCollectionForm((p) => ({ ...p, views: e.target.value }))}
+							/>
+							<input
+								type="number"
+								placeholder="Thứ tự hiển thị"
+								value={collectionForm.sortOrder}
+								onChange={(e) => setCollectionForm((p) => ({ ...p, sortOrder: e.target.value }))}
+							/>
+							<label className="inline-check">
+								<input
+									type="checkbox"
+									checked={collectionForm.isActive}
+									onChange={(e) =>
+										setCollectionForm((p) => ({ ...p, isActive: e.target.checked }))
+									}
+								/>
+								Hiển thị ngoài trang Notebook
+							</label>
+						</div>
+						<div className="admin2-actions">
+							<button type="button" onClick={handleSaveCollection}>
+								{editingCollectionId ? "Cập nhật bộ sổ tay" : "Tạo bộ sổ tay"}
+							</button>
+							<button type="button" className="ghost" onClick={resetCollectionForm}>
+								Làm mới
+							</button>
+						</div>
+
+						<div className="admin2-table-wrap">
+							<table className="admin2-table">
+								<thead>
+									<tr>
+										<th>Tiêu đề</th>
+										<th>Meta</th>
+										<th>Đơn vị</th>
+										<th>Views</th>
+										<th>Sort</th>
+										<th>Trạng thái</th>
+										<th>Hành động</th>
+									</tr>
+								</thead>
+								<tbody>
+									{collections.map((item) => (
+										<tr key={item.id}>
+											<td>{item.title}</td>
+											<td>{item.meta || "-"}</td>
+											<td>{item.ownerName || "Ban quan tri"}</td>
+											<td>{item.views || 0}</td>
+											<td>{item.sortOrder || 0}</td>
+											<td>
+												<span className={`status ${item.isActive ? "active" : "suspended"}`}>
+													{item.isActive ? "active" : "hidden"}
+												</span>
+											</td>
+											<td>
+												<div className="row-actions">
+													<button type="button" onClick={() => handleEditCollection(item)}>
+														Sửa
+													</button>
+													<button type="button" onClick={() => handleToggleCollectionActive(item)}>
+														{item.isActive ? "Ẩn" : "Hiện"}
+													</button>
+													<button type="button" className="danger" onClick={() => handleDeleteCollection(item.id)}>
+														Xóa
+													</button>
 												</div>
 											</td>
 										</tr>

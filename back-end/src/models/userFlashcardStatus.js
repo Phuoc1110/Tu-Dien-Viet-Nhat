@@ -20,11 +20,10 @@ module.exports = (sequelize, DataTypes) => {
 				type: DataTypes.INTEGER,
 				allowNull: false,
 			},
-			srs_stage: {
-				type: DataTypes.INTEGER,
+			isRemembered: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: 0,
-				comment: "Internal storage: 0 = unremembered, 1 = remembered",
+				defaultValue: false,
 			},
 			lastReviewedAt: {
 				type: DataTypes.DATE,
@@ -34,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
 		{
 			sequelize,
 			modelName: "UserFlashcardStatus",
-			tableName: "UserReviews",
+			tableName: "UserFlashcardStatuses",
 			indexes: [
 				{
 					unique: true,

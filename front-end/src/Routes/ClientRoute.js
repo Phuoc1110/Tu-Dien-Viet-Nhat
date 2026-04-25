@@ -11,7 +11,8 @@ import NotebookPage from "../pages/Notebook/NotebookPage";
 import NotebookListPage from "../pages/NotebookList/NotebookListPage";
 import NotebookDetailPage from "../pages/NotebookDetail/NotebookDetailPage";
 import ExploreNotebookPage from "../pages/ExploreNotebook/ExploreNotebookPage";
-import JpltPage from "../pages/Jplt/JpltPage";
+import ReadingPage from "../pages/Reading/ReadingPage";
+import ReadingDetailPage from "../pages/Reading/ReadingDetailPage";
 import PrivateRoutes from "./PrivateRoutes";
 import PrivateRoutesRole from "./PrivateRoutesRole";
 import Profile from "../pages/Profile/Profile";
@@ -41,7 +42,8 @@ const ClientRoute = () => {
 				<Route path="/notebook/list" component={NotebookListPage} />
 				<Route path="/notebook/explore" component={ExploreNotebookPage} />
 				<Route path="/notebook/:id" component={NotebookDetailPage} />
-				<Route path={["/jplt", "/jlpt"]} component={JpltPage} />
+				<Route path={["/reading", "/jplt", "/jlpt"]} exact component={ReadingPage} />
+				<Route path="/reading/:id" component={ReadingDetailPage} />
 				<Route path="/search-word">
 					<Redirect to="/" />
 				</Route>

@@ -4,6 +4,7 @@ import dictionaryController from "../controllers/dictionaryController";
 import adminController from "../controllers/adminController";
 import notebookController from "../controllers/notebookController";
 import quizController from "../controllers/quizController";
+import readingController from "../controllers/readingController";
 import { checkUserJWT } from "../middleware/JWT_Action";
 import { uploadCloud } from "../middleware/Cloudinary_Multer";
 import {
@@ -92,11 +93,18 @@ let initWebRoutes = (app) => {
 		dictionaryController.HandleGetLatestWordContributions
 	);
 	router.get("/api/notebooks/overview", notebookController.HandleGetNotebookOverview);
+	router.get("/api/notebooks/curated", notebookController.HandleGetCuratedNotebookCollections);
 	router.get("/api/notebooks/:id", notebookController.HandleGetNotebookDetail);
 	router.post("/api/notebooks", notebookController.HandleCreateNotebook);
 	router.post("/api/notebooks/:id/items", notebookController.HandleAddNotebookItem);
 	router.put("/api/notebooks/:id", notebookController.HandleUpdateNotebook);
 	router.delete("/api/notebooks/:id", notebookController.HandleDeleteNotebook);
+	router.get("/api/reading/passages", readingController.HandleGetReadingPassages);
+	router.get("/api/reading/passages/:id", readingController.HandleGetReadingPassageDetail);
+	router.post("/api/reading/passages", readingController.HandleCreateReadingPassage);
+	router.put("/api/reading/passages/:id", readingController.HandleUpdateReadingPassage);
+	router.post("/api/reading/passages/:id/progress", readingController.HandleUpsertReadingProgress);
+	router.get("/api/reading/progress", readingController.HandleGetMyReadingProgresses);
 
 	// Quiz & SRS
 	router.post("/api/quiz/generate", quizController.HandleGenerateQuiz);
@@ -127,6 +135,10 @@ let initWebRoutes = (app) => {
 
 	// Admin - Audit logs
 	router.get("/api/admin/audit-logs", adminController.getAuditLogs);
+	router.get("/api/admin/notebook-collections", adminController.getNotebookCollections);
+	router.post("/api/admin/notebook-collections", adminController.createNotebookCollection);
+	router.put("/api/admin/notebook-collections/:id", adminController.updateNotebookCollection);
+	router.delete("/api/admin/notebook-collections/:id", adminController.deleteNotebookCollection);
 
 	return app.use("/", router);
 };

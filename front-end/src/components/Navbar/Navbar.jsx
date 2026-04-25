@@ -7,7 +7,7 @@ import {
 	Crown,
 	BookOpen,
 	NotebookText,
-	BadgeJapaneseYen,
+	BookText,
 } from "lucide-react";
 import "./Navbar.css";
 import { UserContext } from "../../Context/UserProvider";
@@ -98,10 +98,10 @@ const Navbar = ({ title = "HomePage" }) => {
 					<button
 						type="button"
 						className="navbar-shortcut"
-						onClick={() => history.push("/jplt")}
+						onClick={() => history.push("/reading")}
 					>
-						<BadgeJapaneseYen size={16} />
-						<span>JPLT</span>
+						<BookText size={16} />
+						<span>Reading</span>
 					</button>
 				</div>
 

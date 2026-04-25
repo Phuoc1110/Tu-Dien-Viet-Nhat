@@ -68,16 +68,40 @@ const loadItemPreviews = async (items, userId = null) => {
 	const reviewMap = new Map();
 
 	if (userId && (items || []).length) {
-		const reviews = await db.UserFlashcardStatus.findAll({
-			where: {
-				userId,
-				[Op.or]: (items || []).map((item) => ({
-					itemType: item.itemType,
-					itemId: item.itemId,
-				})),
-			},
-			attributes: ["itemType", "itemId", "srs_stage", "lastReviewedAt"],
-		});
+		const reviewWhere = {
+			userId,
+			[Op.or]: (items || []).map((item) => ({
+				itemType: item.itemType,
+				itemId: item.itemId,
+			})),
+		};
+
+		let reviews = [];
+		if (db.UserFlashcardStatus) {
+			try {
+				reviews = await db.UserFlashcardStatus.findAll({
+					where: reviewWhere,
+					attributes: ["itemType", "itemId", "srs_stage", "isRemembered", "lastReviewedAt"],
+				});
+			} catch (error) {
+				try {
+					reviews = await db.UserFlashcardStatus.findAll({
+						where: reviewWhere,
+						attributes: ["itemType", "itemId", "srs_stage", "lastReviewedAt"],
+					});
+				} catch (fallbackError) {
+					try {
+						reviews = await db.UserFlashcardStatus.findAll({
+							where: reviewWhere,
+							attributes: ["itemType", "itemId", "isRemembered", "lastReviewedAt"],
+						});
+					} catch (finalError) {
+						console.warn("Skip flashcard status lookup in notebookService.loadItemPreviews:", finalError?.message || fallbackError?.message || error?.message);
+						reviews = [];
+					}
+				}
+			}
+		}
 
 		for (const review of reviews) {
 			const plain = review.get({ plain: true });
@@ -96,7 +120,10 @@ const loadItemPreviews = async (items, userId = null) => {
 		}
 
 		const review = reviewMap.get(`${item.itemType}:${item.itemId}`) || null;
-		const isRemembered = Number(review?.srs_stage || 0) > 0;
+		const isRemembered =
+			typeof review?.isRemembered === "boolean"
+				? review.isRemembered
+				: Number(review?.srs_stage || 0) > 0;
 
 		return {
 			id: item.id,
@@ -174,6 +201,25 @@ const getNotebookOverview = async (userId, limit = 6) => {
 		myNotebooks,
 		discoverNotebooks,
 	};
+};
+
+const getCuratedNotebookCollections = async (limit = 12) => {
+	const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 40);
+	const rows = await db.AdminNotebookCollection.findAll({
+		where: { isActive: true },
+		attributes: ["id", "title", "meta", "ownerName", "views", "sortOrder", "createdAt"],
+		order: [["sortOrder", "ASC"], ["createdAt", "DESC"], ["id", "DESC"]],
+		limit: safeLimit,
+		raw: true,
+	});
+
+	return rows.map((item) => ({
+		id: item.id,
+		name: item.title,
+		meta: item.meta || "",
+		owner: item.ownerName || "Ban quan tri",
+		views: Number(item.views) || 0,
+	}));
 };
 
 const getNotebookDetail = async (notebookId, userId = null) => {
@@ -284,6 +330,7 @@ const deleteNotebook = async (userId, notebookId) => {
 
 module.exports = {
 	getNotebookOverview,
+	getCuratedNotebookCollections,
 	getNotebookDetail,
 	createNotebook,
 	addItemToNotebook,

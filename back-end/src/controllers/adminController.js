@@ -208,6 +208,57 @@ const getAuditLogs = async (req, res) => {
 	}
 };
 
+const getNotebookCollections = async (req, res) => {
+	try {
+		if (!ensureAdmin(req, res)) return;
+		const data = await adminService.getNotebookCollections(req.query || {});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getNotebookCollections error:", e);
+		return res.status(500).json({ errCode: -1, errMessage: e.message || "Internal server error" });
+	}
+};
+
+const createNotebookCollection = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.createNotebookCollection({ adminId, payload: req.body || {} });
+		return res.status(200).json({ errCode: 0, errMessage: "Created", data });
+	} catch (e) {
+		console.error("createNotebookCollection error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Create failed" });
+	}
+};
+
+const updateNotebookCollection = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.updateNotebookCollection({
+			adminId,
+			id: req.params.id,
+			payload: req.body || {},
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Updated", data });
+	} catch (e) {
+		console.error("updateNotebookCollection error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
+const deleteNotebookCollection = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		await adminService.deleteNotebookCollection({ adminId, id: req.params.id });
+		return res.status(200).json({ errCode: 0, errMessage: "Deleted" });
+	} catch (e) {
+		console.error("deleteNotebookCollection error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Delete failed" });
+	}
+};
+
 module.exports = {
 	HandleAdminLogin,
 	getAdminAccount,
@@ -223,4 +274,8 @@ module.exports = {
 	updateUserStatus,
 	resetUserPassword,
 	getAuditLogs,
+	getNotebookCollections,
+	createNotebookCollection,
+	updateNotebookCollection,
+	deleteNotebookCollection,
 };

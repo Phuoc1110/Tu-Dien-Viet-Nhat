@@ -1,0 +1,346 @@
+.reading-detail-page {
+  min-height: calc(100vh - 140px);
+  padding: 24px 20px 40px;
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.16), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(37, 99, 235, 0.12), transparent 34%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
+}
+
+.reading-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(209, 219, 230, 0.9);
+  border-radius: 10px;
+  cursor: pointer;
+  color: #1d4ed8;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.06);
+}
+
+.reading-back-btn:hover {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+  box-shadow: 0 8px 20px rgba(29, 78, 216, 0.15);
+}
+
+.reading-detail-loading,
+.reading-detail-error {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 1.05rem;
+}
+
+.reading-detail-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #b91c1c;
+}
+
+.reading-detail-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(209, 219, 230, 0.9);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(12px);
+  border-radius: 28px;
+  padding: 40px;
+}
+
+/* Header Section */
+.reading-detail-header {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+}
+
+.reading-detail-title-section h1 {
+  margin: 12px 0 8px;
+  color: #0f172a;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.reading-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reading-level-badge,
+.reading-topic-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.reading-level-badge {
+  background: linear-gradient(135deg, #fef08a 0%, #fde047 100%);
+  color: #b45309;
+}
+
+.reading-topic-badge {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+}
+
+.reading-summary {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 70ch;
+}
+
+.reading-detail-stats {
+  margin-top: 16px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.96rem;
+  font-weight: 600;
+}
+
+.stat-item svg {
+  color: #1d4ed8;
+}
+
+/* Progress Section */
+.reading-progress-section {
+  margin-bottom: 28px;
+}
+
+.reading-progress-section h3 {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.reading-status-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(226, 232, 240, 0.6);
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.status-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+}
+
+.status-btn.active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  color: #fff;
+  border-color: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+.status-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Content Section */
+.reading-content-section {
+  margin-bottom: 28px;
+}
+
+.reading-content-section h3 {
+  margin: 0 0 16px;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.japanese-text,
+.translation-section {
+  margin-bottom: 32px;
+}
+
+.text-content,
+.translation-content {
+  background: #f8fafc;
+  border-left: 4px solid #1d4ed8;
+  padding: 20px;
+  border-radius: 8px;
+  line-height: 2;
+  color: #1e293b;
+  font-size: 1.02rem;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.translation-content {
+  border-left-color: #8b5cf6;
+  background: #faf5ff;
+  color: #5b21b6;
+}
+
+/* Footer */
+.reading-detail-footer {
+  border-top: 2px solid #e2e8f0;
+  padding-top: 20px;
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.text-muted {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.text-success {
+  margin: 0;
+  color: #16a34a;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .reading-detail-container {
+    padding: 24px;
+    border-radius: 20px;
+  }
+
+  .reading-detail-header {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+
+  .reading-detail-title-section h1 {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+  }
+
+  .reading-detail-stats {
+    gap: 16px;
+  }
+
+  .reading-status-buttons {
+    gap: 10px;
+  }
+
+  .status-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .text-content,
+  .translation-content {
+    padding: 16px;
+    line-height: 1.8;
+    font-size: 0.98rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .reading-detail-page {
+    padding: 16px 12px 24px;
+  }
+
+  .reading-detail-container {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .reading-detail-header {
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+
+  .reading-detail-title-section h1 {
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    margin: 8px 0 4px;
+  }
+
+  .reading-detail-meta {
+    gap: 8px;
+  }
+
+  .reading-level-badge,
+  .reading-topic-badge {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .reading-summary {
+    font-size: 0.95rem;
+  }
+
+  .reading-detail-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stat-item {
+    font-size: 0.9rem;
+  }
+
+  .reading-progress-section h3,
+  .reading-content-section h3 {
+    font-size: 1rem;
+  }
+
+  .reading-status-buttons {
+    flex-direction: column;
+  }
+
+  .status-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .text-content,
+  .translation-content {
+    padding: 12px;
+    line-height: 1.6;
+    font-size: 0.96rem;
+  }
+}

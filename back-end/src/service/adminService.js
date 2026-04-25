@@ -460,6 +460,100 @@ const getAuditLogs = async ({ page = 1, limit = 50, actionType = "" }) => {
     };
 };
 
+const getNotebookCollections = async ({ query = "", includeInactive = false } = {}) => {
+    const where = {};
+    if (!includeInactive) {
+        where.isActive = true;
+    }
+    if (query) {
+        where.title = { [Op.like]: `%${String(query).trim()}%` };
+    }
+
+    return db.AdminNotebookCollection.findAll({
+        where,
+        order: [["sortOrder", "ASC"], ["createdAt", "DESC"]],
+        raw: true,
+    });
+};
+
+const createNotebookCollection = async ({ adminId, payload }) => {
+    const title = String(payload?.title || "").trim();
+    if (!title) {
+        throw new Error("Title is required");
+    }
+
+    const created = await db.AdminNotebookCollection.create({
+        title,
+        meta: String(payload?.meta || "").trim() || null,
+        ownerName: String(payload?.ownerName || "").trim() || "Ban quan tri",
+        views: Number(payload?.views) || 0,
+        sortOrder: Number(payload?.sortOrder) || 0,
+        isActive: payload?.isActive !== undefined ? Boolean(payload.isActive) : true,
+        createdByAdminId: adminId || null,
+    });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "CREATE_NOTEBOOK_COLLECTION",
+        targetType: "AdminNotebookCollection",
+        targetId: created.id,
+        details: payload,
+    });
+
+    return created.get({ plain: true });
+};
+
+const updateNotebookCollection = async ({ adminId, id, payload }) => {
+    const item = await db.AdminNotebookCollection.findByPk(id);
+    if (!item) {
+        throw new Error("Notebook collection not found");
+    }
+
+    const nextTitle = payload?.title !== undefined ? String(payload.title || "").trim() : item.title;
+    if (!nextTitle) {
+        throw new Error("Title is required");
+    }
+
+    await item.update({
+        title: nextTitle,
+        meta: payload?.meta !== undefined ? String(payload.meta || "").trim() || null : item.meta,
+        ownerName:
+            payload?.ownerName !== undefined
+                ? String(payload.ownerName || "").trim() || "Ban quan tri"
+                : item.ownerName,
+        views: payload?.views !== undefined ? Number(payload.views) || 0 : item.views,
+        sortOrder: payload?.sortOrder !== undefined ? Number(payload.sortOrder) || 0 : item.sortOrder,
+        isActive: payload?.isActive !== undefined ? Boolean(payload.isActive) : item.isActive,
+    });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "UPDATE_NOTEBOOK_COLLECTION",
+        targetType: "AdminNotebookCollection",
+        targetId: Number(id),
+        details: payload,
+    });
+
+    return item.get({ plain: true });
+};
+
+const deleteNotebookCollection = async ({ adminId, id }) => {
+    const deleted = await db.AdminNotebookCollection.destroy({ where: { id } });
+    if (!deleted) {
+        throw new Error("Notebook collection not found");
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "DELETE_NOTEBOOK_COLLECTION",
+        targetType: "AdminNotebookCollection",
+        targetId: Number(id),
+        details: null,
+    });
+
+    return true;
+};
+
 module.exports = {
     HandleAdminLogin,
     getAdminDashboard,
@@ -473,4 +567,8 @@ module.exports = {
     updateUserStatus,
     resetUserPassword,
     getAuditLogs,
+    getNotebookCollections,
+    createNotebookCollection,
+    updateNotebookCollection,
+    deleteNotebookCollection,
 };

@@ -414,14 +414,14 @@ const updateFlashcardReview = async (userId, itemIdOrPayload, action = "known", 
 				userId,
 				itemType: resolvedType,
 				itemId: resolvedId,
-				srs_stage: 0,
+				isRemembered: false,
 			});
 		}
 
 		const isRemembered = normalizedAction === "known";
 
 		await userReview.update({
-			srs_stage: isRemembered ? 1 : 0,
+			isRemembered,
 			lastReviewedAt: new Date(),
 		});
 
@@ -486,14 +486,14 @@ const evaluateAnswer = async (userId, itemIdOrPayload, userAnswer, mode, itemTyp
 				userId,
 				itemType: resolvedType,
 				itemId: resolvedId,
-				srs_stage: 0,
+				isRemembered: false,
 			});
 		}
 
 		const isRemembered = Boolean(isCorrect);
 
 		await userReview.update({
-			srs_stage: isRemembered ? 1 : 0,
+			isRemembered,
 			lastReviewedAt: new Date(),
 		});
 

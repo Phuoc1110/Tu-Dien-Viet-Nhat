@@ -1,19 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { Eye, PlusCircle, X } from "lucide-react";
-import { createNotebook, getNotebookOverview } from "../../services/notebookService";
+import {
+	createNotebook,
+	getCuratedNotebookCollections,
+	getNotebookOverview,
+} from "../../services/notebookService";
 import "./NotebookPage.css";
-
-const premiumSeed = [
-	{ id: "p-1", name: "Từ vựng trung thu", meta: "30 từ", owner: "Mazii Customer Support", views: 3297 },
-	{ id: "p-2", name: "50 bài Minna no Nihongo - N5", meta: "2037 từ / 50 bài", owner: "Mazii Customer Support", views: 107 },
-	{ id: "p-3", name: "50 bài Minna no Nihongo", meta: "2052 từ / 50 bài", owner: "Mazii Customer Support", views: 101 },
-	{ id: "p-4", name: "Từ vựng tiếng nhật chuyên ngành", meta: "85 từ / 3 bài", owner: "Mazii Customer Support", views: 14 },
-	{ id: "p-5", name: "Từ vựng tiếng nhật chuyên ngành y", meta: "81 từ / 2 bài", owner: "Mazii Customer Support", views: 4 },
-	{ id: "p-6", name: "Mimi Kara Oboeru N3", meta: "875 từ / 12 bài", owner: "Mazii Customer Support", views: 3 },
-	{ id: "p-7", name: "Từ vựng tiếng nhật chuyên ngành IT", meta: "66 từ / 3 bài", owner: "Mazii Customer Support", views: 2 },
-	{ id: "p-8", name: "Ngữ pháp JLPT N2", meta: "74 từ / 4 bài", owner: "Mazii Customer Support", views: 1 },
-];
 
 const formatDate = (value) => {
 	if (!value) {
@@ -26,19 +19,11 @@ const formatDate = (value) => {
 	return date.toISOString().slice(0, 10);
 };
 
-const pseudoViews = (id) => {
-	const text = String(id || "0");
-	let total = 0;
-	for (let i = 0; i < text.length; i += 1) {
-		total += text.charCodeAt(i);
-	}
-	return 12000 + total * 7;
-};
-
 const NotebookPage = () => {
 	const history = useHistory();
 	const [loading, setLoading] = useState(true);
 	const [overview, setOverview] = useState({ myNotebooks: [], discoverNotebooks: [] });
+	const [curatedNotebooks, setCuratedNotebooks] = useState([]);
 	const [pageMessage, setPageMessage] = useState("");
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [createNotebookName, setCreateNotebookName] = useState("");
@@ -46,19 +31,37 @@ const NotebookPage = () => {
 
 	const loadOverview = useCallback(async () => {
 		setLoading(true);
-		const res = await getNotebookOverview(8);
-		if (res && res.errCode === 0) {
-			setOverview({
-				myNotebooks: Array.isArray(res.myNotebooks) ? res.myNotebooks : [],
-				discoverNotebooks: Array.isArray(res.discoverNotebooks) ? res.discoverNotebooks : [],
-			});
-			setPageMessage("");
-		} else if (res?.errCode === -2) {
+		const [overviewRes, curatedRes] = await Promise.all([
+			getNotebookOverview(8),
+			getCuratedNotebookCollections(12),
+		]);
+
+		if (overviewRes?.errCode === -2 || curatedRes?.errCode === -2) {
 			history.push("/login");
 			return;
-		} else {
-			setPageMessage(res?.errMessage || "Không tải được sổ tay.");
 		}
+
+		if (overviewRes && overviewRes.errCode === 0) {
+			setOverview({
+				myNotebooks: Array.isArray(overviewRes.myNotebooks) ? overviewRes.myNotebooks : [],
+				discoverNotebooks: Array.isArray(overviewRes.discoverNotebooks) ? overviewRes.discoverNotebooks : [],
+			});
+		} else {
+			setOverview({ myNotebooks: [], discoverNotebooks: [] });
+		}
+
+		if (curatedRes && curatedRes.errCode === 0) {
+			setCuratedNotebooks(Array.isArray(curatedRes.curatedNotebooks) ? curatedRes.curatedNotebooks : []);
+		} else {
+			setCuratedNotebooks([]);
+		}
+
+		if (overviewRes?.errCode === 0 && curatedRes?.errCode === 0) {
+			setPageMessage("");
+		} else {
+			setPageMessage(overviewRes?.errMessage || curatedRes?.errMessage || "Không tải được sổ tay.");
+		}
+
 		setLoading(false);
 	}, [history]);
 
@@ -130,14 +133,14 @@ const NotebookPage = () => {
 				</div>
 			)}
 
-			{pageMessage && <div className="notebook-message">{pageMessage}</div>}
+			{/* {pageMessage && <div className="notebook-message">{pageMessage}</div>} */}
 
 			<section className="notebook-hero">
 				<div className="notebook-hero-main">
 					<p className="hero-kicker">Notebook Workspace</p>
 					<h1>Quản lý sổ tay học tập theo cách trực quan hơn</h1>
 					<p>
-						Tạo sổ mới, theo dõi sổ của bạn, khám phá nội dung cộng đồng và học theo bộ premium
+						Tạo sổ mới, theo dõi sổ của bạn, khám phá nội dung cộng đồng và học theo bộ sổ tay
 						trong cùng một không gian.
 					</p>
 					<div className="hero-actions">
@@ -159,8 +162,8 @@ const NotebookPage = () => {
 						<strong>{overview.discoverNotebooks.length}</strong>
 					</div>
 					<div className="hero-stat-card">
-						<span>Gợi ý premium</span>
-						<strong>{premiumSeed.length}</strong>
+						<span>Bộ biên soạn</span>
+						<strong>{curatedNotebooks.length}</strong>
 					</div>
 				</div>
 			</section>
@@ -230,11 +233,10 @@ const NotebookPage = () => {
 
 			<section className="section-card premium-section">
 				<div className="section-title-row">
-					<h2>Premium</h2>
-					<button type="button" className="view-more-btn">Xem thêm</button>
+					<h2>Bộ sổ tay biên soạn</h2>
 				</div>
 				<div className="cards-grid premium-grid">
-					{premiumSeed.map((item) => (
+					{curatedNotebooks.map((item) => (
 						<div key={item.id} className="premium-item-card">
 							<h3>{item.name}</h3>
 							<p>({item.meta})</p>
@@ -244,6 +246,10 @@ const NotebookPage = () => {
 							</div>
 						</div>
 					))}
+
+					{!loading && curatedNotebooks.length === 0 && (
+						<div className="empty-card">Chưa có bộ sổ tay biên soạn nào.</div>
+					)}
 				</div>
 			</section>
 		</div>
