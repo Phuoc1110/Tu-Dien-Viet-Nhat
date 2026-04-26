@@ -133,10 +133,10 @@ const NotebookPage = () => {
 				</div>
 			)}
 
-			{/* {pageMessage && <div className="notebook-message">{pageMessage}</div>} */}
+			{pageMessage && <div className="notebook-message">{pageMessage}</div>}
 
-			<section className="notebook-hero">
-				<div className="notebook-hero-main">
+			<section className="notebook-hero bento-surface">
+				<div className="notebook-hero-main bento-tile bento-tile-main">
 					<p className="hero-kicker">Notebook Workspace</p>
 					<h1>Quản lý sổ tay học tập theo cách trực quan hơn</h1>
 					<p>
@@ -153,22 +153,22 @@ const NotebookPage = () => {
 					</div>
 				</div>
 				<div className="notebook-hero-stats">
-					<div className="hero-stat-card">
+					<div className="hero-stat-card bento-tile">
 						<span>Sổ tay của tôi</span>
 						<strong>{overview.myNotebooks.length}</strong>
 					</div>
-					<div className="hero-stat-card">
+					<div className="hero-stat-card bento-tile">
 						<span>Sổ khám phá</span>
 						<strong>{overview.discoverNotebooks.length}</strong>
 					</div>
-					<div className="hero-stat-card">
+					<div className="hero-stat-card bento-tile">
 						<span>Bộ biên soạn</span>
 						<strong>{curatedNotebooks.length}</strong>
 					</div>
 				</div>
 			</section>
 
-			<section className="section-card">
+			<section className="section-card bento-surface">
 				<div className="section-title-row">
 					<h2>Sổ tay của tôi</h2>
 					<button
@@ -182,7 +182,7 @@ const NotebookPage = () => {
 				<div className="cards-grid my-grid">
 					<button
 						type="button"
-						className="create-notebook-card"
+						className="create-notebook-card bento-tile"
 						onClick={() => setIsCreateModalOpen(true)}
 					>
 						<PlusCircle size={18} />
@@ -190,7 +190,7 @@ const NotebookPage = () => {
 					</button>
 
 					{myNotebooks.map((item) => (
-						<button type="button" key={item.id} className="notebook-item-card" onClick={() => history.push(`/notebook/${item.id}`)}>
+						<button type="button" key={item.id} className="notebook-item-card bento-tile" onClick={() => history.push(`/notebook/${item.id}`)}>
 							<h3>{item.name}</h3>
 							<p>({item.itemsCount || 0} từ)</p>
 							<div className="card-meta-date">Ngày tạo: {formatDate(item.createdAt)}</div>
@@ -198,12 +198,12 @@ const NotebookPage = () => {
 					))}
 
 					{!loading && myNotebooks.length === 0 && (
-						<div className="empty-card">Bạn chưa có sổ tay nào.</div>
+						<div className="empty-card bento-tile">Bạn chưa có sổ tay nào.</div>
 					)}
 				</div>
 			</section>
 
-			<section className="section-card">
+			<section className="section-card bento-surface">
 				<div className="section-title-row">
 					<h2>Khám phá cộng đồng</h2>
 					<button type="button" className="view-more-btn" onClick={() => history.push("/notebook/explore")}>Xem thêm</button>
@@ -213,7 +213,7 @@ const NotebookPage = () => {
 						<button
 							type="button"
 							key={item.id}
-							className="discover-item-card"
+							className="discover-item-card bento-tile"
 							onClick={() => history.push(`/notebook/${item.id}`, { fromExplore: true })}
 						>
 							<h3>{item.name}</h3>
@@ -226,18 +226,18 @@ const NotebookPage = () => {
 					))}
 
 					{!loading && discoverNotebooks.length === 0 && (
-						<div className="empty-card">Chưa có sổ tay khám phá.</div>
+						<div className="empty-card bento-tile">Chưa có sổ tay khám phá.</div>
 					)}
 				</div>
 			</section>
 
-			<section className="section-card premium-section">
+			<section className="section-card premium-section bento-surface">
 				<div className="section-title-row">
 					<h2>Bộ sổ tay biên soạn</h2>
 				</div>
 				<div className="cards-grid premium-grid">
 					{curatedNotebooks.map((item) => (
-						<div key={item.id} className="premium-item-card">
+						<div key={item.id} className="premium-item-card bento-tile">
 							<h3>{item.name}</h3>
 							<p>({item.meta})</p>
 							<div className="card-meta-row">
@@ -248,7 +248,16 @@ const NotebookPage = () => {
 					))}
 
 					{!loading && curatedNotebooks.length === 0 && (
-						<div className="empty-card">Chưa có bộ sổ tay biên soạn nào.</div>
+						<div className="empty-card bento-tile curated-empty-state">
+							<div className="empty-illustration" aria-hidden="true">
+								<div className="planet"></div>
+								<div className="ring"></div>
+							</div>
+							<div className="empty-content">
+								<h3>Không gian biên soạn đang trống</h3>
+								<p>Chưa có bộ sổ tay biên soạn nào.</p>
+							</div>
+						</div>
 					)}
 				</div>
 			</section>

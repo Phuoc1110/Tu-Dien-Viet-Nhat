@@ -114,7 +114,7 @@ const NotebookListPage = () => {
 					<span className="breadcrumb-link-btn current">Danh sách sổ tay</span>
 				</div>
 
-				<section className="list-hero">
+				<section className="list-hero bento-surface">
 					<div className="list-hero-main">
 						<p className="list-kicker">My Learning Collection</p>
 						<h1>Tất cả sổ tay của bạn trong một màn hình</h1>
@@ -130,7 +130,7 @@ const NotebookListPage = () => {
 									value={searchValue}
 									onChange={(event) => setSearchValue(event.target.value)}
 								/>
-								<button type="button" className="tiny-btn"><Filter size={16} /></button>
+								<button type="button" className="tiny-btn" title="Bộ lọc nâng cao"><Filter size={16} /></button>
 							</div>
 							<button
 								type="button"
@@ -143,11 +143,11 @@ const NotebookListPage = () => {
 						</div>
 					</div>
 					<div className="list-hero-stats">
-						<div className="list-stat-card">
+						<div className="list-stat-card bento-tile">
 							<span>Tổng sổ tay</span>
 							<strong>{overview.myNotebooks.length}</strong>
 						</div>
-						<div className="list-stat-card">
+						<div className="list-stat-card bento-tile">
 							<span>Sổ đang hiển thị</span>
 							<strong>{myNotebooks.length}</strong>
 						</div>
@@ -156,7 +156,7 @@ const NotebookListPage = () => {
 
 				{pageMessage && <div className="notebook-message">{pageMessage}</div>}
 
-				<section className="section-card">
+				<section className="section-card bento-surface">
 					<div className="section-title-row">
 						<h2>Danh sách sổ tay</h2>
 						<button

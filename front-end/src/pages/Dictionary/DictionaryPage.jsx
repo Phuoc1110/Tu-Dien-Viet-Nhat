@@ -650,7 +650,7 @@ const DictionaryPage = () => {
 	};
 
 	return (
-		<div className="mazii-home">
+		<div className="mazii-home dictionary-page">
 			<div className="mazii-shell">
 				<div className="mazii-search-wrap" ref={searchWrapRef}>
 					<div className="mazii-search-bar">

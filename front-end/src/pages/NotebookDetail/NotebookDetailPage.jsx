@@ -1281,7 +1281,7 @@ const NotebookDetailPage = () => {
 									</div>
 									<div>
 										<span>Đúng</span>
-										<strong>{miniTestCorrectCount}</strong>
+										<strong>{miniTestCorrectCount}/{miniTestSession?.questions?.length || miniTestCount}</strong>
 									</div>
 									<div>
 										<span>Bỏ qua</span>
@@ -1298,12 +1298,29 @@ const NotebookDetailPage = () => {
 									{!miniTestSession && <div className="word-empty">Chọn cấu hình và bấm bắt đầu để làm bài.</div>}
 
 									{miniTestSession && !miniTestQuestion && miniTestSession.index >= miniTestSession.questions.length && (
-										<div className="mini-test-summary">
+										<div className="mini-test-summary mini-test-complete-card">
+											<p className="mini-test-complete-kicker">Mini Test Completed</p>
 											<h3>Hoàn thành Mini Test</h3>
-											<p>Điểm số: {miniTestSession.score}/{miniTestSession.questions.length}</p>
-											<p>Đúng: {miniTestCorrectCount} | Bỏ qua: {miniTestSkippedCount} | Tỉ lệ: {miniTestAccuracy}%</p>
-											<button type="button" className="quiz-main-btn" onClick={handleStartMiniTest}>
-												Làm lại
+											<div className="mini-test-score-ring">
+												<strong>{miniTestSession.score}</strong>
+												<span>/{miniTestSession.questions.length} câu</span>
+											</div>
+											<div className="mini-test-metrics-grid">
+												<div>
+													<span>Đúng</span>
+													<strong>{miniTestCorrectCount}/{miniTestSession.questions.length}</strong>
+												</div>
+												<div>
+													<span>Bỏ qua</span>
+													<strong>{miniTestSkippedCount}</strong>
+												</div>
+												<div>
+													<span>Tỉ lệ đúng</span>
+													<strong>{miniTestAccuracy}%</strong>
+												</div>
+											</div>
+											<button type="button" className="quiz-main-btn mini-test-restart-btn" onClick={handleStartMiniTest}>
+												Làm lại Mini Test
 											</button>
 										</div>
 									)}

@@ -21,10 +21,9 @@ import { toast } from "react-toastify";
 // import Notification from "../Notification/Notification";
 import logo from "../../assets/images/JP_Dict_Logo.jpg";
 
-const Navbar = ({ title = "HomePage" }) => {
+const Navbar = () => {
 	const [showUserMenu, setShowUserMenu] = useState(false);
 	// const [showNotifications, setShowNotifications] = useState(false);
-	const [searchValue, setSearchValue] = useState("");
 	const { user, logoutContext } = useContext(UserContext);
 	// const { notifications = [], unread = 0 } = useNotifications();
 	const history = useHistory();
@@ -38,12 +37,11 @@ const Navbar = ({ title = "HomePage" }) => {
 		// setShowNotifications(false); // Close notifications when opening user menu
 	};
 
-	const handleSearch = (e) => {
-		if (e.key === "Enter") {
-			if (searchValue.trim()) {
-				history.push(`/dictionary?q=${searchValue.trim()}`);
-			}
+	const isActiveShortcut = (segment) => {
+		if (segment === "/") {
+			return location.pathname === "/" || location.pathname === "/dictionary";
 		}
+		return location.pathname.startsWith(segment);
 	};
 
 	const handleLogout = async () => {
@@ -81,7 +79,7 @@ const Navbar = ({ title = "HomePage" }) => {
 				<div className="navbar-shortcuts">
 					<button
 						type="button"
-						className="navbar-shortcut"
+						className={`navbar-shortcut ${isActiveShortcut("/") ? "active" : ""}`}
 						onClick={() => history.push("/")}
 					>
 						<BookOpen size={16} />
@@ -89,7 +87,7 @@ const Navbar = ({ title = "HomePage" }) => {
 					</button>
 					<button
 						type="button"
-						className="navbar-shortcut"
+						className={`navbar-shortcut ${isActiveShortcut("/notebook") ? "active" : ""}`}
 						onClick={() => history.push("/notebook")}
 					>
 						<NotebookText size={16} />
@@ -97,7 +95,7 @@ const Navbar = ({ title = "HomePage" }) => {
 					</button>
 					<button
 						type="button"
-						className="navbar-shortcut"
+						className={`navbar-shortcut ${isActiveShortcut("/reading") || isActiveShortcut("/jlpt") || isActiveShortcut("/jplt") ? "active" : ""}`}
 						onClick={() => history.push("/reading")}
 					>
 						<BookText size={16} />

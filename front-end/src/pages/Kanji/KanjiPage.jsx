@@ -408,7 +408,7 @@ const KanjiPage = () => {
 	};
 
 	return (
-		<div className="mazii-home">
+		<div className="mazii-home kanji-page">
 			<div className="mazii-shell">
 				<div className="mazii-search-wrap" ref={searchWrapRef}>
 					<div className="mazii-search-bar">

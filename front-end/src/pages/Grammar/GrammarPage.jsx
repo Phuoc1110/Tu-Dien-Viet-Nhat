@@ -3,7 +3,6 @@ import { useHistory, useLocation } from "react-router-dom";
 import { searchGrammars } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
-import "../Dictionary/DictionaryPage.css";
 import "./GrammarPage.css";
 
 const GrammarPage = () => {
@@ -210,7 +209,7 @@ const GrammarPage = () => {
 	};
 
 	return (
-		<div className="mazii-home">
+		<div className="mazii-home grammar-page">
 			<div className="mazii-shell">
 				<div className="mazii-search-wrap" ref={searchWrapRef}>
 					<div className="mazii-search-bar">

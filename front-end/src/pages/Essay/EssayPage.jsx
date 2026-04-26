@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useHistory } from "react-router-dom";
 import { 
-	BookMarked, 
 	RefreshCcw, 
 	Search, 
 	FileText,
@@ -10,10 +8,9 @@ import {
 	Edit2,
 	Plus
 } from "lucide-react";
-import "./Essay.css";
+import "./EssayPage.css";
 
-const Essay = () => {
-	const history = useHistory();
+const EssayPage = () => {
 	const [essays, setEssays] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -290,4 +287,4 @@ const Essay = () => {
 	);
 };
 
-export default Essay;
+export default EssayPage;

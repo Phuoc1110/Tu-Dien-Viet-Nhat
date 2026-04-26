@@ -1,22 +1,37 @@
 @import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap");
 
 .notebook-list-page {
-  --nbl-bg: #f3ecde;
-  --nbl-paper: #fffdf8;
-  --nbl-line: #dfd5c2;
-  --nbl-text: #1f2937;
-  --nbl-muted: #6b7280;
-  --nbl-primary: #0f4c81;
-  --nbl-primary-2: #1768ac;
-  --nbl-accent: #c57b23;
+  --nbl-bg: #f2f6fb;
+  --nbl-paper: rgba(255, 255, 255, 0.84);
+  --nbl-line: rgba(149, 170, 199, 0.34);
+  --nbl-text: #17263f;
+  --nbl-muted: #5f7190;
+  --nbl-primary: #1f7a8c;
+  --nbl-primary-2: #1d5f9d;
+  --nbl-accent: #ef7f4d;
   min-height: calc(100vh - 130px);
   padding: 20px 16px 40px;
   color: var(--nbl-text);
   font-family: "Be Vietnam Pro", "Noto Sans JP", system-ui, sans-serif;
   background:
-    radial-gradient(circle at 10% 10%, rgba(197, 123, 35, 0.2), transparent 30%),
-    radial-gradient(circle at 90% 10%, rgba(23, 104, 172, 0.2), transparent 34%),
-    linear-gradient(180deg, #f8f5ee 0%, var(--nbl-bg) 100%);
+    radial-gradient(circle at 8% 9%, rgba(239, 127, 77, 0.2), transparent 30%),
+    radial-gradient(circle at 88% 10%, rgba(50, 124, 197, 0.2), transparent 34%),
+    radial-gradient(circle at 50% 120%, rgba(31, 122, 140, 0.16), transparent 44%),
+    linear-gradient(180deg, #f8fbff 0%, var(--nbl-bg) 100%);
+}
+
+.bento-surface {
+  border: 1px solid var(--nbl-line);
+  background: var(--nbl-paper);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 20px 46px rgba(13, 36, 70, 0.13);
+}
+
+.bento-tile {
+  border: 1px solid rgba(149, 170, 199, 0.32);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(240, 247, 255, 0.84));
+  box-shadow: 0 14px 30px rgba(16, 41, 78, 0.12);
 }
 
 .notebook-list-shell {
@@ -30,21 +45,21 @@
   gap: 8px;
   margin-bottom: 12px;
   font-size: 0.9rem;
-  color: #475569;
+  color: #4d6487;
 }
 
 .breadcrumb-link-btn {
   border: 0;
   background: transparent;
   padding: 0;
-  color: var(--nbl-primary);
+  color: #1e5688;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .breadcrumb-link-btn.current {
-  color: #6b7280;
+  color: #6d7f99;
   cursor: default;
   font-weight: 600;
 }
@@ -53,15 +68,12 @@
 .section-card,
 .notebook-message {
   border-radius: 22px;
-  border: 1px solid var(--nbl-line);
-  background: var(--nbl-paper);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
 }
 
 .list-hero {
   margin-bottom: 12px;
   padding: 20px;
-  background: linear-gradient(145deg, rgba(255, 253, 248, 0.98), rgba(248, 241, 227, 0.95));
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(236, 247, 255, 0.84));
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
   gap: 14px;
@@ -73,19 +85,19 @@
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--nbl-accent);
+  color: #ef6a32;
 }
 
 .list-hero-main h1 {
   margin: 8px 0 0;
   font-size: clamp(1.35rem, 3.5vw, 2.05rem);
-  color: #0d3b66;
+  color: #123457;
   line-height: 1.15;
 }
 
 .list-hero-main p {
   margin: 10px 0 0;
-  color: #4b5563;
+  color: #4c6281;
   line-height: 1.6;
 }
 
@@ -99,9 +111,9 @@
 
 .search-box {
   height: 46px;
-  border: 1px solid var(--nbl-line);
+  border: 1px solid rgba(149, 170, 199, 0.38);
   border-radius: 14px;
-  background: rgba(255, 253, 248, 0.92);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(245, 250, 255, 0.94));
   padding: 0 10px;
   display: flex;
   align-items: center;
@@ -114,16 +126,16 @@
   background: transparent;
   outline: none;
   font: inherit;
-  color: #1f2937;
+  color: #182d49;
 }
 
 .tiny-btn {
   width: 34px;
   height: 34px;
-  border: 1px solid #d8d1c3;
+  border: 1px solid rgba(149, 170, 199, 0.4);
   border-radius: 10px;
-  background: #fff;
-  color: #64748b;
+  background: rgba(255, 255, 255, 0.86);
+  color: #4f6688;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -135,7 +147,7 @@
   border: 0;
   border-radius: 14px;
   padding: 0 14px;
-  background: linear-gradient(135deg, var(--nbl-primary-2), var(--nbl-primary));
+  background: linear-gradient(135deg, #246fb0, #1f7a8c);
   color: #fff;
   font: inherit;
   font-weight: 700;
@@ -152,8 +164,6 @@
 
 .list-stat-card {
   border-radius: 14px;
-  border: 1px solid #e3dbc9;
-  background: rgba(255, 255, 255, 0.78);
   padding: 12px;
   display: grid;
   gap: 7px;
@@ -164,12 +174,12 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7b8798;
+  color: #6d83a4;
 }
 
 .list-stat-card strong {
   font-size: 1.15rem;
-  color: #0f172a;
+  color: #18385e;
 }
 
 .section-card {
@@ -179,7 +189,7 @@
 .section-title-row {
   min-height: 68px;
   padding: 10px 16px;
-  border-bottom: 1px solid #ece5d8;
+  border-bottom: 1px solid #dbe5f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -189,7 +199,7 @@
 .section-title-row h2 {
   margin: 0;
   font-size: 1.35rem;
-  color: #0d3b66;
+  color: #1a4068;
   text-align: left;
 }
 
@@ -198,9 +208,9 @@
   height: 32px;
   padding: 0 11px;
   border-radius: 999px;
-  border: 1px solid #d7d0c1;
-  background: #fff;
-  color: var(--nbl-primary);
+  border: 1px solid #d0dceb;
+  background: #f7fbff;
+  color: #245789;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
@@ -226,9 +236,9 @@
 }
 
 .create-notebook-card {
-  border: 2px dashed #89aee0;
-  background: linear-gradient(145deg, #eff7ff, #f9fcff);
-  color: var(--nbl-primary);
+  border: 2px dashed #8bb8e2;
+  background: linear-gradient(145deg, #f2f9ff, #f9fcff);
+  color: #225d92;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -240,22 +250,22 @@
 
 .notebook-item-card {
   text-align: left;
-  border: 1px solid #e1dbc9;
-  background: linear-gradient(145deg, #fffef9, #f9f2e7);
+  border: 1px solid #d4e0ee;
+  background: linear-gradient(145deg, #ffffff, #f0f7ff);
   cursor: pointer;
 }
 
 .notebook-item-card:hover,
 .create-notebook-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
-  border-color: #b8d0e8;
+  box-shadow: 0 12px 26px rgba(17, 42, 79, 0.14);
+  border-color: #8fb8e0;
 }
 
 .notebook-item-card h3 {
   margin: 0;
   font-size: 1rem;
-  color: var(--nbl-primary);
+  color: #1f5f95;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -270,13 +280,13 @@
 .card-meta-date {
   margin-top: 12px;
   font-size: 0.82rem;
-  color: #7b8798;
+  color: #7183a0;
 }
 
 .empty-card {
-  border: 1px solid #e4dece;
-  background: #faf7f1;
-  color: #6b7280;
+  border: 1px solid #d5e1ee;
+  background: #f6fbff;
+  color: #60789b;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,9 +294,9 @@
 
 .notebook-message {
   margin-bottom: 10px;
-  border-color: #d9e5f1;
-  background: #f4f9ff;
-  color: #334155;
+  border: 1px solid #cadced;
+  background: rgba(241, 248, 255, 0.85);
+  color: #355176;
   padding: 12px 14px;
 }
 
@@ -304,8 +314,8 @@
 .create-modal {
   width: min(560px, 100%);
   border-radius: 16px;
-  border: 1px solid #e1d8c8;
-  background: #fffdf8;
+  border: 1px solid #d2deec;
+  background: #fbfdff;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
@@ -313,7 +323,7 @@
 .create-modal-head {
   min-height: 58px;
   padding: 10px 14px;
-  border-bottom: 1px solid #ebe4d8;
+  border-bottom: 1px solid #e2ebf4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -322,7 +332,7 @@
 .create-modal-head h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: #0d3b66;
+  color: #1a426a;
 }
 
 .create-modal-head button {
@@ -339,7 +349,7 @@
 .create-modal-body input {
   width: 100%;
   height: 42px;
-  border: 1px solid #d7cfbf;
+  border: 1px solid #cfdcea;
   border-radius: 10px;
   background: #fff;
   padding: 0 12px;
@@ -365,12 +375,12 @@
 }
 
 .btn-cancel {
-  background: #ece8df;
-  color: #4b5563;
+  background: #ecf3fb;
+  color: #4e6484;
 }
 
 .btn-save {
-  background: linear-gradient(135deg, var(--nbl-primary-2), var(--nbl-primary));
+  background: linear-gradient(135deg, #246fb0, #1f7a8c);
   color: #fff;
 }
 

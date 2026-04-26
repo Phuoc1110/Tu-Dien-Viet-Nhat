@@ -15,6 +15,7 @@ import {
 import { UserContext } from "../../Context/UserProvider";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
+import { Mic, PenTool, RefreshCcw, Sparkles, Wand2, Zap } from "lucide-react";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -425,34 +426,38 @@ const HomePage = () => {
 	return (
 		<div className="home-page">
 			<div className="home-shell">
-				<header className="home-search-wrap" ref={searchWrapRef}>
+				<header className="home-search-wrap bento-surface" ref={searchWrapRef}>
 					<div className="home-search-head">
 						<p className="home-search-kicker">Japanese Toolbox</p>
 						<h1>Tra cứu từ vựng theo cách nhanh và trực quan hơn</h1>
 					</div>
 					<div className="home-search-input-zone">
 						<form className="home-search-bar" onSubmit={handleSearch}>
-							<span className="search-leading" aria-hidden="true">
-								辞
-							</span>
+							<span className="search-leading" aria-hidden="true">辞</span>
 							<input
 								type="text"
 								value={searchInput}
 								onFocus={() => setIsDropdownOpen(true)}
 								onChange={handleSearchInputChange}
 								onKeyDown={handleSearchInputKeyDown}
-								placeholder="日本, nihon, Nhật Bản"
+								placeholder="Nhật, nihon, Nhật Bản"
 							/>
 							<div className="search-actions">
-								<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
-									A文
+								<button type="button" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay">
+									<PenTool size={15} />
+									<span>Write</span>
+								</button>
+								<button type="button" title="Tìm kiếm giọng nói">
+									<Mic size={15} />
+									<span>Voice</span>
 								</button>
 								<button type="button" onClick={openHistoryPopup}>
+									<RefreshCcw size={15} />
 									His
 								</button>
 							</div>
 							<button className="lang-switch" type="submit">
-								Nhật - Việt
+								Nhật - Việt ▾
 							</button>
 						</form>
 
@@ -488,36 +493,38 @@ const HomePage = () => {
 				</header>
 
 				<section className="home-hero-grid">
-					<article className="home-hero-main">
-						<p className="hero-kicker">Trang chủ học tiếng Nhật</p>
+					<article className="home-hero-main bento-surface">
+						<p className="hero-kicker">Dashboard Spotlight</p>
 						<h2>Kết hợp tra từ, lịch sử học và góp ý cộng đồng trên cùng một dashboard.</h2>
 						<p>
 							Bắt đầu từ một từ khóa, sau đó mở rộng sang câu, ngữ pháp và kanji chỉ bằng vài cú nhấp.
 						</p>
 						<div className="hero-actions">
 							<button type="button" onClick={() => applyHintAndSearch("景気")}>
+								<Wand2 size={14} />
 								Thử từ 景気
 							</button>
 							<button type="button" onClick={() => applyHintAndSearch("健康")}>
+								<Zap size={14} />
 								Thử từ 健康
 							</button>
 						</div>
 					</article>
 
 					<div className="home-hero-stats">
-						<div className="hero-stat-card">
+						<div className="hero-stat-card bento-tile">
 							<span>Tài khoản</span>
 							<strong>{isLoggedIn ? "Đã đăng nhập" : "Chưa đăng nhập"}</strong>
 						</div>
-						<div className="hero-stat-card">
+						<div className="hero-stat-card bento-tile">
 							<span>Lịch sử gần đây</span>
 							<strong>{historyTotal}</strong>
 						</div>
-						<div className="hero-stat-card">
+						<div className="hero-stat-card bento-tile">
 							<span>Từ khóa hot</span>
 							<strong>{hotKeywords.length}</strong>
 						</div>
-						<div className="hero-stat-card">
+						<div className="hero-stat-card bento-tile">
 							<span>Góp ý cộng đồng</span>
 							<strong>{communityTotal}</strong>
 						</div>
@@ -580,19 +587,20 @@ const HomePage = () => {
 
 				<main className="home-content-grid">
 					<section className="home-main-column">
-						<article className="surface-panel tips-panel">
+						<article className="surface-panel tips-panel bento-surface">
 							<h3>Mẹo tra cứu nhanh</h3>
 							<ul>
-								<li>Gõ kana, romaji hoặc kanji đều được hệ thống gợi ý tức thì.</li>
-								<li>Đăng nhập để lưu lịch sử và tiếp tục học trên thiết bị khác.</li>
-								<li>Dùng từ ngắn trước, sau đó mở rộng bằng từ khóa liên quan.</li>
+								<li><Sparkles size={14} /> Gõ kana, romaji hoặc kanji đều được hệ thống gợi ý tức thì.</li>
+								<li><Sparkles size={14} /> Đăng nhập để lưu lịch sử và tiếp tục học trên thiết bị khác.</li>
+								<li><Sparkles size={14} /> Dùng từ ngắn trước, sau đó mở rộng bằng từ khóa liên quan.</li>
 							</ul>
 						</article>
 
-						<article className="surface-panel">
+						<article className="surface-panel bento-surface">
 							<div className="panel-head">
 								<h3>Từ khóa hot hôm nay</h3>
 								<button type="button" onClick={() => setSearchInput("")}>
+									<RefreshCcw size={13} />
 									Làm mới
 								</button>
 							</div>
@@ -605,7 +613,7 @@ const HomePage = () => {
 							</div>
 						</article>
 
-						<article className="surface-panel">
+						<article className="surface-panel bento-surface">
 							<div className="panel-head">
 								<h3>Lịch sử tra cứu</h3>
 								<button type="button" onClick={openHistoryPopup}>
@@ -647,13 +655,13 @@ const HomePage = () => {
 					</section>
 
 					<aside className="home-side-column">
-						<article className="surface-panel community-panel">
+						<article className="surface-panel community-panel bento-surface">
 							<h3>Góp ý cộng đồng </h3>
 							<div className="feedback-list" ref={communityListRef} onScroll={handleCommunityListScroll}>
 								{communityPosts.map((item) => (
 									<div key={`${item.id}-${item.createdAt}`} className="feedback-item">
 										<strong>{item.word}</strong>
-										<p>{item.content}</p>
+										<p>{item.meaning || item.content}</p>
 										<small className="feedback-meta">
 											{item.author || "Bạn"} • {new Date(item.createdAt).toLocaleString("vi-VN")}
 										</small>
