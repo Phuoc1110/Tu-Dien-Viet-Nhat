@@ -35,6 +35,20 @@ const recognizeKanjiInk = ({ ink, width = 280, height = 280, numResults = 20 }) 
 		});
 };
 
+const recognizeImageText = (formData) => {
+	return axios
+		.post(`/api/dictionary/image-recognize`, formData, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		})
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Recognize image text error:", err);
+			return { errCode: 1, errMessage: "Recognize failed", words: [], text: "" };
+		});
+};
+
 const searchSentences = (query, limit = 20) => {
 	return axios
 		.get(`/api/dictionary/sentence/search?q=${encodeURIComponent(query)}&limit=${limit}`)
@@ -59,6 +73,7 @@ export {
 	searchWords,
 	searchKanjis,
 	recognizeKanjiInk,
+	recognizeImageText,
 	searchSentences,
 	searchGrammars,
 };

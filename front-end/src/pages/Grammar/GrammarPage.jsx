@@ -18,6 +18,7 @@ const GrammarPage = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [grammars, setGrammars] = useState([]);
+	const [defaultGrammars, setDefaultGrammars] = useState([]);
 	const [activeGrammar, setActiveGrammar] = useState(null);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
@@ -27,16 +28,50 @@ const GrammarPage = () => {
 		const params = new URLSearchParams(search);
 		return params.get("q") || params.get("keyword") || "";
 	}, [search]);
+	const hasKeyword = keyword.trim().length > 0;
 
 	useEffect(() => {
 		setSearchInput(keyword);
 	}, [keyword]);
 
 	useEffect(() => {
+		let mounted = true;
+
+		const loadDefaultGrammars = async () => {
+			setLoading(true);
+			const seedWords = ["は", "です", "する", "ない", "よう", "ため", "ば", "ので"];
+			const randomSeed = seedWords[Math.floor(Math.random() * seedWords.length)] || "は";
+			const res = await searchGrammars(randomSeed, 24);
+
+			if (!mounted) {
+				return;
+			}
+
+			if (res && res.errCode === 0) {
+				const shuffled = [...(res.grammars || [])]
+					.sort(() => Math.random() - 0.5)
+					.slice(0, 16);
+				setDefaultGrammars(shuffled);
+				if (!keyword.trim()) {
+					setActiveGrammar(shuffled[0] || null);
+				}
+			} else {
+				setDefaultGrammars([]);
+			}
+			setLoading(false);
+		};
+
+		loadDefaultGrammars();
+
+		return () => {
+			mounted = false;
+		};
+	}, [keyword]);
+
+	useEffect(() => {
 		const runSearch = async () => {
 			if (!keyword.trim()) {
 				setGrammars([]);
-				setActiveGrammar(null);
 				setError("");
 				return;
 			}
@@ -61,6 +96,12 @@ const GrammarPage = () => {
 
 		runSearch();
 	}, [keyword]);
+
+	useEffect(() => {
+		if (!hasKeyword && defaultGrammars.length && !activeGrammar) {
+			setActiveGrammar(defaultGrammars[0]);
+		}
+	}, [hasKeyword, defaultGrammars, activeGrammar]);
 
 	useEffect(() => {
 		if (!searchInput.trim()) {
@@ -208,6 +249,8 @@ const GrammarPage = () => {
 		);
 	};
 
+	const displayedGrammars = hasKeyword ? grammars : defaultGrammars;
+
 	return (
 		<div className="mazii-home grammar-page">
 			<div className="mazii-shell">
@@ -267,6 +310,9 @@ const GrammarPage = () => {
 						<div className="detail-card grammar-detail-card">
 							{loading && <p>Dang tai...</p>}
 							{error && <p className="sentence-error">{error}</p>}
+							{!loading && !error && !activeGrammar && (
+								<p>Chua co ngu phap de hien thi.</p>
+							)}
 							{activeGrammar && (
 								<>
 									<div className="grammar-head">
@@ -348,7 +394,7 @@ const GrammarPage = () => {
 
 					<div className="grammar-right">
 						<div className="lookup-panel grammar-list-panel">
-							{grammars.map((item) => (
+							{displayedGrammars.map((item) => (
 								<button
 									key={item.id}
 									type="button"
@@ -362,6 +408,7 @@ const GrammarPage = () => {
 									<p>{item.meaning}</p>
 								</button>
 							))}
+							{displayedGrammars.length === 0 && !loading && <p>Chua co du lieu ngu phap.</p>}
 						</div>
 					</div>
 				</div>

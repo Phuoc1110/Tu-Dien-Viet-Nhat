@@ -1,10 +1,15 @@
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchSentences, searchWords } from "../../services/dictionaryService";
-import { addWordSearchHistory } from "../../services/searchHistoryService";
+import {
+	addWordSearchHistory,
+	getTopSearchKeywordsToday,
+	getWordSearchHistoryPage,
+} from "../../services/searchHistoryService";
 import { UserContext } from "../../Context/UserProvider";
 import {
 	addWordContribution,
+	getLatestWordContributions,
 	getWordContributions,
 } from "../../services/wordContributionService";
 import WordImages from "../../components/WordImages/WordImages";
@@ -290,17 +295,50 @@ const DictionaryPage = () => {
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
 	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
+	const [recentHistory, setRecentHistory] = useState([]);
+	const [topKeywords, setTopKeywords] = useState([]);
+	const [latestContributions, setLatestContributions] = useState([]);
 	const searchWrapRef = useRef(null);
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
 		return params.get("q") || params.get("keyword") || "";
 	}, [search]);
+	const hasKeyword = keyword.trim().length > 0;
 	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
+
+	const getTermLabel = (item) => String(item?.word || item?.searchTerm || item?.keyword || "").trim();
+	const getTermCount = (item) => Number(item?.count || item?.searchCount || 0) || 0;
 
 	useEffect(() => {
 		setSearchInput(keyword);
 	}, [keyword]);
+
+	useEffect(() => {
+		let mounted = true;
+
+		const loadSidebarData = async () => {
+			const [historyRes, topRes, contributionRes] = await Promise.all([
+				getWordSearchHistoryPage(8, 0),
+				getTopSearchKeywordsToday(8),
+				getLatestWordContributions(6, 0),
+			]);
+
+			if (!mounted) {
+				return;
+			}
+
+			setRecentHistory(Array.isArray(historyRes?.items) ? historyRes.items : []);
+			setTopKeywords(Array.isArray(topRes) ? topRes : []);
+			setLatestContributions(Array.isArray(contributionRes) ? contributionRes : []);
+		};
+
+		loadSidebarData();
+
+		return () => {
+			mounted = false;
+		};
+	}, []);
 
 	useEffect(() => {
 		setContributionError("");
@@ -834,61 +872,121 @@ const DictionaryPage = () => {
 						)}
 					</div>
 					<div className="detail-right">
-						{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
-							<div className="lookup-panel">
-								<h3>Các chữ kanji của {wordDetail.word}</h3>
-								<div className="kanji-list">
-									{wordDetail.kanjis.map((kanji) => (
-										<button
-											key={kanji.id}
-											type="button"
-											className="kanji-info-card"
-											onClick={() => history.push(`/kanji?q=${kanji.characterKanji}`)}
-										>
-											<div className="kanji-card-head">
-												<strong className="kanji-char">{kanji.characterKanji}</strong>
-												<span className="kanji-head-reading">
-													[{getReadingItems(kanji.onyomi)[0] || "-"}]
-												</span>
-											</div>
-											<p className="kanji-meaning">{(kanji.meaning || "-").toUpperCase()}</p>
-											<div className="kanji-reading-lines">
-												<p>
-													<span>Hán tự:</span> {kanji.characterKanji} - {(kanji.meaning || "-").toUpperCase()}
-												</p>
-												<p>
-													<span>訓:</span> {getReadingItems(kanji.kunyomi).join(" ") || "-"}
-												</p>
-												<p>
-													<span>音:</span> {getReadingItems(kanji.onyomi).join(" ") || "-"}
-												</p>
-											</div>
-											{kanji.jlptLevel && (
-												<small className="kanji-jlpt">JLPT N{kanji.jlptLevel}</small>
-											)}
-										</button>
-									))}
-								</div>
-							</div>
-						)}
+						{hasKeyword ? (
+							<>
+								{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
+									<div className="lookup-panel">
+										<h3>Các chữ kanji của {wordDetail.word}</h3>
+										<div className="kanji-list">
+											{wordDetail.kanjis.map((kanji) => (
+												<button
+													key={kanji.id}
+													type="button"
+													className="kanji-info-card"
+													onClick={() => history.push(`/kanji?q=${kanji.characterKanji}`)}
+												>
+													<div className="kanji-card-head">
+														<strong className="kanji-char">{kanji.characterKanji}</strong>
+														<span className="kanji-head-reading">
+															[{getReadingItems(kanji.onyomi)[0] || "-"}]
+														</span>
+													</div>
+													<p className="kanji-meaning">{(kanji.meaning || "-").toUpperCase()}</p>
+													<div className="kanji-reading-lines">
+														<p>
+															<span>Hán tự:</span> {kanji.characterKanji} - {(kanji.meaning || "-").toUpperCase()}
+														</p>
+														<p>
+															<span>訓:</span> {getReadingItems(kanji.kunyomi).join(" ") || "-"}
+														</p>
+														<p>
+															<span>音:</span> {getReadingItems(kanji.onyomi).join(" ") || "-"}
+														</p>
+													</div>
+													{kanji.jlptLevel && (
+														<small className="kanji-jlpt">JLPT N{kanji.jlptLevel}</small>
+													)}
+												</button>
+											))}
+										</div>
+									</div>
+								)}
 
-						{relatedWords.length > 0 && (
-							<div className="lookup-panel">
-								<h3>Từ liên quan</h3>
-								<div className="related-list">
-									{relatedWords.map((item) => (
-										<button
-											type="button"
-											key={item.id}
-											onClick={() => history.push(`/dictionary?q=${encodeURIComponent(item.word || item.reading || "")}`)}
-										>
-											<strong>{item.word}</strong>
-											<span>{item.reading || "-"}</span>
-											<p>{item.meanings?.[0]?.definition || "Chưa có nghĩa"}</p>
-										</button>
-									))}
+								{relatedWords.length > 0 && (
+									<div className="lookup-panel">
+										<h3>Từ liên quan</h3>
+										<div className="related-list">
+											{relatedWords.map((item) => (
+												<button
+													type="button"
+													key={item.id}
+													onClick={() => history.push(`/dictionary?q=${encodeURIComponent(item.word || item.reading || "")}`)}
+												>
+													<strong>{item.word}</strong>
+													<span>{item.reading || "-"}</span>
+													<p>{item.meanings?.[0]?.definition || "Chưa có nghĩa"}</p>
+												</button>
+											))}
+										</div>
+									</div>
+								)}
+							</>
+						) : (
+							<>
+								<div className="lookup-panel">
+									<h3>Lich su gan day</h3>
+									<div className="related-list default-list">
+										{recentHistory.slice(0, 6).map((item) => {
+											const term = getTermLabel(item);
+											if (!term) return null;
+											return (
+												<button
+													type="button"
+													key={item.id}
+													onClick={() => history.push(`/dictionary?q=${encodeURIComponent(term)}`)}
+												>
+													<strong>{term}</strong>
+												</button>
+											);
+										})}
+										{recentHistory.length === 0 && <p className="side-empty">Chua co lich su.</p>}
+									</div>
 								</div>
-							</div>
+
+								<div className="lookup-panel">
+									<h3>Tu khoa hot</h3>
+									<div className="chip-list">
+										{topKeywords.slice(0, 8).map((item, index) => {
+											const term = getTermLabel(item);
+											if (!term) return null;
+											return (
+												<button
+													type="button"
+													key={`${term}-${index}`}
+													onClick={() => history.push(`/dictionary?q=${encodeURIComponent(term)}`)}
+												>
+													{term}
+													<span>{getTermCount(item)}</span>
+												</button>
+											);
+										})}
+										{topKeywords.length === 0 && <p className="side-empty">Chua co du lieu hot.</p>}
+									</div>
+								</div>
+
+								<div className="lookup-panel">
+									<h3>Gop y moi</h3>
+									<div className="feedback-list">
+										{latestContributions.slice(0, 4).map((item) => (
+											<div key={item.id} className="feedback-item">
+												<strong>{item.word || "Tu vung"}</strong>
+												<p>{item.content}</p>
+											</div>
+										))}
+										{latestContributions.length === 0 && <p className="side-empty">Chua co gop y.</p>}
+									</div>
+								</div>
+							</>
 						)}
 					</div>
 				</div>

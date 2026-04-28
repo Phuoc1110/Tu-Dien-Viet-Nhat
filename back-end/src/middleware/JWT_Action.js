@@ -18,6 +18,7 @@ const nonSecurePaths = [
 	"/api/reset-otp/send",
 	"/api/reset-otp/verify",
 	"/api/reset-password",
+	"/api/dictionary/image-recognize",
 ];
 
 const CreateJWT = (payload) => {

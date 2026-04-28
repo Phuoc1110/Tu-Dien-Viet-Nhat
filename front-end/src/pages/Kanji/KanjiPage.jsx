@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { searchKanjis, searchSentences } from "../../services/dictionaryService";
+import {
+	getTopSearchKeywordsToday,
+	getWordSearchHistoryPage,
+} from "../../services/searchHistoryService";
+import { getLatestWordContributions } from "../../services/wordContributionService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import "./KanjiPage.css";
@@ -25,6 +30,9 @@ const KanjiPage = () => {
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
 	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
+	const [recentHistory, setRecentHistory] = useState([]);
+	const [topKeywords, setTopKeywords] = useState([]);
+	const [latestContributions, setLatestContributions] = useState([]);
 
 	const normalizeStrokePaths = (value) => {
 		if (!value) return [];
@@ -165,16 +173,46 @@ const KanjiPage = () => {
 		const params = new URLSearchParams(search);
 		return params.get("q") || params.get("keyword") || "";
 	}, [search]);
+	const hasKeyword = keyword.trim().length > 0;
+	const getTermLabel = (item) => String(item?.word || item?.searchTerm || item?.keyword || "").trim();
+	const getTermCount = (item) => Number(item?.count || item?.searchCount || 0) || 0;
 
 	useEffect(() => {
 		setSearchInput(keyword);
 	}, [keyword]);
 
 	useEffect(() => {
+		let mounted = true;
+
+		const loadSidebarData = async () => {
+			const [historyRes, topRes, contributionRes] = await Promise.all([
+				getWordSearchHistoryPage(8, 0),
+				getTopSearchKeywordsToday(8),
+				getLatestWordContributions(6, 0),
+			]);
+
+			if (!mounted) {
+				return;
+			}
+
+			setRecentHistory(Array.isArray(historyRes?.items) ? historyRes.items : []);
+			setTopKeywords(Array.isArray(topRes) ? topRes : []);
+			setLatestContributions(Array.isArray(contributionRes) ? contributionRes : []);
+		};
+
+		loadSidebarData();
+
+		return () => {
+			mounted = false;
+		};
+	}, []);
+
+	useEffect(() => {
 		const runSearch = async () => {
 			if (!keyword.trim()) {
 				setKanjiDetail(null);
 				setRelatedKanjis([]);
+				setActiveKanji(null);
 				setError("");
 				return;
 			}
@@ -466,6 +504,15 @@ const KanjiPage = () => {
 					<div className="detail-left">
 						{loading && <div className="detail-card">Đang tải...</div>}
 						{error && <div className="detail-card error">{error}</div>}
+						{!loading && !error && !kanjiDetail && (
+							<div className="detail-card empty-state-card">
+								<div className="empty-state-visual">漢</div>
+								<h3>Nhap mot chu kanji de bat dau</h3>
+								<p>
+									Ban co the tim theo chu kanji, am han viet hoac ve kanji bang nut A文.
+								</p>
+							</div>
+						)}
 						{kanjiDetail && (
 							<div className="detail-card">
 								<div className="detail-overview-grid">
@@ -586,25 +633,83 @@ const KanjiPage = () => {
 						)}
 					</div>
 					<div className="detail-right">
-						<div className="lookup-panel">
-							<h3>Kết quả tra cứu kanji</h3>
-							<div className="related-list">
-								{relatedKanjis.map((item) => (
-									<button
-										key={item.id}
-										className={
-											activeKanji && activeKanji.id === item.id
-												? "related-active"
-												: ""
-										}
-										onClick={() => handleSelectRelatedKanji(item)}
-									>
-										<strong>{item.characterKanji}</strong>
-										<span>{item.sinoVietnamese}</span>
-									</button>
-								))}
+						{hasKeyword ? (
+							<div className="lookup-panel">
+								<h3>Kết quả tra cứu kanji</h3>
+								<div className="related-list">
+									{relatedKanjis.map((item) => (
+										<button
+											key={item.id}
+											className={
+												activeKanji && activeKanji.id === item.id
+													? "related-active"
+													: ""
+											}
+											onClick={() => handleSelectRelatedKanji(item)}
+										>
+											<strong>{item.characterKanji}</strong>
+											<span>{item.sinoVietnamese}</span>
+										</button>
+									))}
+								</div>
 							</div>
-						</div>
+						) : (
+							<>
+								<div className="lookup-panel">
+									<h3>Lich su gan day</h3>
+									<div className="related-list default-list">
+										{recentHistory.slice(0, 6).map((item) => {
+											const term = getTermLabel(item);
+											if (!term) return null;
+											return (
+												<button
+													type="button"
+													key={item.id}
+													onClick={() => history.push(`/kanji?q=${encodeURIComponent(term)}`)}
+												>
+													<strong>{term}</strong>
+												</button>
+											);
+										})}
+										{recentHistory.length === 0 && <p className="side-empty">Chua co lich su.</p>}
+									</div>
+								</div>
+
+								<div className="lookup-panel">
+									<h3>Tu khoa hot</h3>
+									<div className="chip-list">
+										{topKeywords.slice(0, 8).map((item, index) => {
+											const term = getTermLabel(item);
+											if (!term) return null;
+											return (
+												<button
+													type="button"
+													key={`${term}-${index}`}
+													onClick={() => history.push(`/kanji?q=${encodeURIComponent(term)}`)}
+												>
+													{term}
+													<span>{getTermCount(item)}</span>
+												</button>
+											);
+										})}
+										{topKeywords.length === 0 && <p className="side-empty">Chua co du lieu hot.</p>}
+									</div>
+								</div>
+
+								<div className="lookup-panel">
+									<h3>Gop y moi</h3>
+									<div className="feedback-list">
+										{latestContributions.slice(0, 4).map((item) => (
+											<div key={item.id} className="feedback-item">
+												<strong>{item.word || "Tu vung"}</strong>
+												<p>{item.content}</p>
+											</div>
+										))}
+										{latestContributions.length === 0 && <p className="side-empty">Chua co gop y.</p>}
+									</div>
+								</div>
+							</>
+						)}
 					</div>
 				</div>
 			</div>

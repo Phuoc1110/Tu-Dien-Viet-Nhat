@@ -5,6 +5,7 @@ import adminController from "../controllers/adminController";
 import notebookController from "../controllers/notebookController";
 import quizController from "../controllers/quizController";
 import readingController from "../controllers/readingController";
+import multer from "multer";
 import { checkUserJWT } from "../middleware/JWT_Action";
 import { uploadCloud } from "../middleware/Cloudinary_Multer";
 import {
@@ -14,6 +15,10 @@ import {
 } from "../controllers/otpController.js";
 
 let router = express.Router();
+const uploadImage = multer({
+	storage: multer.memoryStorage(),
+	limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 let initWebRoutes = (app) => {
 	router.all("*", checkUserJWT);
@@ -55,6 +60,11 @@ let initWebRoutes = (app) => {
 	router.post(
 		"/api/dictionary/kanji/recognize",
 		dictionaryController.HandleRecognizeKanji
+	);
+	router.post(
+		"/api/dictionary/image-recognize",
+		uploadImage.single("image"),
+		dictionaryController.HandleRecognizeTextFromImage
 	);
 	router.get(
 		"/api/dictionary/sentence/search",

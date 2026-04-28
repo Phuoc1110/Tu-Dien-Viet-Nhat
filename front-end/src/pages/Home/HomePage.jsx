@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./HomePage.css";
-import { searchWords } from "../../services/dictionaryService";
+import { recognizeImageText, searchWords } from "../../services/dictionaryService";
 import { useHistory } from "react-router-dom";
 import {
 	clearWordSearchHistory,
@@ -15,7 +15,7 @@ import {
 import { UserContext } from "../../Context/UserProvider";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
-import { Mic, PenTool, RefreshCcw, Sparkles, Wand2, Zap } from "lucide-react";
+import { Camera, Mic, PenTool, RefreshCcw, Sparkles, Wand2, Zap } from "lucide-react";
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -69,7 +69,9 @@ const HomePage = () => {
 	const [communityHasMore, setCommunityHasMore] = useState(true);
 	const [communityLoadingMore, setCommunityLoadingMore] = useState(false);
 	const [hotKeywords, setHotKeywords] = useState([]);
+	const [isImageUploading, setIsImageUploading] = useState(false);
 	const searchWrapRef = useRef(null);
+	const imageInputRef = useRef(null);
 	const historyListRef = useRef(null);
 	const communityListRef = useRef(null);
 	const history = useHistory();
@@ -241,6 +243,60 @@ const HomePage = () => {
 		const nextValue = event.target.value;
 		setSearchInput(nextValue);
 		setHighlightedDropdownIndex(-1);
+	};
+
+	const openImagePicker = () => {
+		if (isImageUploading) {
+			return;
+		}
+		imageInputRef.current?.click();
+	};
+
+	const handleImagePick = async (event) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+
+		if (!file) {
+			return;
+		}
+
+		if (!file.type.startsWith("image/")) {
+			setSearchError("Vui lòng chọn một file ảnh hợp lệ.");
+			setIsDropdownOpen(true);
+			return;
+		}
+
+		const formData = new FormData();
+		formData.append("image", file);
+
+		setIsImageUploading(true);
+		setSearchError("");
+
+		try {
+			const response = await recognizeImageText(formData);
+			if (response && response.errCode === 0) {
+				const recognizedText = String(response.text || response.words?.join(" ") || "").trim();
+				if (recognizedText) {
+					setSearchInput(recognizedText);
+					setIsDropdownOpen(true);
+					setHighlightedDropdownIndex(-1);
+					return;
+				}
+
+				setSearchError("Không nhận được chữ nào từ ảnh này.");
+				setIsDropdownOpen(true);
+				return;
+			}
+
+			setSearchError(response?.errMessage || "Không thể đọc ảnh lúc này.");
+			setIsDropdownOpen(true);
+		} catch (error) {
+			console.error("Image OCR error:", error);
+			setSearchError("Không thể đọc ảnh lúc này.");
+			setIsDropdownOpen(true);
+		} finally {
+			setIsImageUploading(false);
+		}
 	};
 
 	const handleSearchInputKeyDown = (event) => {
@@ -443,14 +499,18 @@ const HomePage = () => {
 								placeholder="Nhật, nihon, Nhật Bản"
 							/>
 							<div className="search-actions">
+								<button type="button" onClick={openImagePicker} title="Chụp ảnh để tra cứu" disabled={isImageUploading}>
+									<Camera size={15} />
+									<span>{isImageUploading ? "Đang đọc" : "Ảnh"}</span>
+								</button>
 								<button type="button" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay">
 									<PenTool size={15} />
 									<span>Write</span>
 								</button>
-								<button type="button" title="Tìm kiếm giọng nói">
+								{/* <button type="button" title="Tìm kiếm giọng nói">
 									<Mic size={15} />
 									<span>Voice</span>
-								</button>
+								</button> */}
 								<button type="button" onClick={openHistoryPopup}>
 									<RefreshCcw size={15} />
 									His
@@ -460,6 +520,14 @@ const HomePage = () => {
 								Nhật - Việt ▾
 							</button>
 						</form>
+						<input
+							ref={imageInputRef}
+							type="file"
+							accept="image/*"
+							capture="environment"
+							onChange={handleImagePick}
+							style={{ display: "none" }}
+						/>
 
 						{isDropdownOpen && searchInput.trim() && (
 							<div className="home-dropdown">{renderDropdownBody()}</div>

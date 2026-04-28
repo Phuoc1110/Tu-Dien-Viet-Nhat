@@ -162,6 +162,13 @@
 
 .sentence-results { margin-top: 14px; }
 
+.sentence-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
+  align-items: start;
+}
+
 .sentence-card {
   border-radius: 20px;
   border: 1px solid var(--st-line);
@@ -187,6 +194,11 @@
   margin: 0;
   padding: 14px 18px;
   color: #334155;
+}
+
+.sentence-empty-tip {
+  border-bottom: 1px solid #dbe5f0;
+  background: #f8fbff;
 }
 
 .sentence-item {
@@ -221,8 +233,94 @@
   background: #fef2f2;
 }
 
+.sentence-side-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.sentence-side-card {
+  border-radius: 20px;
+  border: 1px solid var(--st-line);
+  background: var(--st-surface);
+  box-shadow: 0 20px 42px rgba(13, 36, 70, 0.12);
+  backdrop-filter: blur(10px);
+  padding: 12px;
+}
+
+.sentence-side-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.sentence-side-list,
+.sentence-chip-list,
+.sentence-feedback-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.sentence-side-list button {
+  text-align: left;
+  border: 1px solid #d4e1ef;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  color: #2d4668;
+  cursor: pointer;
+}
+
+.sentence-chip-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d4e1ef;
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 10px;
+  color: #2d4668;
+  cursor: pointer;
+}
+
+.sentence-chip-list span {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e8f3ff;
+  color: #1f6fa8;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.sentence-feedback-item {
+  border: 1px solid #d4e1ef;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.sentence-feedback-item strong {
+  color: #1f5f95;
+  font-size: 0.9rem;
+}
+
+.sentence-feedback-item p {
+  margin: 5px 0 0;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 760px) {
   .sentence-page { padding: 11px; }
+
+  .sentence-layout {
+    grid-template-columns: 1fr;
+  }
 
   .sentence-page .mazii-search-wrap {
     top: 6px;
