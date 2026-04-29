@@ -33,6 +33,40 @@ const getKanjiChars = (raw) => {
 	return [...new Set(chars)];
 };
 
+const getUniqueChars = (raw) => {
+	const chars = String(raw || "")
+		.replace(/\s+/g, "")
+		.split("")
+		.filter(Boolean);
+	return [...new Set(chars)];
+};
+
+const getSharedCharCount = (left, right) => {
+	const leftChars = getUniqueChars(left);
+	const rightChars = new Set(getUniqueChars(right));
+	return leftChars.filter((char) => rightChars.has(char)).length;
+};
+
+const getSharedSubstringScore = (left, right) => {
+	const normalizedLeft = normalize(left);
+	const normalizedRight = normalize(right);
+	if (!normalizedLeft || !normalizedRight) {
+		return 0;
+	}
+
+	const maxWindow = Math.min(4, normalizedLeft.length, normalizedRight.length);
+	for (let size = maxWindow; size >= 2; size -= 1) {
+		for (let i = 0; i <= normalizedLeft.length - size; i += 1) {
+			const fragment = normalizedLeft.slice(i, i + size);
+			if (normalizedRight.includes(fragment)) {
+				return size;
+			}
+		}
+	}
+
+	return 0;
+};
+
 const pickBestQueryToken = (entry, typedValue) => {
 	const typed = normalize(typedValue);
 	const variants = [
@@ -191,16 +225,38 @@ const pickRelatedWords = (mainWord, pool) => {
 			const candidateReadings = getReadingItems(item.reading);
 			const candidateMeanings = getMeaningTexts(item);
 			const candidateRomaji = getRomajiItems(item.romaji);
+			const sharedCharCount = getSharedCharCount(mainWord.word, item.word);
+			const sharedSubstringScore = getSharedSubstringScore(mainWord.word, item.word);
 			const readingScore = readingSimilarity(mainReadings, candidateReadings);
 			const romajiScore = romajiSimilarity(mainRomaji, candidateRomaji);
 			const meaningScore = meaningSimilarity(mainMeanings, candidateMeanings);
-			const score = readingScore * 0.45 + romajiScore * 0.2 + meaningScore * 0.35;
-			return { item, score, readingScore, romajiScore, meaningScore };
+			const charScore = Math.min(sharedCharCount / 3, 1);
+			const substringScore = Math.min(sharedSubstringScore / 4, 1);
+			const score =
+				readingScore * 0.32 +
+				romajiScore * 0.14 +
+				meaningScore * 0.2 +
+				charScore * 0.2 +
+				substringScore * 0.14;
+			return {
+				item,
+				score,
+				readingScore,
+				romajiScore,
+				meaningScore,
+				sharedCharCount,
+				sharedSubstringScore,
+			};
 		})
 		.sort((a, b) => b.score - a.score);
 
 	const strongMatch = scored.filter(
-		(entry) => entry.readingScore >= 0.42 || entry.romajiScore >= 0.42 || entry.meaningScore >= 0.28
+		(entry) =>
+			entry.readingScore >= 0.38 ||
+			entry.romajiScore >= 0.38 ||
+			entry.meaningScore >= 0.26 ||
+			entry.sharedCharCount > 0 ||
+			entry.sharedSubstringScore >= 2
 	);
 
 	const pickedEntries = [];
@@ -223,6 +279,7 @@ const pickRelatedWords = (mainWord, pool) => {
 			const itemReading = normalize(item.reading);
 			const itemRomaji = normalize(item.romaji);
 			const itemMeanings = getMeaningTexts(item).map((text) => normalize(text));
+			const sharedCharCount = getSharedCharCount(mainWord.word, item.word);
 
 			const byReading =
 				mainReadingToken.length >= 2 && itemReading.includes(mainReadingToken.slice(0, 2));
@@ -234,8 +291,9 @@ const pickRelatedWords = (mainWord, pool) => {
 			const byMeaning = simpleMeaningTokens.some((token) =>
 				itemMeanings.some((meaning) => meaning.includes(token))
 			);
+			const bySharedChar = sharedCharCount > 0;
 
-			return byReading || byRomaji || byWord || byMeaning;
+			return byReading || byRomaji || byWord || byMeaning || bySharedChar;
 		});
 
 		simpleFallback.forEach(pushEntry);

@@ -1,8 +1,14 @@
 import axios from "../setup/axios";
 
+const stripTilde = (raw) => 
+	String(raw || '')
+		.replace(/[~～〜∼]/g, '')
+		.trim();
+
 const searchWords = (query, limit = 30) => {
+	const cleanedQuery = stripTilde(query);
 	return axios
-		.get(`/api/dictionary/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+		.get(`/api/dictionary/search?q=${encodeURIComponent(cleanedQuery)}&limit=${limit}`)
 		.then((res) => res)
 		.catch((err) => {
 			console.error("Search words error:", err);
@@ -11,8 +17,9 @@ const searchWords = (query, limit = 30) => {
 };
 
 const searchKanjis = (query, limit = 30) => {
+	const cleanedQuery = stripTilde(query);
 	return axios
-		.get(`/api/dictionary/kanji/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+		.get(`/api/dictionary/kanji/search?q=${encodeURIComponent(cleanedQuery)}&limit=${limit}`)
 		.then((res) => res)
 		.catch((err) => {
 			console.error("Search kanjis error:", err);
@@ -49,9 +56,21 @@ const recognizeImageText = (formData) => {
 		});
 };
 
-const searchSentences = (query, limit = 20) => {
+const analyzeJapaneseParagraph = (text, limit = 100) => {
+	const cleanedText = stripTilde(text);
 	return axios
-		.get(`/api/dictionary/sentence/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+		.post(`/api/dictionary/paragraph/analyze`, { text: cleanedText, limit })
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Analyze paragraph error:", err);
+			return { errCode: 1, errMessage: "Analyze failed", text: "", tokens: [], matchedWords: [] };
+		});
+};
+
+const searchSentences = (query, limit = 20) => {
+	const cleanedQuery = stripTilde(query);
+	return axios
+		.get(`/api/dictionary/sentence/search?q=${encodeURIComponent(cleanedQuery)}&limit=${limit}`)
 		.then((res) => res)
 		.catch((err) => {
 			console.error("Search sentences error:", err);
@@ -60,8 +79,9 @@ const searchSentences = (query, limit = 20) => {
 };
 
 const searchGrammars = (query, limit = 20) => {
+	const cleanedQuery = stripTilde(query);
 	return axios
-		.get(`/api/dictionary/grammar/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+		.get(`/api/dictionary/grammar/search?q=${encodeURIComponent(cleanedQuery)}&limit=${limit}`)
 		.then((res) => res)
 		.catch((err) => {
 			console.error("Search grammars error:", err);
@@ -74,6 +94,7 @@ export {
 	searchKanjis,
 	recognizeKanjiInk,
 	recognizeImageText,
+	analyzeJapaneseParagraph,
 	searchSentences,
 	searchGrammars,
 };

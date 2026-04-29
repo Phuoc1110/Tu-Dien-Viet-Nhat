@@ -1,13 +1,13 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import dictionaryService from "../service/dictionaryService";
+import fetch from "node-fetch";
+import FormData from "form-data";
 
-const execFileAsync = promisify(execFile);
-const AI_PYTHON_PATH = path.resolve(__dirname, "../../../AI/.venv/bin/python");
-const AI_RUN_SCRIPT_PATH = path.resolve(__dirname, "../../../AI/Script/run.py");
+// OCR Server configuration
+const OCR_SERVER_URL = process.env.OCR_SERVER_URL || "http://127.0.0.1:5001";
+const OCR_ENDPOINT = `${OCR_SERVER_URL}/ocr`;
 
 let HandleSearchWords = async (req, res) => {
 	try {
@@ -129,6 +129,42 @@ let HandleSearchGrammars = async (req, res) => {
 	}
 };
 
+let HandleAnalyzeJapaneseParagraph = async (req, res) => {
+	try {
+		const text = req.body?.text || req.body?.paragraph || req.body?.content || "";
+		const limit = req.body?.limit || req.query?.limit || 100;
+
+		if (!String(text || "").trim()) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing text",
+				text: "",
+				tokens: [],
+				matchedWords: [],
+			});
+		}
+
+		const result = await dictionaryService.analyzeJapaneseParagraph(text, limit);
+
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			text: result.text,
+			tokens: result.tokens,
+			matchedWords: result.matchedWords,
+		});
+	} catch (e) {
+		console.error("HandleAnalyzeJapaneseParagraph error:", e);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+			text: "",
+			tokens: [],
+			matchedWords: [],
+		});
+	}
+};
+
 let HandleRecognizeKanji = async (req, res) => {
 	try {
 		const ink = req.body?.ink;
@@ -167,56 +203,48 @@ let HandleRecognizeKanji = async (req, res) => {
 };
 
 let HandleRecognizeTextFromImage = async (req, res) => {
-	const tempImagePath = req.file
-		? path.join(
-			os.tmpdir(),
-			`ocr-${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(req.file.originalname || "") || ".png"}`
-		)
-		: "";
 	try {
-		if (!req.file?.buffer || !tempImagePath) {
+		if (!req.file?.buffer) {
 			return res.status(200).json({
 				errCode: 1,
 				errMessage: "Missing image file",
 				words: [],
 				text: "",
+				items: [],
 			});
 		}
 
-		await fs.promises.writeFile(tempImagePath, req.file.buffer);
+		// Create FormData to send image to OCR server
+		const formData = new FormData();
+		formData.append("image", req.file.buffer, {
+			filename: req.file.originalname || "image.png",
+			contentType: req.file.mimetype || "image/png",
+		});
 
-		const { stdout, stderr } = await execFileAsync(
-			AI_PYTHON_PATH,
-			[AI_RUN_SCRIPT_PATH, tempImagePath],
-			{
-				timeout: 120000,
-				maxBuffer: 10 * 1024 * 1024,
-			}
-		);
+		// Send request to OCR server
+		const response = await fetch(OCR_ENDPOINT, {
+			method: "POST",
+			body: formData,
+			headers: formData.getHeaders?.() || {},
+			timeout: 120000,
+		});
 
-		if (stderr) {
-			console.log("OCR script stderr:", stderr);
+		if (!response.ok) {
+			console.error(`OCR Server error: ${response.status} ${response.statusText}`);
+			return res.status(500).json({
+				errCode: -1,
+				errMessage: "OCR Server error",
+				words: [],
+				text: "",
+				items: [],
+			});
 		}
 
-		let payload = { words: [], text: "", items: [] };
-		const rawOutput = String(stdout || "").trim();
-		if (rawOutput) {
-			try {
-				payload = JSON.parse(rawOutput);
-			} catch (parseError) {
-				console.error("Parse OCR output error:", parseError, rawOutput);
-				return res.status(500).json({
-					errCode: -1,
-					errMessage: "Invalid OCR output",
-					words: [],
-					text: "",
-				});
-			}
-		}
+		const payload = await response.json();
 
 		return res.status(200).json({
-			errCode: 0,
-			errMessage: "OK",
+			errCode: payload.errCode || 0,
+			errMessage: payload.errMessage || "OK",
 			words: Array.isArray(payload.words) ? payload.words : [],
 			text: String(payload.text || "").trim(),
 			items: Array.isArray(payload.items) ? payload.items : [],
@@ -225,20 +253,11 @@ let HandleRecognizeTextFromImage = async (req, res) => {
 		console.error("HandleRecognizeTextFromImage error:", e);
 		return res.status(500).json({
 			errCode: -1,
-			errMessage: "Internal server error",
+			errMessage: `Internal server error: ${e.message}`,
 			words: [],
 			text: "",
+			items: [],
 		});
-	} finally {
-		if (tempImagePath) {
-			try {
-				await fs.promises.unlink(tempImagePath);
-			} catch (unlinkError) {
-				if (unlinkError && unlinkError.code !== "ENOENT") {
-					console.error("Remove temp OCR image error:", unlinkError);
-				}
-			}
-		}
 	}
 };
 
@@ -461,6 +480,7 @@ module.exports = {
 	HandleSearchWords,
 	HandleSearchKanjis,
 	HandleRecognizeKanji,
+	HandleAnalyzeJapaneseParagraph,
 	HandleRecognizeTextFromImage,
 	HandleSearchSentences,
 	HandleSearchGrammars,

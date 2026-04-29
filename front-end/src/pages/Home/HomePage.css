@@ -385,6 +385,111 @@
 	gap: 10px;
 }
 
+.paragraph-analyze-panel {
+	display: grid;
+	gap: 10px;
+}
+
+.paragraph-input {
+	width: 100%;
+	min-height: 112px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	border: 1px solid #cfdae8;
+	background: #fff;
+	font: inherit;
+	font-size: 1rem;
+	line-height: 1.6;
+	color: #22344f;
+	resize: vertical;
+}
+
+.paragraph-input:focus {
+	outline: 2px solid rgba(56, 134, 211, 0.24);
+	border-color: #8fb9e3;
+}
+
+.paragraph-hint {
+	margin: 0;
+	font-size: 0.9rem;
+	color: #60789c;
+}
+
+.paragraph-error {
+	margin: 0;
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: #fef2f2;
+	color: #991b1b;
+	font-size: 0.9rem;
+}
+
+.token-cloud {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.token-chip {
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 0.9rem;
+	font-weight: 700;
+	font-family: "Noto Sans JP", "Be Vietnam Pro", sans-serif;
+	border: 1px solid transparent;
+}
+
+.token-chip.matched {
+	background: #e8f6ee;
+	color: #166534;
+	border-color: #9fd8b7;
+}
+
+.token-chip.unmatched {
+	background: #f1f5f9;
+	color: #475569;
+	border-color: #d7e0ea;
+}
+
+.matched-words-wrap h4 {
+	margin: 0;
+	font-size: 0.95rem;
+	color: #1f3f67;
+}
+
+.matched-words-list {
+	margin-top: 8px;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 8px;
+}
+
+.matched-words-list button {
+	text-align: left;
+	padding: 8px 10px;
+	border-radius: 10px;
+	border: 1px solid #ccd9e8;
+	background: linear-gradient(145deg, #ffffff, #eef5ff);
+	cursor: pointer;
+	display: grid;
+	gap: 2px;
+}
+
+.matched-words-list button strong {
+	color: #113a67;
+	font-family: "Noto Sans JP", "Be Vietnam Pro", sans-serif;
+	font-size: 1rem;
+}
+
+.matched-words-list button span {
+	color: #597190;
+	font-size: 0.84rem;
+}
+
+.matched-words-list button:hover {
+	border-color: #8eb7df;
+}
+
 .tips-panel li {
 	display: flex;
 	align-items: flex-start;
@@ -402,6 +507,12 @@
 	justify-content: space-between;
 	align-items: center;
 	gap: 8px;
+}
+
+.panel-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 .panel-head button {

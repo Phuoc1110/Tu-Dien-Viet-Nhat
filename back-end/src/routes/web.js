@@ -62,6 +62,10 @@ let initWebRoutes = (app) => {
 		dictionaryController.HandleRecognizeKanji
 	);
 	router.post(
+		"/api/dictionary/paragraph/analyze",
+		dictionaryController.HandleAnalyzeJapaneseParagraph
+	);
+	router.post(
 		"/api/dictionary/image-recognize",
 		uploadImage.single("image"),
 		dictionaryController.HandleRecognizeTextFromImage

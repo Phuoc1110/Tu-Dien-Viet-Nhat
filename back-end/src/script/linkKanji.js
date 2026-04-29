@@ -1,5 +1,10 @@
 const mysql = require('mysql2/promise');
 
+const stripTilde = (raw) => 
+    String(raw || '')
+        .replace(/[~～〜∼]/g, '')
+        .trim();
+
 async function linkKanjis() {
     // 1. Kết nối database
     const connection = await mysql.createConnection({
@@ -17,8 +22,12 @@ async function linkKanjis() {
         const [words] = await connection.execute("SELECT id, word FROM Words");
 
         for (let w of words) {
+            // Loại bỏ dấu ~ trước khi tách thành ký tự
+            const normalizedWord = stripTilde(w.word);
+            if (!normalizedWord) continue;
+            
             // Tách từ vựng thành từng ký tự (VD: "学校" -> ['学', '校'])
-            let chars = w.word.split(''); 
+            let chars = normalizedWord.split(''); 
 
             for (let char of chars) {
                 // Kiểm tra xem ký tự này có phải là Kanji không (dựa vào dải mã Unicode)

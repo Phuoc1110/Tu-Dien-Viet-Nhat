@@ -1,11 +1,19 @@
 import db from "../models/index";
 import { Op } from "sequelize";
+import path from "path";
+
+const kuromoji = require("kuromoji");
 
 const splitVariants = (raw) =>
 	String(raw || "")
 		.split(/[;；,，、|/]+/)
 		.map((item) => item.trim())
 		.filter(Boolean);
+
+const stripTilde = (raw) =>
+	String(raw || "")
+		.replace(/[~～〜∼]/g, "")
+		.trim();
 
 const buildWordExampleConditions = (word) => {
 	const variants = [
@@ -35,6 +43,55 @@ const parseOffset = (offset, fallback = 0, max = 100000) => {
 		return fallback;
 	}
 	return Math.max(0, Math.min(+offset, max));
+};
+
+const isJapaneseText = (raw) => /[\u3040-\u30ff\u3400-\u9fff]/.test(String(raw || ""));
+
+const tokenizerCache = {
+	instance: null,
+	loading: null,
+};
+
+const getKuromojiTokenizer = async () => {
+	if (tokenizerCache.instance) {
+		return tokenizerCache.instance;
+	}
+
+	if (tokenizerCache.loading) {
+		return tokenizerCache.loading;
+	}
+
+	const kuromojiCorePath = require.resolve("kuromoji");
+	const dicPath = path.join(path.dirname(kuromojiCorePath), "../dict");
+
+	tokenizerCache.loading = new Promise((resolve, reject) => {
+		kuromoji.builder({ dicPath }).build((err, tokenizer) => {
+			if (err) {
+				tokenizerCache.loading = null;
+				reject(err);
+				return;
+			}
+
+			tokenizerCache.instance = tokenizer;
+			tokenizerCache.loading = null;
+			resolve(tokenizer);
+		});
+	});
+
+	return tokenizerCache.loading;
+};
+
+const normalizeTokenText = (raw) => String(raw || "").trim();
+
+const pushIfUseful = (bucket, value) => {
+	const normalized = normalizeTokenText(value);
+	if (!normalized || normalized === "*") {
+		return;
+	}
+	if (!isJapaneseText(normalized)) {
+		return;
+	}
+	bucket.push(normalized);
 };
 
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
@@ -672,7 +729,7 @@ const getFallbackExamplesForWord = async (word, limit = 5) => {
 let searchWords = (query, limit = 30) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const keyword = (query || "").trim();
+			const keyword = stripTilde((query || "").trim());
 			const safeLimit = Number.isFinite(+limit)
 				? Math.max(1, Math.min(+limit, 100))
 				: 30;
@@ -746,7 +803,7 @@ let searchWords = (query, limit = 30) => {
 let searchKanjis = (query, limit = 30) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const keyword = (query || "").trim();
+			const keyword = stripTilde((query || "").trim());
 			const safeLimit = Number.isFinite(+limit)
 				? Math.max(1, Math.min(+limit, 100))
 				: 30;
@@ -852,7 +909,7 @@ let searchKanjis = (query, limit = 30) => {
 let searchSentences = (query, limit = 20) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const keyword = (query || "").trim();
+			const keyword = stripTilde((query || "").trim());
 			const safeLimit = Number.isFinite(+limit)
 				? Math.max(1, Math.min(+limit, 100))
 				: 20;
@@ -907,7 +964,7 @@ let searchSentences = (query, limit = 20) => {
 let searchGrammars = (query, limit = 20) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const keyword = (query || "").trim();
+			const keyword = stripTilde((query || "").trim());
 			const safeLimit = Number.isFinite(+limit)
 				? Math.max(1, Math.min(+limit, 100))
 				: 20;
@@ -949,6 +1006,159 @@ let searchGrammars = (query, limit = 20) => {
 			reject(e);
 		}
 	});
+};
+
+let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
+	const text = String(paragraph || "").trim();
+	if (!text) {
+		return {
+			text: "",
+			tokens: [],
+			matchedWords: [],
+		};
+	}
+
+	const safeLimit = parseLimit(limit, 100, 300);
+	const tokenizer = await getKuromojiTokenizer();
+	const rawTokens = tokenizer.tokenize(text) || [];
+
+	const normalizedTokens = [];
+	const wordCandidates = [];
+	const readingCandidates = [];
+
+	for (const token of rawTokens) {
+		const surface = stripTilde(normalizeTokenText(token.surface_form));
+		const baseForm = stripTilde(normalizeTokenText(token.basic_form));
+		const reading = stripTilde(normalizeTokenText(token.reading));
+		const pos = normalizeTokenText(token.pos);
+
+		if (!surface || !isJapaneseText(surface)) {
+			continue;
+		}
+
+		if (pos === "記号") {
+			continue;
+		}
+
+		normalizedTokens.push({
+			surface,
+			baseForm: baseForm && baseForm !== "*" ? baseForm : "",
+			reading: reading && reading !== "*" ? reading : "",
+			partOfSpeech: pos,
+		});
+
+		pushIfUseful(wordCandidates, surface);
+		pushIfUseful(wordCandidates, baseForm);
+		pushIfUseful(readingCandidates, reading);
+	}
+
+	const uniqueWordCandidates = [...new Set(wordCandidates)].slice(0, 1200);
+	const uniqueReadingCandidates = [...new Set(readingCandidates)].slice(0, 1200);
+
+	if (!uniqueWordCandidates.length && !uniqueReadingCandidates.length) {
+		return {
+			text,
+			tokens: normalizedTokens.map((item) => ({ ...item, isMatched: false })),
+			matchedWords: [],
+		};
+	}
+
+	const words = await db.Word.findAll({
+		where: {
+			[Op.or]: [
+				uniqueWordCandidates.length
+					? {
+						word: {
+							[Op.in]: uniqueWordCandidates,
+						},
+					}
+					: null,
+				uniqueWordCandidates.length
+					? {
+						reading: {
+							[Op.in]: uniqueWordCandidates,
+						},
+					}
+					: null,
+				uniqueReadingCandidates.length
+					? {
+						reading: {
+							[Op.in]: uniqueReadingCandidates,
+						},
+					}
+					: null,
+			].filter(Boolean),
+		},
+		include: [
+			{
+				model: db.Meaning,
+				as: "meanings",
+				attributes: ["id", "definition", "partOfSpeech", "language"],
+				required: false,
+			},
+		],
+		attributes: ["id", "word", "reading", "romaji", "jlptLevel", "isCommon"],
+		order: [
+			["isCommon", "DESC"],
+			["jlptLevel", "ASC"],
+			["id", "ASC"],
+		],
+		limit: 2000,
+	});
+
+	const variantToWord = new Map();
+	for (const item of words) {
+		for (const variant of splitVariants(item.word)) {
+			if (!variantToWord.has(variant)) {
+				variantToWord.set(variant, item);
+			}
+		}
+		for (const variant of splitVariants(item.reading)) {
+			if (!variantToWord.has(variant)) {
+				variantToWord.set(variant, item);
+			}
+		}
+	}
+
+	const matchedWordMap = new Map();
+	const tokens = normalizedTokens.map((token) => {
+		const matched =
+			variantToWord.get(token.surface) ||
+			(token.baseForm ? variantToWord.get(token.baseForm) : null) ||
+			(token.reading ? variantToWord.get(token.reading) : null);
+
+		if (!matched) {
+			return {
+				...token,
+				isMatched: false,
+			};
+		}
+
+		if (!matchedWordMap.has(matched.id)) {
+			matchedWordMap.set(matched.id, {
+				id: matched.id,
+				word: matched.word,
+				reading: matched.reading,
+				romaji: matched.romaji,
+				jlptLevel: matched.jlptLevel,
+				isCommon: !!matched.isCommon,
+				meanings: Array.isArray(matched.meanings) ? matched.meanings.slice(0, 2) : [],
+			});
+		}
+
+		return {
+			...token,
+			isMatched: true,
+			wordId: matched.id,
+			matchedWord: matched.word,
+		};
+	});
+
+	return {
+		text,
+		tokens: tokens.slice(0, safeLimit),
+		matchedWords: [...matchedWordMap.values()].slice(0, safeLimit),
+	};
 };
 
 let addSearchHistory = async (userId, searchTerm) => {
@@ -1299,6 +1509,7 @@ module.exports = {
 	searchKanjis,
 	searchSentences,
 	searchGrammars,
+	analyzeJapaneseParagraph,
 	recognizeKanjiFromInk,
 	addSearchHistory,
 	getSearchHistory,
