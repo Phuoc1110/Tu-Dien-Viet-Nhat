@@ -534,11 +534,18 @@ const DictionaryPage = () => {
 
 				let related = pickRelatedWords(mainWord, Array.from(candidateMap.values()));
 
-				if (!related.length) {
-					const kanjiChars = getKanjiChars(mainWord.word).slice(0, 3);
+				if (related.length < 5) {
+					const relatedSearchTokens = [
+						...getKanjiChars(mainWord.word),
+						...getUniqueChars(mainWord.word),
+						...getReadingItems(mainWord.reading).slice(0, 2),
+					];
+					const searchTokens = [...new Set(relatedSearchTokens)]
+						.filter((token) => token && token.length <= 3)
+						.slice(0, 6);
 					await Promise.all(
-						kanjiChars.map(async (kanjiChar) => {
-							const byKanjiRes = await searchWords(kanjiChar, 30);
+						searchTokens.map(async (token) => {
+							const byKanjiRes = await searchWords(token, 30);
 							if (byKanjiRes?.errCode === 0) {
 								(byKanjiRes.words || []).forEach((item) => {
 									if (item?.id) {
@@ -550,6 +557,36 @@ const DictionaryPage = () => {
 					);
 
 					related = pickWordsBySharedKanji(mainWord, Array.from(candidateMap.values()));
+
+					if (related.length < 5) {
+						const fallbackPool = Array.from(candidateMap.values());
+						const relatedByAnyChar = fallbackPool
+							.filter((item) => item?.id && item.id !== mainWord.id)
+							.map((item) => ({
+								item,
+								sharedAnyCharCount: getSharedCharCount(mainWord.word, item.word),
+								sharedSubstringScore: getSharedSubstringScore(mainWord.word, item.word),
+							}))
+							.filter((entry) => entry.sharedAnyCharCount > 0 || entry.sharedSubstringScore > 0)
+							.sort(
+								(a, b) =>
+									b.sharedAnyCharCount - a.sharedAnyCharCount ||
+									b.sharedSubstringScore - a.sharedSubstringScore
+							)
+							.map((entry) => entry.item);
+
+						const merged = [...related, ...relatedByAnyChar];
+						const unique = [];
+						const seenIds = new Set();
+						merged.forEach((item) => {
+							if (!item?.id || seenIds.has(item.id)) {
+								return;
+							}
+							seenIds.add(item.id);
+							unique.push(item);
+						});
+						related = unique.slice(0, 5);
+					}
 				}
 
 				setRelatedWords(related);
