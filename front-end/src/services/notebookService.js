@@ -40,6 +40,16 @@ const getCuratedNotebookCollections = (limit = 12) => {
 		});
 };
 
+const getCuratedNotebookCollectionDetail = (id) => {
+    return axios
+        .get(`/api/notebooks/curated?id=${id}`)
+        .then((response) => response)
+        .catch((error) => {
+            console.error(error);
+            return { errCode: 1, errMessage: "Không tải được bộ sổ tay biên soạn", data: null };
+        });
+};
+
 const addNotebookItem = (notebookId, data) => {
 	return axios
 		.post(`/api/notebooks/${notebookId}/items`, data)
@@ -75,6 +85,7 @@ export {
 	getNotebookDetail,
 	createNotebook,
 	getCuratedNotebookCollections,
+	getCuratedNotebookCollectionDetail,
 	addNotebookItem,
 		updateNotebook,
 		deleteNotebook,

@@ -15,17 +15,16 @@ import { useHistory } from "react-router-dom";
 import { UserContext } from "../../Context/UserProvider";
 import {
 	LogOutAdmin,
-	createAdminNotebookCollection,
+	addAdminNotebookItemsByJlpt,
+	createAdminNotebook,
 	createAdminVocabulary,
-	deleteAdminNotebookCollection,
-	getAdminNotebookCollections,
 	deleteAdminVocabulary,
 	getAdminAuditLogs,
 	getAdminDashboard,
+	getAdminNotebooks,
 	getAdminUsers,
 	getAdminVocabularies,
 	resetAdminUserPassword,
-	updateAdminNotebookCollection,
 	updateAdminUserRole,
 	updateAdminUserStatus,
 	updateAdminVocabulary,
@@ -43,13 +42,9 @@ const defaultForm = {
 	isCommon: false,
 };
 
-const defaultCollectionForm = {
-	title: "",
-	meta: "",
-	ownerName: "Ban quan tri",
-	views: "0",
-	sortOrder: "0",
-	isActive: true,
+const defaultNotebookForm = {
+	name: "",
+	description: "",
 };
 
 const AUDIT_PAGE_SIZE = 20;
@@ -68,9 +63,14 @@ const Admin = () => {
 	const [vocabularies, setVocabularies] = useState([]);
 	const [editingVocabularyId, setEditingVocabularyId] = useState(null);
 	const [vocabularyForm, setVocabularyForm] = useState(defaultForm);
-	const [collections, setCollections] = useState([]);
-	const [collectionForm, setCollectionForm] = useState(defaultCollectionForm);
-	const [editingCollectionId, setEditingCollectionId] = useState(null);
+
+	const [adminNotebooks, setAdminNotebooks] = useState([]);
+	const [adminNotebookQuery, setAdminNotebookQuery] = useState("");
+	const [adminNotebookJlpt, setAdminNotebookJlpt] = useState("");
+	const [adminNotebookForm, setAdminNotebookForm] = useState(defaultNotebookForm);
+	const [jlptTargetNotebookId, setJlptTargetNotebookId] = useState("");
+	const [jlptBulkLevel, setJlptBulkLevel] = useState("N5");
+	const [jlptBulkLimit, setJlptBulkLimit] = useState("200");
 
 	const [users, setUsers] = useState([]);
 	const [userQuery, setUserQuery] = useState("");
@@ -116,13 +116,20 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể tải danh sách người dùng");
 	};
 
-	const loadNotebookCollections = async () => {
-		const res = await getAdminNotebookCollections({ includeInactive: true });
+	const loadAdminNotebooks = async () => {
+		const res = await getAdminNotebooks({
+			query: adminNotebookQuery,
+			jlptLevel: adminNotebookJlpt,
+			limit: 100,
+		});
 		if (res?.errCode === 0) {
-			setCollections(res.data || []);
+			setAdminNotebooks(res.data || []);
+			if (!jlptTargetNotebookId && (res.data || []).length) {
+				setJlptTargetNotebookId(String(res.data[0].id));
+			}
 			return;
 		}
-		toast.error(res?.errMessage || "Không thể tải danh sách bộ sổ tay biên soạn");
+		toast.error(res?.errMessage || "Không thể tải danh sách notebook admin");
 	};
 
 	const loadAuditLogs = async (page = auditPage) => {
@@ -146,9 +153,8 @@ const Admin = () => {
 		setLoading(true);
 		try {
 			if (tab === "dashboard") await loadDashboard();
-			if (tab === "content") {
-				await Promise.all([loadVocabularies(), loadNotebookCollections()]);
-			}
+			if (tab === "content") await loadVocabularies();
+			if (tab === "notebooks") await loadAdminNotebooks();
 			if (tab === "users") await loadUsers();
 			if (tab === "audit") await loadAuditLogs();
 		} finally {
@@ -164,10 +170,16 @@ const Admin = () => {
 	useEffect(() => {
 		if (tab === "content") {
 			loadVocabularies();
-			loadNotebookCollections();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [vocabularyQuery, vocabularyJlpt]);
+
+	useEffect(() => {
+		if (tab === "notebooks") {
+			loadAdminNotebooks();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [adminNotebookQuery, adminNotebookJlpt]);
 
 	useEffect(() => {
 		if (tab === "users") {
@@ -259,81 +271,49 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể cập nhật JLPT");
 	};
 
-	const handleEditCollection = (item) => {
-		setEditingCollectionId(item.id);
-		setCollectionForm({
-			title: item.title || "",
-			meta: item.meta || "",
-			ownerName: item.ownerName || "Ban quan tri",
-			views: String(item.views ?? 0),
-			sortOrder: String(item.sortOrder ?? 0),
-			isActive: Boolean(item.isActive),
+	const handleCreateAdminNotebook = async () => {
+		if (!adminNotebookForm.name.trim()) {
+			toast.error("Tên notebook là bắt buộc");
+			return;
+		}
+
+		const res = await createAdminNotebook({
+			name: adminNotebookForm.name.trim(),
+			description: adminNotebookForm.description.trim(),
 		});
-	};
-
-	const resetCollectionForm = () => {
-		setEditingCollectionId(null);
-		setCollectionForm(defaultCollectionForm);
-	};
-
-	const handleSaveCollection = async () => {
-		if (!collectionForm.title.trim()) {
-			toast.error("Tiêu đề bộ sổ tay là bắt buộc");
-			return;
-		}
-
-		const payload = {
-			title: collectionForm.title.trim(),
-			meta: collectionForm.meta.trim(),
-			ownerName: collectionForm.ownerName.trim() || "Ban quan tri",
-			views: Number(collectionForm.views) || 0,
-			sortOrder: Number(collectionForm.sortOrder) || 0,
-			isActive: Boolean(collectionForm.isActive),
-		};
-
-		const res = editingCollectionId
-			? await updateAdminNotebookCollection(editingCollectionId, payload)
-			: await createAdminNotebookCollection(payload);
 
 		if (res?.errCode === 0) {
-			toast.success(editingCollectionId ? "Đã cập nhật bộ sổ tay" : "Đã tạo bộ sổ tay");
-			resetCollectionForm();
-			await loadNotebookCollections();
+			toast.success("Đã tạo notebook admin");
+			setAdminNotebookForm(defaultNotebookForm);
+			await loadAdminNotebooks();
 			await loadAuditLogs();
 			return;
 		}
 
-		toast.error(res?.errMessage || "Không thể lưu bộ sổ tay");
+		toast.error(res?.errMessage || "Không thể tạo notebook admin");
 	};
 
-	const handleDeleteCollection = async (id) => {
-		if (!window.confirm("Xóa bộ sổ tay này?")) {
+	const handleAddJlptGroup = async () => {
+		if (!jlptTargetNotebookId) {
+			toast.error("Chọn notebook trước khi thêm");
 			return;
 		}
-		const res = await deleteAdminNotebookCollection(id);
-		if (res?.errCode === 0) {
-			toast.success("Đã xóa bộ sổ tay");
-			if (editingCollectionId === id) {
-				resetCollectionForm();
-			}
-			await loadNotebookCollections();
-			await loadAuditLogs();
-			return;
-		}
-		toast.error(res?.errMessage || "Không thể xóa bộ sổ tay");
-	};
 
-	const handleToggleCollectionActive = async (item) => {
-		const res = await updateAdminNotebookCollection(item.id, {
-			isActive: !item.isActive,
+		const res = await addAdminNotebookItemsByJlpt(jlptTargetNotebookId, {
+			jlptLevel: jlptBulkLevel,
+			limit: Number(jlptBulkLimit) || 200,
 		});
+
 		if (res?.errCode === 0) {
-			toast.success("Đã cập nhật trạng thái hiển thị");
-			await loadNotebookCollections();
+			const inserted = res?.data?.insertedCount ?? 0;
+			const skipped = res?.data?.skippedCount ?? 0;
+			toast.success(`Đã thêm ${inserted} từ, bỏ qua ${skipped} từ trùng`);
+			await loadAdminNotebooks();
 			await loadAuditLogs();
 			return;
 		}
-		toast.error(res?.errMessage || "Không thể cập nhật trạng thái");
+
+		toast.error(res?.errMessage || "Không thể thêm từ theo nhóm JLPT");
 	};
 
 	const handleUpdateRole = async (id, role) => {
@@ -415,6 +395,9 @@ const Admin = () => {
 				</button>
 				<button className={tab === "content" ? "active" : ""} onClick={() => setTab("content")}>
 					<BookOpen size={16} /> Vocabulary & Content
+				</button>
+				<button className={tab === "notebooks" ? "active" : ""} onClick={() => setTab("notebooks")}>
+					<Users size={16} /> Notebook
 				</button>
 				<button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
 					<UserCog size={16} /> Users & Roles
@@ -600,95 +583,113 @@ const Admin = () => {
 						</div>
 					</div>
 
+				</div>
+			)}
+
+			{tab === "notebooks" && (
+				<div className="admin2-grid">
 					<div className="admin2-panel">
-						<h3>Bộ sổ tay biên soạn</h3>
+						<h3>Tạo notebook biên soạn</h3>
 						<div className="admin2-form-grid">
 							<input
-								placeholder="Tiêu đề"
-								value={collectionForm.title}
-								onChange={(e) => setCollectionForm((p) => ({ ...p, title: e.target.value }))}
+								placeholder="Tên notebook"
+								value={adminNotebookForm.name}
+								onChange={(e) =>
+									setAdminNotebookForm((prev) => ({ ...prev, name: e.target.value }))
+								}
 							/>
-							<input
-								placeholder="Mô tả ngắn (meta)"
-								value={collectionForm.meta}
-								onChange={(e) => setCollectionForm((p) => ({ ...p, meta: e.target.value }))}
+							<textarea
+								placeholder="Mô tả"
+								value={adminNotebookForm.description}
+								onChange={(e) =>
+									setAdminNotebookForm((prev) => ({ ...prev, description: e.target.value }))
+								}
 							/>
-							<input
-								placeholder="Tên đơn vị biên soạn"
-								value={collectionForm.ownerName}
-								onChange={(e) => setCollectionForm((p) => ({ ...p, ownerName: e.target.value }))}
-							/>
-							<input
-								type="number"
-								placeholder="Lượt xem"
-								value={collectionForm.views}
-								onChange={(e) => setCollectionForm((p) => ({ ...p, views: e.target.value }))}
-							/>
-							<input
-								type="number"
-								placeholder="Thứ tự hiển thị"
-								value={collectionForm.sortOrder}
-								onChange={(e) => setCollectionForm((p) => ({ ...p, sortOrder: e.target.value }))}
-							/>
-							<label className="inline-check">
-								<input
-									type="checkbox"
-									checked={collectionForm.isActive}
-									onChange={(e) =>
-										setCollectionForm((p) => ({ ...p, isActive: e.target.checked }))
-									}
-								/>
-								Hiển thị ngoài trang Notebook
-							</label>
 						</div>
 						<div className="admin2-actions">
-							<button type="button" onClick={handleSaveCollection}>
-								{editingCollectionId ? "Cập nhật bộ sổ tay" : "Tạo bộ sổ tay"}
-							</button>
-							<button type="button" className="ghost" onClick={resetCollectionForm}>
+							<button type="button" onClick={handleCreateAdminNotebook}>Tạo notebook</button>
+							<button
+								type="button"
+								className="ghost"
+								onClick={() => setAdminNotebookForm(defaultNotebookForm)}
+							>
 								Làm mới
 							</button>
 						</div>
+					</div>
 
+					<div className="admin2-panel">
+						<h3>Thêm từ theo nhóm JLPT</h3>
+						<div className="admin2-form-grid">
+							<select
+								value={jlptTargetNotebookId}
+								onChange={(e) => setJlptTargetNotebookId(e.target.value)}
+							>
+								<option value="">Chọn notebook đích</option>
+								{adminNotebooks.map((item) => (
+									<option key={item.id} value={item.id}>
+										{item.name}
+									</option>
+								))}
+							</select>
+							<select value={jlptBulkLevel} onChange={(e) => setJlptBulkLevel(e.target.value)}>
+								<option value="N5">N5</option>
+								<option value="N4">N4</option>
+								<option value="N3">N3</option>
+								<option value="N2">N2</option>
+								<option value="N1">N1</option>
+							</select>
+							<input
+								type="number"
+								min="1"
+								max="500"
+								placeholder="Số lượng tối đa"
+								value={jlptBulkLimit}
+								onChange={(e) => setJlptBulkLimit(e.target.value)}
+							/>
+						</div>
+						<div className="admin2-actions">
+							<button type="button" onClick={handleAddJlptGroup}>Thêm theo JLPT</button>
+						</div>
+					</div>
+
+					<div className="admin2-panel">
+						<h3>Danh sách notebook admin</h3>
+						<div className="admin2-filters">
+							<input
+								placeholder="Tìm theo tên notebook"
+								value={adminNotebookQuery}
+								onChange={(e) => setAdminNotebookQuery(e.target.value)}
+							/>
+							<select
+								value={adminNotebookJlpt}
+								onChange={(e) => setAdminNotebookJlpt(e.target.value)}
+							>
+								<option value="">Tất cả JLPT</option>
+								<option value="N5">N5</option>
+								<option value="N4">N4</option>
+								<option value="N3">N3</option>
+								<option value="N2">N2</option>
+								<option value="N1">N1</option>
+							</select>
+						</div>
 						<div className="admin2-table-wrap">
 							<table className="admin2-table">
 								<thead>
 									<tr>
-										<th>Tiêu đề</th>
-										<th>Meta</th>
-										<th>Đơn vị</th>
-										<th>Views</th>
-										<th>Sort</th>
-										<th>Trạng thái</th>
-										<th>Hành động</th>
+										<th>Notebook</th>
+										<th>Mô tả</th>
+										<th>Số mục</th>
+										<th>Cập nhật</th>
 									</tr>
 								</thead>
 								<tbody>
-									{collections.map((item) => (
+									{adminNotebooks.map((item) => (
 										<tr key={item.id}>
-											<td>{item.title}</td>
-											<td>{item.meta || "-"}</td>
-											<td>{item.ownerName || "Ban quan tri"}</td>
-											<td>{item.views || 0}</td>
-											<td>{item.sortOrder || 0}</td>
-											<td>
-												<span className={`status ${item.isActive ? "active" : "suspended"}`}>
-													{item.isActive ? "active" : "hidden"}
-												</span>
-											</td>
-											<td>
-												<div className="row-actions">
-													<button type="button" onClick={() => handleEditCollection(item)}>
-														Sửa
-													</button>
-													<button type="button" onClick={() => handleToggleCollectionActive(item)}>
-														{item.isActive ? "Ẩn" : "Hiện"}
-													</button>
-													<button type="button" className="danger" onClick={() => handleDeleteCollection(item.id)}>
-														Xóa
-													</button>
-												</div>
-											</td>
+											<td>{item.name}</td>
+											<td>{item.description || "-"}</td>
+											<td>{item.itemsCount || 0}</td>
+											<td>{new Date(item.updatedAt).toLocaleString("vi-VN")}</td>
 										</tr>
 									))}
 								</tbody>

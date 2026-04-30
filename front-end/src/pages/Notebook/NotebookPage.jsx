@@ -237,14 +237,19 @@ const NotebookPage = () => {
 				</div>
 				<div className="cards-grid premium-grid">
 					{curatedNotebooks.map((item) => (
-						<div key={item.id} className="premium-item-card bento-tile">
+						<button
+							type="button"
+							key={item.id}
+							className="premium-item-card bento-tile"
+							onClick={() => history.push(`/notebook/${item.id}`)}
+						>
 							<h3>{item.name}</h3>
 							<p>({item.meta})</p>
 							<div className="card-meta-row">
 								<span>{item.owner}</span>
 								<span className="views"><Eye size={14} /> {item.views}</span>
 							</div>
-						</div>
+						</button>
 					))}
 
 					{!loading && curatedNotebooks.length === 0 && (

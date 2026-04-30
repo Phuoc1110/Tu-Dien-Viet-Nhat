@@ -259,6 +259,52 @@ const deleteNotebookCollection = async (req, res) => {
 	}
 };
 
+const getAdminNotebooks = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.getAdminNotebooks({
+			adminId,
+			query: req.query?.query,
+			jlptLevel: req.query?.jlptLevel,
+			limit: req.query?.limit,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getAdminNotebooks error:", e);
+		return res.status(500).json({ errCode: -1, errMessage: e.message || "Internal server error" });
+	}
+};
+
+const createAdminNotebook = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.createAdminNotebook({ adminId, payload: req.body || {} });
+		return res.status(200).json({ errCode: 0, errMessage: "Created", data });
+	} catch (e) {
+		console.error("createAdminNotebook error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Create failed" });
+	}
+};
+
+const addAdminNotebookItemsByJlpt = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.addAdminNotebookItemsByJlpt({
+			adminId,
+			notebookId: req.params.id,
+			jlptLevel: req.body?.jlptLevel,
+			limit: req.body?.limit,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Updated", data });
+	} catch (e) {
+		console.error("addAdminNotebookItemsByJlpt error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
 module.exports = {
 	HandleAdminLogin,
 	getAdminAccount,
@@ -278,4 +324,7 @@ module.exports = {
 	createNotebookCollection,
 	updateNotebookCollection,
 	deleteNotebookCollection,
+	getAdminNotebooks,
+	createAdminNotebook,
+	addAdminNotebookItemsByJlpt,
 };

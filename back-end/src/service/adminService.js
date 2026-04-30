@@ -554,6 +554,159 @@ const deleteNotebookCollection = async ({ adminId, id }) => {
     return true;
 };
 
+const getAdminNotebooks = async ({ adminId, query = "", jlptLevel = "", limit = 50 }) => {
+    const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 50;
+    const where = { userId: adminId };
+
+    if (query) {
+        where.name = { [Op.like]: `%${String(query).trim()}%` };
+    }
+
+    const normalizedJlpt = Number(String(jlptLevel || "").replace("N", ""));
+    const hasJlptFilter = [1, 2, 3, 4, 5].includes(normalizedJlpt);
+
+    const notebooks = await db.Notebook.findAll({
+        where,
+        include: [
+            {
+                model: db.NotebookItem,
+                as: "items",
+                required: false,
+            },
+        ],
+        order: [["updatedAt", "DESC"]],
+        limit: safeLimit,
+    });
+
+    let jlptWordSet = null;
+    if (hasJlptFilter) {
+        const allWordIds = notebooks
+            .flatMap((item) => item.items || [])
+            .filter((item) => item.itemType === "word")
+            .map((item) => Number(item.itemId));
+
+        if (allWordIds.length) {
+            const matchedWords = await db.Word.findAll({
+                where: {
+                    id: { [Op.in]: allWordIds },
+                    jlptLevel: normalizedJlpt,
+                },
+                attributes: ["id"],
+                raw: true,
+            });
+            jlptWordSet = new Set(matchedWords.map((item) => Number(item.id)));
+        } else {
+            jlptWordSet = new Set();
+        }
+    }
+
+    return notebooks
+        .map((item) => {
+        const plain = item.get({ plain: true });
+        const filteredCount = hasJlptFilter
+            ? (plain.items || []).filter(
+                (it) => it.itemType === "word" && jlptWordSet?.has(Number(it.itemId))
+            ).length
+            : (plain.items || []).length;
+
+        return {
+            id: plain.id,
+            name: plain.name,
+            description: plain.description || "",
+            createdAt: plain.createdAt,
+            updatedAt: plain.updatedAt,
+            itemsCount: filteredCount,
+        };
+    })
+        .filter((item) => (!hasJlptFilter ? true : item.itemsCount > 0));
+};
+
+const createAdminNotebook = async ({ adminId, payload }) => {
+    const name = String(payload?.name || "").trim();
+    if (!name) {
+        throw new Error("Notebook name is required");
+    }
+
+    const created = await db.Notebook.create({
+        userId: adminId,
+        name,
+        description: String(payload?.description || "").trim() || null,
+    });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "CREATE_ADMIN_NOTEBOOK",
+        targetType: "Notebook",
+        targetId: created.id,
+        details: payload,
+    });
+
+    return created.get({ plain: true });
+};
+
+const addAdminNotebookItemsByJlpt = async ({ adminId, notebookId, jlptLevel, limit = 200 }) => {
+    const normalizedJlpt = Number(String(jlptLevel || "").replace("N", ""));
+    if (![1, 2, 3, 4, 5].includes(normalizedJlpt)) {
+        throw new Error("JLPT level must be N1..N5");
+    }
+
+    const notebook = await db.Notebook.findOne({
+        where: { id: notebookId, userId: adminId },
+    });
+
+    if (!notebook) {
+        throw new Error("Notebook not found");
+    }
+
+    const safeLimit = Number.isFinite(+limit) ? Math.min(500, Math.max(1, +limit)) : 200;
+
+    const words = await db.Word.findAll({
+        where: { jlptLevel: normalizedJlpt },
+        attributes: ["id"],
+        limit: safeLimit,
+        order: [["id", "DESC"]],
+        raw: true,
+    });
+
+    if (!words.length) {
+        return { insertedCount: 0, skippedCount: 0, totalCandidates: 0 };
+    }
+
+    const wordIds = words.map((w) => w.id);
+    const exists = await db.NotebookItem.findAll({
+        where: {
+            notebookId,
+            itemType: "word",
+            itemId: { [Op.in]: wordIds },
+        },
+        attributes: ["itemId"],
+        raw: true,
+    });
+
+    const existsSet = new Set(exists.map((item) => Number(item.itemId)));
+    const inserts = wordIds
+        .filter((id) => !existsSet.has(Number(id)))
+        .map((id) => ({ notebookId, itemType: "word", itemId: id }));
+
+    if (inserts.length) {
+        await db.NotebookItem.bulkCreate(inserts, { ignoreDuplicates: true });
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "ADD_ADMIN_NOTEBOOK_ITEMS_BY_JLPT",
+        targetType: "Notebook",
+        targetId: Number(notebookId),
+        details: { jlptLevel: `N${normalizedJlpt}`, limit: safeLimit, insertedCount: inserts.length },
+    });
+
+    return {
+        insertedCount: inserts.length,
+        skippedCount: wordIds.length - inserts.length,
+        totalCandidates: wordIds.length,
+    };
+};
+
 module.exports = {
     HandleAdminLogin,
     getAdminDashboard,
@@ -571,4 +724,7 @@ module.exports = {
     createNotebookCollection,
     updateNotebookCollection,
     deleteNotebookCollection,
+    getAdminNotebooks,
+    createAdminNotebook,
+    addAdminNotebookItemsByJlpt,
 };

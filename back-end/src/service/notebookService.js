@@ -179,7 +179,16 @@ const getNotebookOverview = async (userId, limit = 6) => {
 			where: { userId: { [Op.ne]: userId } },
 			order: [["createdAt", "DESC"]],
 			include: [
-				{ model: db.User, as: "user", attributes: ["id", "username", "avatarUrl"] },
+				{
+					model: db.User,
+					as: "user",
+					attributes: ["id", "username", "avatarUrl", "role", "status"],
+					required: true,
+					where: {
+						role: "user",
+						status: "active",
+					},
+				},
 				{ model: db.NotebookItem, as: "items", order: [["addedAt", "DESC"]] },
 			],
 		}),
@@ -205,21 +214,34 @@ const getNotebookOverview = async (userId, limit = 6) => {
 
 const getCuratedNotebookCollections = async (limit = 12) => {
 	const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 40);
-	const rows = await db.AdminNotebookCollection.findAll({
-		where: { isActive: true },
-		attributes: ["id", "title", "meta", "ownerName", "views", "sortOrder", "createdAt"],
-		order: [["sortOrder", "ASC"], ["createdAt", "DESC"], ["id", "DESC"]],
+	const rows = await db.Notebook.findAll({
+		include: [
+			{
+				model: db.User,
+				as: "user",
+				attributes: ["id", "username", "role", "status"],
+				required: true,
+				where: {
+					role: "admin",
+					status: "active",
+				},
+			},
+			{ model: db.NotebookItem, as: "items", required: false },
+		],
+		order: [["updatedAt", "DESC"], ["createdAt", "DESC"], ["id", "DESC"]],
 		limit: safeLimit,
-		raw: true,
 	});
 
-	return rows.map((item) => ({
-		id: item.id,
-		name: item.title,
-		meta: item.meta || "",
-		owner: item.ownerName || "Ban quan tri",
-		views: Number(item.views) || 0,
-	}));
+	return rows.map((item) => {
+		const plain = item.get({ plain: true });
+		return {
+			id: plain.id,
+			name: plain.name,
+			meta: plain.description || "",
+			owner: plain.user?.username || "Ban quan tri",
+			views: Array.isArray(plain.items) ? plain.items.length : 0,
+		};
+	});
 };
 
 const getNotebookDetail = async (notebookId, userId = null) => {

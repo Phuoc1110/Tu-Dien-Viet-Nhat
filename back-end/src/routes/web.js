@@ -153,6 +153,9 @@ let initWebRoutes = (app) => {
 	router.post("/api/admin/notebook-collections", adminController.createNotebookCollection);
 	router.put("/api/admin/notebook-collections/:id", adminController.updateNotebookCollection);
 	router.delete("/api/admin/notebook-collections/:id", adminController.deleteNotebookCollection);
+	router.get("/api/admin/notebooks", adminController.getAdminNotebooks);
+	router.post("/api/admin/notebooks", adminController.createAdminNotebook);
+	router.post("/api/admin/notebooks/:id/add-by-jlpt", adminController.addAdminNotebookItemsByJlpt);
 
 	return app.use("/", router);
 };
