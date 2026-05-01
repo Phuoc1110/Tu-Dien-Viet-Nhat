@@ -1,5 +1,8 @@
 const db = require("../models/index");
 const { Op } = require("sequelize");
+const kuromoji = require("kuromoji");
+const wanakana = require("wanakana");
+const path = require("path");
 
 const parseLimit = (limit, fallback = 12, max = 100) => {
 	if (!Number.isFinite(+limit)) {
@@ -17,6 +20,28 @@ const parseOffset = (offset, fallback = 0, max = 100000) => {
 
 const VALID_LEVELS = new Set(["N5", "N4", "N3", "N2", "N1", "mixed"]);
 const VALID_STATUS = new Set(["not_started", "in_progress", "completed"]);
+
+const normalizeJlptLevel = (value) => {
+	if (value === null || value === undefined) {
+		return null;
+	}
+
+	const text = String(value).trim().toUpperCase();
+	if (["N1", "N2", "N3", "N4", "N5"].includes(text)) {
+		return text;
+	}
+
+	const numeric = Number(value);
+	if (!Number.isFinite(numeric)) {
+		return null;
+	}
+
+	if (numeric >= 1 && numeric <= 5) {
+		return `N${numeric}`;
+	}
+
+	return null;
+};
 
 const normalizeStatus = (status) => {
 	const value = String(status || "").trim();
@@ -291,6 +316,338 @@ const getMyReadingProgresses = async ({ userId, limit = 30, offset = 0 }) => {
 	};
 };
 
+// Initialize kuromoji tokenizer with caching
+let tokenizerPromise = null;
+const getTokenizer = async () => {
+	if (!tokenizerPromise) {
+		const dictPath = path.join(__dirname, "../../node_modules/kuromoji/dict");
+		tokenizerPromise = new Promise((resolve, reject) => {
+			kuromoji.builder({ dicPath: dictPath }).build((err, tokenizer) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+				resolve(tokenizer);
+			});
+		});
+	}
+	return tokenizerPromise;
+};
+
+/**
+ * Analyzes Japanese text and returns detailed token information
+ * Including furigana, pronunciation, JLPT levels, meanings
+ */
+const analyzeJapaneseText = async (content) => {
+	try {
+		const tokenizer = await getTokenizer();
+		const tokens = tokenizer.tokenize(content);
+		
+		const analyzedTokens = [];
+		for (const token of tokens) {
+			const surface = token.surface_form;
+			const features = Array.isArray(token.parts_of_speech) ? token.parts_of_speech : [];
+			
+			// Skip whitespace and punctuation
+			if (/^\s+$/.test(surface) || !surface.trim()) {
+				analyzedTokens.push({
+					type: "spacing",
+					text: surface,
+				});
+				continue;
+			}
+			
+			// Extract grammatical features
+			const POS = token.pos || features[0] || ""; // Part of speech
+			const POS1 = token.pos_detail_1 || features[1] || ""; // Subcategory 1
+			const baseForm = token.basic_form && token.basic_form !== "*" ? token.basic_form : (features[6] || surface);
+			const reading = token.reading && token.reading !== "*" ? token.reading : (features[7] || "");
+			const pronunciation = token.pronunciation && token.pronunciation !== "*" ? token.pronunciation : (features[8] || "");
+			
+			// Convert katakana reading to hiragana if needed
+			const hiraganaReading = wanakana.toHiragana(reading || pronunciation || "");
+			
+			// Check if it's kanji (contains kanji characters)
+			const hasKanji = /[\u4E00-\u9FFF]/.test(surface);
+			const isWord = POS === "名詞" || POS === "動詞" || POS === "形容詞" || POS === "副詞";
+			const isGrammar = POS === "助詞" || POS === "助動詞" || POS === "接続詞";
+			
+			analyzedTokens.push({
+				type: "word",
+				text: surface,
+				baseForm,
+				reading: hiraganaReading,
+				pos: POS,
+				pos1: POS1,
+				isKanji: hasKanji,
+				isWord,
+				isGrammar,
+				meaning: null, // Will be filled from database lookup
+				jlptLevel: null,
+				grammarTag: null,
+			});
+		}
+		
+		return analyzedTokens;
+	} catch (error) {
+		console.error("Error analyzing Japanese text:", error);
+		return [];
+	}
+};
+
+/**
+ * Links analyzed tokens to database information
+ * Matches words/kanji/grammar with their database records
+ */
+const linkTokensToDatabase = async (tokens) => {
+	const linkedTokens = [...tokens];
+	
+	// Extract words and kanji from tokens for batch lookup
+	const lookupWords = new Map(); // key: surface, value: array of token indices
+	const lookupKanji = new Map();
+	
+	for (let i = 0; i < linkedTokens.length; i++) {
+		const token = linkedTokens[i];
+		if (token.type !== "word") continue;
+		
+		// Store mapping of text to token indices for batch lookup
+		if (token.isKanji && /[\u4E00-\u9FFF]/.test(token.text)) {
+			if (!lookupKanji.has(token.text)) {
+				lookupKanji.set(token.text, []);
+			}
+			lookupKanji.get(token.text).push(i);
+		}
+		
+		if (!lookupWords.has(token.baseForm)) {
+			lookupWords.set(token.baseForm, []);
+		}
+		lookupWords.get(token.baseForm).push(i);
+		
+		// Also check original text
+		if (token.text !== token.baseForm && !lookupWords.has(token.text)) {
+			lookupWords.set(token.text, []);
+			lookupWords.get(token.text).push(i);
+		}
+	}
+	
+	try {
+		// Batch lookup words in database
+		if (lookupWords.size > 0) {
+			const wordSearchTerms = Array.from(lookupWords.keys());
+			const words = await db.Word.findAll({
+				where: {
+					[Op.or]: [
+						{ word: { [Op.in]: wordSearchTerms } },
+						{ reading: { [Op.in]: wordSearchTerms } },
+					],
+				},
+				include: [
+					{
+						model: db.Meaning,
+						as: "meanings",
+					},
+				],
+				limit: 1000,
+			});
+			
+			// Create lookup map
+			const wordMap = new Map();
+			words.forEach((word) => {
+				const key = word.word;
+				wordMap.set(key, word);
+				if (word.reading) {
+					wordMap.set(word.reading, word);
+				}
+			});
+			
+			// Link to tokens
+			lookupWords.forEach((indices, searchTerm) => {
+				const word = wordMap.get(searchTerm);
+				if (word) {
+					indices.forEach((idx) => {
+						linkedTokens[idx].meaning = word.meanings?.[0]?.definition || word.meanings?.[0]?.meaning || word.meaningVN || "";
+						linkedTokens[idx].jlptLevel = normalizeJlptLevel(word.jlptLevel);
+						linkedTokens[idx].wordDatabaseId = word.id;
+					});
+				}
+			});
+		}
+		
+		// Batch lookup kanji in database
+		if (lookupKanji.size > 0) {
+			const kanjiChars = Array.from(lookupKanji.keys());
+			const kanjis = await db.Kanji.findAll({
+				where: {
+					characterKanji: { [Op.in]: kanjiChars },
+				},
+				limit: 1000,
+			});
+			
+			// Create lookup map
+			const kanjiMap = new Map();
+			kanjis.forEach((kanji) => {
+				kanjiMap.set(kanji.characterKanji, kanji);
+			});
+			
+			// Link to tokens
+			lookupKanji.forEach((indices, character) => {
+				const kanji = kanjiMap.get(character);
+				if (kanji) {
+					indices.forEach((idx) => {
+						linkedTokens[idx].meaning = kanji.meaning || "";
+						linkedTokens[idx].jlptLevel = normalizeJlptLevel(kanji.jlptLevel);
+						linkedTokens[idx].kanjiDatabaseId = kanji.id;
+						linkedTokens[idx].strokeCount = kanji.strokeCount;
+						linkedTokens[idx].onyomi = kanji.onyomi;
+						linkedTokens[idx].kunyomi = kanji.kunyomi;
+					});
+				}
+			});
+		}
+		
+		// Batch lookup grammar patterns
+		const grammarTokens = linkedTokens.filter((t) => t.isGrammar && t.text.trim());
+		if (grammarTokens.length > 0) {
+			const grammarSearchTerms = grammarTokens.map((t) => t.text);
+			const grammars = await db.Grammar.findAll({
+				where: {
+					title: { [Op.in]: grammarSearchTerms },
+				},
+				limit: 500,
+			});
+			
+			const grammarMap = new Map();
+			grammars.forEach((grammar) => {
+				grammarMap.set(grammar.title, grammar);
+			});
+			
+			grammarTokens.forEach((token) => {
+				const grammar = grammarMap.get(token.text);
+				if (grammar) {
+					const idx = linkedTokens.indexOf(token);
+					linkedTokens[idx].meaning = grammar.meaning || "";
+					linkedTokens[idx].jlptLevel = normalizeJlptLevel(grammar.jlptLevel);
+					linkedTokens[idx].grammarDatabaseId = grammar.id;
+					linkedTokens[idx].grammarTag = `[${grammar.title}]`;
+				}
+			});
+		}
+	} catch (error) {
+		console.error("Error linking tokens to database:", error);
+	}
+	
+	return linkedTokens;
+};
+
+/**
+ * Analyzes passage content and returns sentence-by-sentence analysis
+ */
+const analyzePassageContent = async (content) => {
+	const tokens = await analyzeJapaneseText(content);
+	const linkedTokens = await linkTokensToDatabase(tokens);
+	
+	// Group tokens into sentences
+	const sentences = [];
+	let currentSentence = [];
+	let currentSentenceText = "";
+	
+	for (const token of linkedTokens) {
+		if (token.type === "spacing" && /[\n。！？]/.test(token.text)) {
+			if (currentSentenceText.trim()) {
+				sentences.push({
+					textOriginal: currentSentenceText.trim(),
+					tokens: currentSentence,
+				});
+			}
+			currentSentence = [];
+			currentSentenceText = "";
+		} else {
+			currentSentence.push(token);
+			if (token.type === "word") {
+				currentSentenceText += token.text;
+			}
+		}
+	}
+	
+	// Add remaining sentence
+	if (currentSentenceText.trim()) {
+		sentences.push({
+			textOriginal: currentSentenceText.trim(),
+			tokens: currentSentence,
+		});
+	}
+	
+	// Calculate passage statistics
+	const wordTokens = linkedTokens.filter((t) => t.type === "word");
+	const jlptLevelDistribution = {
+		N5: 0,
+		N4: 0,
+		N3: 0,
+		N2: 0,
+		N1: 0,
+		unknown: 0,
+	};
+	
+	wordTokens.forEach((token) => {
+		const level = normalizeJlptLevel(token.jlptLevel);
+		if (level && jlptLevelDistribution.hasOwnProperty(level)) {
+			jlptLevelDistribution[level]++;
+		} else {
+			jlptLevelDistribution.unknown++;
+		}
+	});
+	
+	return {
+		sentences,
+		analysis: {
+			totalWords: wordTokens.length,
+			uniqueWords: new Set(wordTokens.map((t) => t.text)).size,
+			jlptLevelDistribution,
+			estimatedDifficulty: calculateDifficulty(jlptLevelDistribution),
+		},
+	};
+};
+
+/**
+ * Calculate overall passage difficulty based on vocabulary levels
+ */
+const calculateDifficulty = (distribution) => {
+	const total = distribution.N5 + distribution.N4 + distribution.N3 + distribution.N2 + distribution.N1;
+	if (total === 0) return "unknown";
+	
+	// Weight by JLPT level (higher level = harder)
+	const score = (
+		distribution.N5 * 1 +
+		distribution.N4 * 2 +
+		distribution.N3 * 3 +
+		distribution.N2 * 4 +
+		distribution.N1 * 5
+	) / total;
+	
+	if (score < 1.5) return "N5";
+	if (score < 2.5) return "N4";
+	if (score < 3.5) return "N3";
+	if (score < 4.5) return "N2";
+	return "N1";
+};
+
+/**
+ * Get full analysis for a passage (for API endpoint)
+ */
+const getPassageAnalysis = async (passageId) => {
+	const passage = await db.ReadingPassage.findByPk(passageId);
+	if (!passage) {
+		return null;
+	}
+	
+	const analysis = await analyzePassageContent(passage.content);
+	return {
+		passageId,
+		passageTitle: passage.title,
+		...analysis,
+	};
+};
+
 module.exports = {
 	getReadingPassages,
 	getReadingPassageDetail,
@@ -298,4 +655,6 @@ module.exports = {
 	updateReadingPassage,
 	upsertReadingProgress,
 	getMyReadingProgresses,
+	analyzePassageContent,
+	getPassageAnalysis,
 };

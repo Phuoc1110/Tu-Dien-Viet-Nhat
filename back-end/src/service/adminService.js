@@ -644,7 +644,99 @@ const createAdminNotebook = async ({ adminId, payload }) => {
     return created.get({ plain: true });
 };
 
-const addAdminNotebookItemsByJlpt = async ({ adminId, notebookId, jlptLevel, limit = 200 }) => {
+const updateAdminNotebook = async ({ adminId, notebookId, payload }) => {
+    const notebook = await db.Notebook.findOne({
+        where: { id: notebookId, userId: adminId },
+    });
+
+    if (!notebook) {
+        throw new Error("Notebook not found");
+    }
+
+    const nextName = payload?.name !== undefined ? String(payload.name || "").trim() : notebook.name;
+    if (!nextName) {
+        throw new Error("Notebook name is required");
+    }
+
+    await notebook.update({
+        name: nextName,
+        description:
+            payload?.description !== undefined
+                ? String(payload.description || "").trim() || null
+                : notebook.description,
+    });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "UPDATE_ADMIN_NOTEBOOK",
+        targetType: "Notebook",
+        targetId: Number(notebookId),
+        details: payload,
+    });
+
+    return notebook.get({ plain: true });
+};
+
+const deleteAdminNotebook = async ({ adminId, notebookId }) => {
+    const notebook = await db.Notebook.findOne({
+        where: { id: notebookId, userId: adminId },
+    });
+
+    if (!notebook) {
+        throw new Error("Notebook not found");
+    }
+
+    await db.NotebookItem.destroy({ where: { notebookId } });
+    await db.Notebook.destroy({ where: { id: notebookId } });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "DELETE_ADMIN_NOTEBOOK",
+        targetType: "Notebook",
+        targetId: Number(notebookId),
+        details: null,
+    });
+
+    return true;
+};
+
+const getBulkItemConfig = (itemType) => {
+    const normalizedType = String(itemType || "word").trim().toLowerCase();
+    const modelMap = {
+        word: db.Word,
+        kanji: db.Kanji,
+        grammar: db.Grammar,
+    };
+
+    const model = modelMap[normalizedType];
+    if (!model) {
+        throw new Error("Item type must be one of: word, kanji, grammar");
+    }
+
+    return {
+        itemType: normalizedType,
+        model,
+    };
+};
+
+const getBulkLimitInfo = (limit) => {
+    const raw = String(limit || "").trim().toLowerCase();
+    if (!raw || raw === "all") {
+        return { limitValue: null, limitLabel: "all" };
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        throw new Error("Limit must be a positive number or 'all'");
+    }
+
+    return {
+        limitValue: Math.floor(parsed),
+        limitLabel: Math.floor(parsed),
+    };
+};
+
+const getNotebookBulkDataset = async ({ adminId, notebookId, jlptLevel, itemType, limit }) => {
     const normalizedJlpt = Number(String(jlptLevel || "").replace("N", ""));
     if (![1, 2, 3, 4, 5].includes(normalizedJlpt)) {
         throw new Error("JLPT level must be N1..N5");
@@ -658,35 +750,93 @@ const addAdminNotebookItemsByJlpt = async ({ adminId, notebookId, jlptLevel, lim
         throw new Error("Notebook not found");
     }
 
-    const safeLimit = Number.isFinite(+limit) ? Math.min(500, Math.max(1, +limit)) : 200;
+    const { itemType: normalizedType, model } = getBulkItemConfig(itemType);
+    const { limitValue, limitLabel } = getBulkLimitInfo(limit);
 
-    const words = await db.Word.findAll({
+    const allCandidates = await model.findAll({
         where: { jlptLevel: normalizedJlpt },
         attributes: ["id"],
-        limit: safeLimit,
         order: [["id", "DESC"]],
         raw: true,
     });
 
-    if (!words.length) {
-        return { insertedCount: 0, skippedCount: 0, totalCandidates: 0 };
-    }
+    const allIds = allCandidates.map((item) => Number(item.id));
+    const selectedIds = limitValue ? allIds.slice(0, limitValue) : allIds;
 
-    const wordIds = words.map((w) => w.id);
-    const exists = await db.NotebookItem.findAll({
-        where: {
-            notebookId,
-            itemType: "word",
-            itemId: { [Op.in]: wordIds },
-        },
-        attributes: ["itemId"],
-        raw: true,
+    const existingAllRows = allIds.length
+        ? await db.NotebookItem.findAll({
+            where: {
+                notebookId,
+                itemType: normalizedType,
+                itemId: { [Op.in]: allIds },
+            },
+            attributes: ["itemId"],
+            raw: true,
+        })
+        : [];
+
+    const existingAllSet = new Set(existingAllRows.map((item) => Number(item.itemId)));
+    const selectedExistingCount = selectedIds.reduce(
+        (count, id) => count + (existingAllSet.has(Number(id)) ? 1 : 0),
+        0
+    );
+
+    return {
+        notebookId: Number(notebookId),
+        itemType: normalizedType,
+        jlptLevel: normalizedJlpt,
+        limitLabel,
+        allIds,
+        selectedIds,
+        existingAllSet,
+        selectedExistingCount,
+    };
+};
+
+const getAdminNotebookBulkSummary = async ({ adminId, notebookId, jlptLevel, itemType, limit }) => {
+    const data = await getNotebookBulkDataset({
+        adminId,
+        notebookId,
+        jlptLevel,
+        itemType,
+        limit,
     });
 
-    const existsSet = new Set(exists.map((item) => Number(item.itemId)));
-    const inserts = wordIds
-        .filter((id) => !existsSet.has(Number(id)))
-        .map((id) => ({ notebookId, itemType: "word", itemId: id }));
+    return {
+        itemType: data.itemType,
+        jlptLevel: `N${data.jlptLevel}`,
+        limit: data.limitLabel,
+        totalPool: data.allIds.length,
+        alreadyInNotebookPool: data.existingAllSet.size,
+        canAddPool: data.allIds.length - data.existingAllSet.size,
+        selectedPool: data.selectedIds.length,
+        selectedAlreadyInNotebook: data.selectedExistingCount,
+        selectedCanAdd: data.selectedIds.length - data.selectedExistingCount,
+    };
+};
+
+const addAdminNotebookItemsByJlpt = async ({ adminId, notebookId, jlptLevel, itemType = "word", limit = 200 }) => {
+    const data = await getNotebookBulkDataset({
+        adminId,
+        notebookId,
+        jlptLevel,
+        itemType,
+        limit,
+    });
+
+    if (!data.selectedIds.length) {
+        return {
+            itemType: data.itemType,
+            insertedCount: 0,
+            skippedCount: 0,
+            totalCandidates: 0,
+            totalPool: data.allIds.length,
+        };
+    }
+
+    const inserts = data.selectedIds
+        .filter((id) => !data.existingAllSet.has(Number(id)))
+        .map((id) => ({ notebookId, itemType: data.itemType, itemId: id }));
 
     if (inserts.length) {
         await db.NotebookItem.bulkCreate(inserts, { ignoreDuplicates: true });
@@ -697,13 +847,20 @@ const addAdminNotebookItemsByJlpt = async ({ adminId, notebookId, jlptLevel, lim
         actionType: "ADD_ADMIN_NOTEBOOK_ITEMS_BY_JLPT",
         targetType: "Notebook",
         targetId: Number(notebookId),
-        details: { jlptLevel: `N${normalizedJlpt}`, limit: safeLimit, insertedCount: inserts.length },
+        details: {
+            itemType: data.itemType,
+            jlptLevel: `N${data.jlptLevel}`,
+            limit: data.limitLabel,
+            insertedCount: inserts.length,
+        },
     });
 
     return {
+        itemType: data.itemType,
         insertedCount: inserts.length,
-        skippedCount: wordIds.length - inserts.length,
-        totalCandidates: wordIds.length,
+        skippedCount: data.selectedIds.length - inserts.length,
+        totalCandidates: data.selectedIds.length,
+        totalPool: data.allIds.length,
     };
 };
 
@@ -726,5 +883,8 @@ module.exports = {
     deleteNotebookCollection,
     getAdminNotebooks,
     createAdminNotebook,
+    updateAdminNotebook,
+    deleteAdminNotebook,
+    getAdminNotebookBulkSummary,
     addAdminNotebookItemsByJlpt,
 };

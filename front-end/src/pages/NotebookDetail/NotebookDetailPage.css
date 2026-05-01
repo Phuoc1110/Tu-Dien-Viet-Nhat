@@ -686,8 +686,50 @@
   border-top: 1px solid #dbe5f0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+}
+
+.word-pagination-controls,
+.word-pagination-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.word-pagination-meta span {
+  font-size: 0.82rem;
+  color: #5b7395;
+  font-weight: 600;
+}
+
+.word-pagination-meta select,
+.word-pagination-meta input {
+  height: 32px;
+  border: 1px solid #cddbea;
+  border-radius: 10px;
+  background: #fff;
+  color: #345980;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.word-pagination-meta input {
+  width: 70px;
+}
+
+.page-jump-btn {
+  height: 32px;
+  border: 1px solid #7faedb;
+  border-radius: 10px;
+  background: #e9f4ff;
+  color: #1f5f95;
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .page-btn {

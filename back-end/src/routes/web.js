@@ -115,6 +115,7 @@ let initWebRoutes = (app) => {
 	router.delete("/api/notebooks/:id", notebookController.HandleDeleteNotebook);
 	router.get("/api/reading/passages", readingController.HandleGetReadingPassages);
 	router.get("/api/reading/passages/:id", readingController.HandleGetReadingPassageDetail);
+	router.get("/api/reading/passages/:id/analysis", readingController.HandleGetPassageAnalysis);
 	router.post("/api/reading/passages", readingController.HandleCreateReadingPassage);
 	router.put("/api/reading/passages/:id", readingController.HandleUpdateReadingPassage);
 	router.post("/api/reading/passages/:id/progress", readingController.HandleUpsertReadingProgress);
@@ -155,6 +156,9 @@ let initWebRoutes = (app) => {
 	router.delete("/api/admin/notebook-collections/:id", adminController.deleteNotebookCollection);
 	router.get("/api/admin/notebooks", adminController.getAdminNotebooks);
 	router.post("/api/admin/notebooks", adminController.createAdminNotebook);
+	router.put("/api/admin/notebooks/:id", adminController.updateAdminNotebook);
+	router.delete("/api/admin/notebooks/:id", adminController.deleteAdminNotebook);
+	router.get("/api/admin/notebooks/:id/add-by-jlpt/summary", adminController.getAdminNotebookBulkSummary);
 	router.post("/api/admin/notebooks/:id/add-by-jlpt", adminController.addAdminNotebookItemsByJlpt);
 
 	return app.use("/", router);

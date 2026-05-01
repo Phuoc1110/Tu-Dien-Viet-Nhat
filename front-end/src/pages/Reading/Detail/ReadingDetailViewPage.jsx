@@ -11,11 +11,14 @@ import {
 	AlertCircle,
 	Languages,
 	UserRound,
+	Zap,
 } from "lucide-react";
 import { 
 	getReadingPassageDetail, 
-	upsertReadingProgress 
+	upsertReadingProgress,
+	getPassageAnalysis,
 } from "../../../services/readingService";
+import AnnotatedText from "../../../components/AnnotatedText/AnnotatedText";
 import "./ReadingDetailViewPage.css";
 
 const STATUS_OPTIONS = [
@@ -33,6 +36,10 @@ const ReadingDetailViewPage = () => {
 	const [error, setError] = useState("");
 	const [updating, setUpdating] = useState(false);
 	const [currentStatus, setCurrentStatus] = useState("completed");
+	const [analysis, setAnalysis] = useState(null);
+	const [analysisLoading, setAnalysisLoading] = useState(false);
+	const [analysisError, setAnalysisError] = useState("");
+	const [showAnalysis, setShowAnalysis] = useState(false);
 
 	useEffect(() => {
 		const loadData = async () => {
@@ -43,6 +50,9 @@ const ReadingDetailViewPage = () => {
 				setPassage(res.passage);
 				setCurrentStatus(res.passage.myProgress?.status || "completed");
 				setError("");
+				
+				// Load analysis automatically
+				loadAnalysis(id);
 			} else if (res?.errCode === -2) {
 				history.push("/login");
 				return;
@@ -60,6 +70,19 @@ const ReadingDetailViewPage = () => {
 			loadData();
 		}
 	}, [id, history]);
+
+	const loadAnalysis = async (passageId) => {
+		setAnalysisLoading(true);
+		setAnalysisError("");
+		const res = await getPassageAnalysis(passageId);
+		
+		if (res?.errCode === 0 && res?.analysis) {
+			setAnalysis(res.analysis);
+		} else {
+			setAnalysisError(res?.errMessage || "Khong phan tich duoc bai doc");
+		}
+		setAnalysisLoading(false);
+	};
 
 	const handleStatusChange = async (newStatus) => {
 		if (newStatus === currentStatus) {
@@ -172,6 +195,45 @@ const ReadingDetailViewPage = () => {
 								{passage.translation || "Chua co ban dich."}
 							</div>
 						</div>
+					</div>
+
+					<div className="reading-analysis-section">
+						<button 
+							className={`analysis-toggle-btn ${showAnalysis ? "active" : ""}`}
+							onClick={() => setShowAnalysis(!showAnalysis)}
+						>
+							<Zap size={16} />
+							<span>Text Analysis</span>
+							<ChevronDown 
+								size={16} 
+								style={{ 
+									transform: showAnalysis ? "rotate(180deg)" : "rotate(0deg)",
+									transition: "transform 0.3s ease",
+								}} 
+							/>
+						</button>
+						
+						{showAnalysis && (
+							<div className="analysis-content">
+								{analysisError && (
+									<div className="analysis-error">
+										<AlertCircle size={16} />
+										<p>{analysisError}</p>
+									</div>
+								)}
+								{analysis && (
+									<AnnotatedText 
+										analysis={analysis} 
+										loading={analysisLoading}
+									/>
+								)}
+								{analysisLoading && !analysis && (
+									<div className="analysis-loading">
+										<p>Analyzing passage...</p>
+									</div>
+								)}
+							</div>
+						)}
 					</div>
 
 					<div className="reading-detail-footer">

@@ -35,7 +35,7 @@ const chunkItems = (items, chunkSize = 2) => {
 
 const hasKanjiChar = (text) => /[\u4E00-\u9FFF]/.test(String(text || ""));
 const hasJapaneseChar = (text) => /[\u3040-\u30FF\u4E00-\u9FFF]/.test(String(text || ""));
-const WORDS_PER_PAGE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 const NotebookDetailPage = () => {
 	const history = useHistory();
@@ -55,6 +55,8 @@ const NotebookDetailPage = () => {
 	const [flashIndex, setFlashIndex] = useState(0);
 	const [isCardFlipped, setIsCardFlipped] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [wordsPerPage, setWordsPerPage] = useState(20);
+	const [pageInput, setPageInput] = useState("1");
 	const [fieldVisibility, setFieldVisibility] = useState({
 		vocabulary: true,
 		reading: true,
@@ -204,15 +206,24 @@ const NotebookDetailPage = () => {
 	}, [activeFlashItem]);
 
 	const totalPages = useMemo(() => {
-		const pages = Math.ceil(filteredItems.length / WORDS_PER_PAGE);
+		const pages = Math.ceil(filteredItems.length / wordsPerPage);
 		return pages > 0 ? pages : 1;
-	}, [filteredItems.length]);
+	}, [filteredItems.length, wordsPerPage]);
 
 	const paginatedItems = useMemo(() => {
-		const start = (currentPage - 1) * WORDS_PER_PAGE;
-		const end = start + WORDS_PER_PAGE;
+		const start = (currentPage - 1) * wordsPerPage;
+		const end = start + wordsPerPage;
 		return filteredItems.slice(start, end);
-	}, [currentPage, filteredItems]);
+	}, [currentPage, filteredItems, wordsPerPage]);
+
+	const paginationSummary = useMemo(() => {
+		if (!filteredItems.length) {
+			return { start: 0, end: 0 };
+		}
+		const start = (currentPage - 1) * wordsPerPage + 1;
+		const end = Math.min(start + paginatedItems.length - 1, filteredItems.length);
+		return { start, end };
+	}, [currentPage, filteredItems.length, paginatedItems.length, wordsPerPage]);
 
 	const twoColumnRows = useMemo(() => chunkItems(paginatedItems, 2), [paginatedItems]);
 
@@ -249,13 +260,23 @@ const NotebookDetailPage = () => {
 
 	useEffect(() => {
 		setCurrentPage(1);
+		setPageInput("1");
 	}, [searchKeyword, notebook?.id]);
+
+	useEffect(() => {
+		setCurrentPage(1);
+		setPageInput("1");
+	}, [wordsPerPage]);
 
 	useEffect(() => {
 		if (currentPage > totalPages) {
 			setCurrentPage(totalPages);
 		}
 	}, [currentPage, totalPages]);
+
+	useEffect(() => {
+		setPageInput(String(currentPage));
+	}, [currentPage]);
 
 	const handleSaveNotebookName = async () => {
 		const nextName = editingName.trim();
@@ -315,6 +336,15 @@ const NotebookDetailPage = () => {
 	const gotoPreviousPage = () => setCurrentPage((prev) => Math.max(1, prev - 1));
 	const gotoNextPage = () => setCurrentPage((prev) => Math.min(totalPages, prev + 1));
 	const gotoLastPage = () => setCurrentPage(totalPages);
+	const gotoSpecificPage = () => {
+		const parsed = Number(pageInput);
+		if (!Number.isFinite(parsed)) {
+			setPageInput(String(currentPage));
+			return;
+		}
+		const nextPage = Math.min(totalPages, Math.max(1, Math.floor(parsed)));
+		setCurrentPage(nextPage);
+	};
 
 	const stopReadingList = () => {
 		playSessionRef.current = { active: false, token: playSessionRef.current.token + 1 };
@@ -1488,39 +1518,67 @@ const NotebookDetailPage = () => {
 
 								{!loading && filteredItems.length > 0 && (
 									<div className="word-pagination">
-										<button
-											type="button"
-											className="page-btn"
-											onClick={gotoFirstPage}
-											disabled={currentPage === 1}
-										>
-											&laquo;
-										</button>
-										<button
-											type="button"
-											className="page-btn"
-											onClick={gotoPreviousPage}
-											disabled={currentPage === 1}
-										>
-											&lsaquo;
-										</button>
-										<span className="page-number">{currentPage}</span>
-										<button
-											type="button"
-											className="page-btn"
-											onClick={gotoNextPage}
-											disabled={currentPage >= totalPages}
-										>
-											&rsaquo;
-										</button>
-										<button
-											type="button"
-											className="page-btn"
-											onClick={gotoLastPage}
-											disabled={currentPage >= totalPages}
-										>
-											&raquo;
-										</button>
+										<div className="word-pagination-controls">
+											<button
+												type="button"
+												className="page-btn"
+												onClick={gotoFirstPage}
+												disabled={currentPage === 1}
+											>
+												&laquo;
+											</button>
+											<button
+												type="button"
+												className="page-btn"
+												onClick={gotoPreviousPage}
+												disabled={currentPage === 1}
+											>
+												&lsaquo;
+											</button>
+											<span className="page-number">{currentPage}/{totalPages}</span>
+											<button
+												type="button"
+												className="page-btn"
+												onClick={gotoNextPage}
+												disabled={currentPage >= totalPages}
+											>
+												&rsaquo;
+											</button>
+											<button
+												type="button"
+												className="page-btn"
+												onClick={gotoLastPage}
+												disabled={currentPage >= totalPages}
+											>
+												&raquo;
+											</button>
+										</div>
+										<div className="word-pagination-meta">
+											<span>
+												Hiển thị {paginationSummary.start}-{paginationSummary.end} / {filteredItems.length}
+											</span>
+											<select
+												value={String(wordsPerPage)}
+												onChange={(event) => setWordsPerPage(Number(event.target.value))}
+											>
+												{PAGE_SIZE_OPTIONS.map((size) => (
+													<option key={size} value={size}>{size}/trang</option>
+												))}
+											</select>
+											<input
+												type="number"
+												min="1"
+												max={totalPages}
+												value={pageInput}
+												onChange={(event) => setPageInput(event.target.value)}
+												onKeyDown={(event) => {
+													if (event.key === "Enter") gotoSpecificPage();
+												}}
+											/>
+											<button type="button" className="page-jump-btn" onClick={gotoSpecificPage}>
+												Đi
+											</button>
+										</div>
 									</div>
 								)}
 							</div>

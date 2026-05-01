@@ -288,6 +288,37 @@ const createAdminNotebook = async (req, res) => {
 	}
 };
 
+const updateAdminNotebook = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.updateAdminNotebook({
+			adminId,
+			notebookId: req.params.id,
+			payload: req.body || {},
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Updated", data });
+	} catch (e) {
+		console.error("updateAdminNotebook error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
+const deleteAdminNotebook = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		await adminService.deleteAdminNotebook({
+			adminId,
+			notebookId: req.params.id,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Deleted" });
+	} catch (e) {
+		console.error("deleteAdminNotebook error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Delete failed" });
+	}
+};
+
 const addAdminNotebookItemsByJlpt = async (req, res) => {
 	try {
 		const adminId = ensureAdmin(req, res);
@@ -296,12 +327,31 @@ const addAdminNotebookItemsByJlpt = async (req, res) => {
 			adminId,
 			notebookId: req.params.id,
 			jlptLevel: req.body?.jlptLevel,
+			itemType: req.body?.itemType,
 			limit: req.body?.limit,
 		});
 		return res.status(200).json({ errCode: 0, errMessage: "Updated", data });
 	} catch (e) {
 		console.error("addAdminNotebookItemsByJlpt error:", e);
 		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
+const getAdminNotebookBulkSummary = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.getAdminNotebookBulkSummary({
+			adminId,
+			notebookId: req.params.id,
+			jlptLevel: req.query?.jlptLevel,
+			itemType: req.query?.itemType,
+			limit: req.query?.limit,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getAdminNotebookBulkSummary error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Summary failed" });
 	}
 };
 
@@ -326,5 +376,8 @@ module.exports = {
 	deleteNotebookCollection,
 	getAdminNotebooks,
 	createAdminNotebook,
+	updateAdminNotebook,
+	deleteAdminNotebook,
+	getAdminNotebookBulkSummary,
 	addAdminNotebookItemsByJlpt,
 };

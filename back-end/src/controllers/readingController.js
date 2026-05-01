@@ -147,6 +147,27 @@ const HandleGetMyReadingProgresses = async (req, res) => {
 	}
 };
 
+const HandleGetPassageAnalysis = async (req, res) => {
+	try {
+		const actor = resolveActor(req);
+		if (!actor.id) {
+			return res.status(401).json({ errCode: -2, errMessage: "Not Authenticated the user", analysis: null });
+		}
+
+		const passageId = Number(req.params.id);
+		const analysis = await readingService.getPassageAnalysis(passageId);
+		
+		if (!analysis) {
+			return res.status(404).json({ errCode: 1, errMessage: "Reading passage not found", analysis: null });
+		}
+
+		return res.status(200).json({ errCode: 0, errMessage: "OK", analysis });
+	} catch (error) {
+		console.error("HandleGetPassageAnalysis error:", error);
+		return res.status(500).json({ errCode: -1, errMessage: "Internal server error", analysis: null });
+	}
+};
+
 module.exports = {
 	HandleGetReadingPassages,
 	HandleGetReadingPassageDetail,
@@ -154,4 +175,5 @@ module.exports = {
 	HandleUpdateReadingPassage,
 	HandleUpsertReadingProgress,
 	HandleGetMyReadingProgresses,
+	HandleGetPassageAnalysis,
 };

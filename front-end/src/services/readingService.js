@@ -44,9 +44,20 @@ const getMyReadingProgresses = (params = {}) => {
 		});
 };
 
+const getPassageAnalysis = (id) => {
+	return axios
+		.get(`/api/reading/passages/${id}/analysis`)
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+			return { errCode: 1, errMessage: "Khong phan tich duoc bai doc", analysis: null };
+		});
+};
+
 export {
 	getReadingPassages,
 	getReadingPassageDetail,
 	upsertReadingProgress,
 	getMyReadingProgresses,
+	getPassageAnalysis,
 };

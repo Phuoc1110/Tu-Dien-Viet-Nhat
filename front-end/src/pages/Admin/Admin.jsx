@@ -18,13 +18,16 @@ import {
 	addAdminNotebookItemsByJlpt,
 	createAdminNotebook,
 	createAdminVocabulary,
+	deleteAdminNotebook,
 	deleteAdminVocabulary,
 	getAdminAuditLogs,
 	getAdminDashboard,
+	getAdminNotebookBulkSummary,
 	getAdminNotebooks,
 	getAdminUsers,
 	getAdminVocabularies,
 	resetAdminUserPassword,
+	updateAdminNotebook,
 	updateAdminUserRole,
 	updateAdminUserStatus,
 	updateAdminVocabulary,
@@ -68,9 +71,14 @@ const Admin = () => {
 	const [adminNotebookQuery, setAdminNotebookQuery] = useState("");
 	const [adminNotebookJlpt, setAdminNotebookJlpt] = useState("");
 	const [adminNotebookForm, setAdminNotebookForm] = useState(defaultNotebookForm);
+	const [editingAdminNotebookId, setEditingAdminNotebookId] = useState(null);
 	const [jlptTargetNotebookId, setJlptTargetNotebookId] = useState("");
+	const [jlptBulkItemType, setJlptBulkItemType] = useState("word");
 	const [jlptBulkLevel, setJlptBulkLevel] = useState("N5");
-	const [jlptBulkLimit, setJlptBulkLimit] = useState("200");
+	const [jlptBulkLimitMode, setJlptBulkLimitMode] = useState("200");
+	const [jlptBulkCustomLimit, setJlptBulkCustomLimit] = useState("300");
+	const [bulkSummary, setBulkSummary] = useState(null);
+	const [bulkSummaryLoading, setBulkSummaryLoading] = useState(false);
 
 	const [users, setUsers] = useState([]);
 	const [userQuery, setUserQuery] = useState("");
@@ -277,20 +285,56 @@ const Admin = () => {
 			return;
 		}
 
-		const res = await createAdminNotebook({
+		const payload = {
 			name: adminNotebookForm.name.trim(),
 			description: adminNotebookForm.description.trim(),
-		});
+		};
+
+		const res = editingAdminNotebookId
+			? await updateAdminNotebook(editingAdminNotebookId, payload)
+			: await createAdminNotebook(payload);
 
 		if (res?.errCode === 0) {
-			toast.success("Đã tạo notebook admin");
+			toast.success(editingAdminNotebookId ? "Đã cập nhật notebook admin" : "Đã tạo notebook admin");
 			setAdminNotebookForm(defaultNotebookForm);
+			setEditingAdminNotebookId(null);
 			await loadAdminNotebooks();
 			await loadAuditLogs();
 			return;
 		}
 
-		toast.error(res?.errMessage || "Không thể tạo notebook admin");
+		toast.error(res?.errMessage || "Không thể lưu notebook admin");
+	};
+
+	const handleEditAdminNotebook = (item) => {
+		setEditingAdminNotebookId(item.id);
+		setAdminNotebookForm({
+			name: item.name || "",
+			description: item.description || "",
+		});
+	};
+
+	const handleDeleteAdminNotebook = async (id) => {
+		if (!window.confirm("Xóa notebook này?")) {
+			return;
+		}
+
+		const res = await deleteAdminNotebook(id);
+		if (res?.errCode === 0) {
+			toast.success("Đã xóa notebook admin");
+			if (editingAdminNotebookId === id) {
+				setEditingAdminNotebookId(null);
+				setAdminNotebookForm(defaultNotebookForm);
+			}
+			if (String(jlptTargetNotebookId) === String(id)) {
+				setJlptTargetNotebookId("");
+			}
+			await loadAdminNotebooks();
+			await loadAuditLogs();
+			return;
+		}
+
+		toast.error(res?.errMessage || "Không thể xóa notebook admin");
 	};
 
 	const handleAddJlptGroup = async () => {
@@ -299,22 +343,66 @@ const Admin = () => {
 			return;
 		}
 
+		const resolvedLimit =
+			jlptBulkLimitMode === "custom"
+				? String(Math.max(1, Number(jlptBulkCustomLimit) || 1))
+				: jlptBulkLimitMode;
+
 		const res = await addAdminNotebookItemsByJlpt(jlptTargetNotebookId, {
+			itemType: jlptBulkItemType,
 			jlptLevel: jlptBulkLevel,
-			limit: Number(jlptBulkLimit) || 200,
+			limit: resolvedLimit,
 		});
 
 		if (res?.errCode === 0) {
 			const inserted = res?.data?.insertedCount ?? 0;
 			const skipped = res?.data?.skippedCount ?? 0;
-			toast.success(`Đã thêm ${inserted} từ, bỏ qua ${skipped} từ trùng`);
+			const typeLabelMap = { word: "từ vựng", kanji: "kanji", grammar: "ngữ pháp" };
+			const typeLabel = typeLabelMap[jlptBulkItemType] || "mục";
+			toast.success(`Đã thêm ${inserted} ${typeLabel}, bỏ qua ${skipped} mục trùng`);
 			await loadAdminNotebooks();
+			await loadBulkSummary();
 			await loadAuditLogs();
 			return;
 		}
 
-		toast.error(res?.errMessage || "Không thể thêm từ theo nhóm JLPT");
+		toast.error(res?.errMessage || "Không thể thêm mục theo nhóm JLPT");
 	};
+
+	const loadBulkSummary = async () => {
+		if (!jlptTargetNotebookId) {
+			setBulkSummary(null);
+			return;
+		}
+
+		const resolvedLimit =
+			jlptBulkLimitMode === "custom"
+				? String(Math.max(1, Number(jlptBulkCustomLimit) || 1))
+				: jlptBulkLimitMode;
+
+		setBulkSummaryLoading(true);
+		const res = await getAdminNotebookBulkSummary(jlptTargetNotebookId, {
+			itemType: jlptBulkItemType,
+			jlptLevel: jlptBulkLevel,
+			limit: resolvedLimit,
+		});
+
+		if (res?.errCode === 0) {
+			setBulkSummary(res.data || null);
+		} else {
+			setBulkSummary(null);
+		}
+
+		setBulkSummaryLoading(false);
+	};
+
+	useEffect(() => {
+		if (tab !== "notebooks") {
+			return;
+		}
+		loadBulkSummary();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [tab, jlptTargetNotebookId, jlptBulkItemType, jlptBulkLevel, jlptBulkLimitMode, jlptBulkCustomLimit]);
 
 	const handleUpdateRole = async (id, role) => {
 		const res = await updateAdminUserRole(id, role);
@@ -607,11 +695,16 @@ const Admin = () => {
 							/>
 						</div>
 						<div className="admin2-actions">
-							<button type="button" onClick={handleCreateAdminNotebook}>Tạo notebook</button>
+							<button type="button" onClick={handleCreateAdminNotebook}>
+								{editingAdminNotebookId ? "Lưu thay đổi" : "Tạo notebook"}
+							</button>
 							<button
 								type="button"
 								className="ghost"
-								onClick={() => setAdminNotebookForm(defaultNotebookForm)}
+								onClick={() => {
+									setAdminNotebookForm(defaultNotebookForm);
+									setEditingAdminNotebookId(null);
+								}}
 							>
 								Làm mới
 							</button>
@@ -619,7 +712,7 @@ const Admin = () => {
 					</div>
 
 					<div className="admin2-panel">
-						<h3>Thêm từ theo nhóm JLPT</h3>
+						<h3>Thêm mục theo nhóm JLPT</h3>
 						<div className="admin2-form-grid">
 							<select
 								value={jlptTargetNotebookId}
@@ -632,6 +725,11 @@ const Admin = () => {
 									</option>
 								))}
 							</select>
+							<select value={jlptBulkItemType} onChange={(e) => setJlptBulkItemType(e.target.value)}>
+								<option value="word">Từ vựng</option>
+								<option value="kanji">Kanji</option>
+								<option value="grammar">Ngữ pháp</option>
+							</select>
 							<select value={jlptBulkLevel} onChange={(e) => setJlptBulkLevel(e.target.value)}>
 								<option value="N5">N5</option>
 								<option value="N4">N4</option>
@@ -639,14 +737,42 @@ const Admin = () => {
 								<option value="N2">N2</option>
 								<option value="N1">N1</option>
 							</select>
-							<input
-								type="number"
-								min="1"
-								max="500"
-								placeholder="Số lượng tối đa"
-								value={jlptBulkLimit}
-								onChange={(e) => setJlptBulkLimit(e.target.value)}
-							/>
+							<select value={jlptBulkLimitMode} onChange={(e) => setJlptBulkLimitMode(e.target.value)}>
+								<option value="50">50</option>
+								<option value="100">100</option>
+								<option value="200">200</option>
+								<option value="500">500</option>
+								<option value="1000">1000</option>
+								<option value="custom">Tùy chỉnh...</option>
+								<option value="all">All</option>
+							</select>
+							{jlptBulkLimitMode === "custom" && (
+								<input
+									type="number"
+									min="1"
+									placeholder="Nhập số lượng"
+									value={jlptBulkCustomLimit}
+									onChange={(e) => setJlptBulkCustomLimit(e.target.value)}
+								/>
+							)}
+						</div>
+						<div className="admin2-bulk-summary">
+							{bulkSummaryLoading ? (
+								<p>Đang tính thống kê dữ liệu...</p>
+							) : bulkSummary ? (
+								<>
+									<p>
+										Nguồn dữ liệu {bulkSummary.itemType} {bulkSummary.jlptLevel}: tổng {bulkSummary.totalPool} mục,
+										 trong notebook đã có {bulkSummary.alreadyInNotebookPool} mục, còn thêm được {bulkSummary.canAddPool} mục.
+									</p>
+									<p>
+										Theo lựa chọn số lượng hiện tại ({String(bulkSummary.limit)}): duyệt {bulkSummary.selectedPool} mục,
+										 trùng {bulkSummary.selectedAlreadyInNotebook} mục, thêm mới được {bulkSummary.selectedCanAdd} mục.
+									</p>
+								</>
+							) : (
+								<p>Chọn notebook và bộ lọc để xem thống kê trước khi thêm.</p>
+							)}
 						</div>
 						<div className="admin2-actions">
 							<button type="button" onClick={handleAddJlptGroup}>Thêm theo JLPT</button>
@@ -681,6 +807,7 @@ const Admin = () => {
 										<th>Mô tả</th>
 										<th>Số mục</th>
 										<th>Cập nhật</th>
+										<th>Hành động</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -690,6 +817,20 @@ const Admin = () => {
 											<td>{item.description || "-"}</td>
 											<td>{item.itemsCount || 0}</td>
 											<td>{new Date(item.updatedAt).toLocaleString("vi-VN")}</td>
+											<td>
+												<div className="row-actions">
+													<button type="button" onClick={() => handleEditAdminNotebook(item)}>
+														Sửa
+													</button>
+													<button
+														type="button"
+														className="danger"
+														onClick={() => handleDeleteAdminNotebook(item.id)}
+													>
+														Xóa
+													</button>
+												</div>
+											</td>
 										</tr>
 									))}
 								</tbody>
