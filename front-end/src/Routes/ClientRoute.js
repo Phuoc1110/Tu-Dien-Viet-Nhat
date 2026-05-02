@@ -13,6 +13,7 @@ import NotebookDetailPage from "../pages/NotebookDetail/NotebookDetailPage";
 import ExploreNotebookPage from "../pages/ExploreNotebook/ExploreNotebookPage";
 import ReadingListPage from "../pages/Reading/List/ReadingListPage";
 import ReadingDetailViewPage from "../pages/Reading/Detail/ReadingDetailViewPage";
+import ReadingCreatePage from "../pages/Reading/Create/ReadingCreatePage";
 import PrivateRoutes from "./PrivateRoutes";
 import PrivateRoutesRole from "./PrivateRoutesRole";
 import Profile from "../pages/Profile/Profile";
@@ -43,6 +44,8 @@ const ClientRoute = () => {
 				<Route path="/notebook/explore" component={ExploreNotebookPage} />
 				<Route path="/notebook/:id" component={NotebookDetailPage} />
 				<Route path={["/reading", "/jplt", "/jlpt"]} exact component={ReadingListPage} />
+				<Route path="/reading/create" component={ReadingCreatePage} />
+				<Route path="/reading/:id/edit" component={ReadingCreatePage} />
 				<Route path="/reading/:id" component={ReadingDetailViewPage} />
 				<Route path="/search-word">
 					<Redirect to="/" />

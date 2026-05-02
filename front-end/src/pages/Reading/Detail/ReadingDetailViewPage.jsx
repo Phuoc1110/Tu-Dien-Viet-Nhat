@@ -1,250 +1,189 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
-import { 
-	ArrowLeft, 
-	BookOpenCheck,
-	BookText,
-	ChevronDown,
-	Clock3, 
-	CheckCircle2, 
-	Circle, 
-	AlertCircle,
-	Languages,
-	UserRound,
-	Zap,
-} from "lucide-react";
-import { 
-	getReadingPassageDetail, 
-	upsertReadingProgress,
-	getPassageAnalysis,
-} from "../../../services/readingService";
+import { ArrowLeft, BookText, CheckCircle2, Circle, Clock3, Languages, PencilLine, Zap } from "lucide-react";
+import { UserContext } from "../../../Context/UserProvider";
+import { getPassageAnalysis, getReadingPassageDetail, upsertReadingProgress } from "../../../services/readingService";
 import AnnotatedText from "../../../components/AnnotatedText/AnnotatedText";
 import "./ReadingDetailViewPage.css";
 
 const STATUS_OPTIONS = [
-	{ value: "not_started", label: "Chua bat dau", icon: Circle },
-	{ value: "in_progress", label: "Dang doc", icon: BookOpenCheck },
-	{ value: "completed", label: "Da doc xong", icon: CheckCircle2 },
+	{ value: "not_started", label: "Not started", icon: Circle },
+	{ value: "in_progress", label: "Reading", icon: BookText },
+	{ value: "completed", label: "Completed", icon: CheckCircle2 },
 ];
 
-const ReadingDetailViewPage = () => {
+function ReadingDetailViewPage() {
 	const history = useHistory();
 	const { id } = useParams();
-	
+	const { user, admin } = useContext(UserContext);
+
 	const [passage, setPassage] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const [updating, setUpdating] = useState(false);
-	const [currentStatus, setCurrentStatus] = useState("completed");
+	const [currentStatus, setCurrentStatus] = useState("not_started");
 	const [analysis, setAnalysis] = useState(null);
 	const [analysisLoading, setAnalysisLoading] = useState(false);
 	const [analysisError, setAnalysisError] = useState("");
 	const [showAnalysis, setShowAnalysis] = useState(false);
 
+	const actorId = user?.account?.id ?? admin?.account?.id;
+	const canEditPassage = Boolean(
+		passage?.author?.id && (admin?.isAuthenticated || Number(passage.author.id) === Number(actorId))
+	);
+
 	useEffect(() => {
-		const loadData = async () => {
+		let mounted = true;
+
+		async function load() {
 			setLoading(true);
 			const res = await getReadingPassageDetail(id);
-			
+			if (!mounted) return;
 			if (res?.errCode === 0 && res?.passage) {
 				setPassage(res.passage);
-				setCurrentStatus(res.passage.myProgress?.status || "completed");
+				setCurrentStatus(res.passage.myProgress?.status || "not_started");
 				setError("");
-				
-				// Load analysis automatically
 				loadAnalysis(id);
 			} else if (res?.errCode === -2) {
 				history.push("/login");
-				return;
 			} else if (res?.errCode === 1) {
-				setError("Bai doc khong ton tai hoac da bi xoa.");
-				setPassage(null);
+				setError("Bài đọc không tồn tại hoặc đã bị xóa.");
 			} else {
-				setError(res?.errMessage || "Khong tai duoc bai doc");
-				setPassage(null);
+				setError(res?.errMessage || "Không tải được bài đọc");
 			}
 			setLoading(false);
-		};
-
-		if (id) {
-			loadData();
 		}
+
+		async function loadAnalysis(passageId) {
+			setAnalysisLoading(true);
+			setAnalysisError("");
+			const res = await getPassageAnalysis(passageId);
+			if (!mounted) return;
+			if (res?.errCode === 0 && res?.analysis) setAnalysis(res.analysis);
+			else setAnalysisError(res?.errMessage || "Không phân tích được bài đọc");
+			setAnalysisLoading(false);
+		}
+
+		if (id) load();
+		return () => {
+			mounted = false;
+		};
 	}, [id, history]);
 
-	const loadAnalysis = async (passageId) => {
-		setAnalysisLoading(true);
-		setAnalysisError("");
-		const res = await getPassageAnalysis(passageId);
-		
-		if (res?.errCode === 0 && res?.analysis) {
-			setAnalysis(res.analysis);
-		} else {
-			setAnalysisError(res?.errMessage || "Khong phan tich duoc bai doc");
-		}
-		setAnalysisLoading(false);
-	};
-
 	const handleStatusChange = async (newStatus) => {
-		if (newStatus === currentStatus) {
-			return;
-		}
-
+		if (newStatus === currentStatus) return;
 		setUpdating(true);
 		const now = new Date().toISOString();
-		const payload = {
-			status: newStatus,
-			lastReadAt: newStatus !== "not_started" ? now : null,
-			completedAt: newStatus === "completed" ? now : null,
-		};
-
-		const res = await upsertReadingProgress(id, newStatus, payload.lastReadAt, payload.completedAt);
-		
-		if (res?.errCode === 0) {
-			setCurrentStatus(newStatus);
-		} else {
-			setError(res?.errMessage || "Khong cap nhat duoc tien do");
-		}
+		const lastReadAt = newStatus !== "not_started" ? now : null;
+		const completedAt = newStatus === "completed" ? now : null;
+		const res = await upsertReadingProgress(id, newStatus, lastReadAt, completedAt);
+		if (res?.errCode === 0) setCurrentStatus(newStatus);
+		else setError(res?.errMessage || "Không cập nhật được tiến độ");
 		setUpdating(false);
 	};
 
 	if (loading) {
 		return (
-			<div className="reading-detail-page">
-				<div className="reading-detail-loading">Loading reading detail...</div>
+			<div className="rd-page">
+				<div className="rd-shell">
+					<div className="rd-loading">Loading...</div>
+				</div>
 			</div>
 		);
 	}
 
 	if (error || !passage) {
 		return (
-			<div className="reading-detail-page">
-				<div className="reading-detail-error">
-					<AlertCircle size={32} />
-					<p>{error || "Khong the tai bai doc"}</p>
+			<div className="rd-page">
+				<div className="rd-shell">
+					<div className="rd-error">{error || "Không thể tải bài đọc"}</div>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="reading-detail-page">
+		<div className="rd-page">
+			<div className="rd-shell">
+				<header className="rd-header">
+					<button className="rd-back" onClick={() => history.push("/reading")}> <ArrowLeft /> Back</button>
+					<div className="rd-controls">
+						{canEditPassage && (
+							<button className="rd-edit" onClick={() => history.push(`/reading/${id}/edit`)}> <PencilLine /> Edit</button>
+						)}
+					</div>
+				</header>
 
-			<main className="reading-detail-shell">
-				<button className="reading-back-btn" onClick={() => history.push("/reading")}>
-					<ArrowLeft size={18} />
-					<span>Back to list</span>
-				</button>
-
-				<article className="reading-detail-container glass-panel">
-					<div className="reading-article-meta">
-						<div className="reading-detail-meta">
-							<span className="reading-level-badge">{passage.level || "N3"}</span>
-							<span className="reading-topic-badge">{passage.topic || "Education"}</span>
+				<section className="rd-hero">
+					<div className="rd-hero-left">
+						<h1 className="rd-title">{passage.title || "Untitled"}</h1>
+						<p className="rd-summary">{passage.summary}</p>
+						<div className="rd-badges">
+							<span className="badge">{passage.level || "mixed"}</span>
+							<span className="badge muted">{passage.topic || "general"}</span>
 						</div>
-
-						<h1 className="reading-japanese-title">{passage.title || "未来の教育"}</h1>
-						<p className="reading-subtitle">{passage.summary || "Giáo dục tương lai"}</p>
-
-						<div className="reading-detail-stats">
-							<div className="stat-item">
-								<Clock3 size={17} />
-								<span>{passage.estimatedMinutes || 8} minutes</span>
-							</div>
-							<div className="stat-item">
-								<UserRound size={17} />
-								<span>{passage.author?.username || "Author"}</span>
-							</div>
+						<div className="rd-meta">
+							<div><Clock3 /> {passage.estimatedMinutes || 8} min</div>
+							<div><Languages /> {new Date(passage.createdAt).toLocaleDateString()}</div>
+							<div>By {passage.author?.username || "Community"}</div>
 						</div>
 					</div>
 
-					<div className="reading-progress-section">
-						<h3 className="reading-section-title">Progress Tracker</h3>
-						<div className="reading-status-buttons">
+					<div className="rd-hero-right">
+						<div className="rd-status">
+							<label>Your status</label>
+							<strong>{STATUS_OPTIONS.find(s => s.value === currentStatus)?.label}</strong>
+						</div>
+						<button className="rd-toggle-analysis" onClick={() => setShowAnalysis(v => !v)}>
+							<Zap /> {showAnalysis ? 'Hide analysis' : 'Show analysis'}
+						</button>
+					</div>
+				</section>
+
+				<main className="rd-main">
+					<article className="rd-article">
+						<div className="rd-actions">
 							{STATUS_OPTIONS.map(({ value, label, icon: Icon }) => (
-								<button
-									key={value}
-									className={`status-btn ${currentStatus === value ? "active" : ""} ${updating ? "is-updating" : ""}`}
-									onClick={() => handleStatusChange(value)}
-									disabled={updating}
-									title={label}
-								>
-									<Icon size={18} />
-									<span>
-										{value === "not_started" ? "Not started" : value === "in_progress" ? "Reading" : "Finished"}
-									</span>
+								<button key={value} className={`rd-status-btn ${currentStatus === value ? 'active' : ''}`} onClick={() => handleStatusChange(value)} disabled={updating}>
+									<Icon /> {label}
 								</button>
 							))}
 						</div>
-					</div>
 
-					<div className="reading-content-section">
-						<div className="reading-pane japanese-text">
-							<h3 className="reading-section-title">
-								<BookText size={16} />
-								<span>Original Content</span>
-							</h3>
-							<div className="text-content japanese-font">{passage.content}</div>
+						<section className="rd-content">
+							<h3>Original</h3>
+							<div className="rd-text">{passage.content}</div>
+							<h3>Translation</h3>
+							<div className="rd-translation">{passage.translation || 'No translation provided.'}</div>
+						</section>
+					</article>
+
+					<aside className="rd-aside">
+						<div className="rd-card">
+							<strong>Facts</strong>
+							<div>Level: {passage.level || 'mixed'}</div>
+							<div>Topic: {passage.topic || 'general'}</div>
+							<div>Updated: {new Date(passage.updatedAt).toLocaleDateString()}</div>
 						</div>
-
-						<div className="reading-pane translation-section">
-							<h3 className="reading-section-title">
-								<Languages size={16} />
-								<span>Translation</span>
-							</h3>
-							<div className="translation-content">
-								{passage.translation || "Chua co ban dich."}
-							</div>
+						<div className="rd-card">
+							<strong>Creator</strong>
+							<div>{passage.author?.username || 'Community'}</div>
 						</div>
-					</div>
+					</aside>
+				</main>
 
-					<div className="reading-analysis-section">
-						<button 
-							className={`analysis-toggle-btn ${showAnalysis ? "active" : ""}`}
-							onClick={() => setShowAnalysis(!showAnalysis)}
-						>
-							<Zap size={16} />
-							<span>Text Analysis</span>
-							<ChevronDown 
-								size={16} 
-								style={{ 
-									transform: showAnalysis ? "rotate(180deg)" : "rotate(0deg)",
-									transition: "transform 0.3s ease",
-								}} 
-							/>
-						</button>
-						
-						{showAnalysis && (
-							<div className="analysis-content">
-								{analysisError && (
-									<div className="analysis-error">
-										<AlertCircle size={16} />
-										<p>{analysisError}</p>
-									</div>
-								)}
-								{analysis && (
-									<AnnotatedText 
-										analysis={analysis} 
-										loading={analysisLoading}
-									/>
-								)}
-								{analysisLoading && !analysis && (
-									<div className="analysis-loading">
-										<p>Analyzing passage...</p>
-									</div>
-								)}
-							</div>
-						)}
-					</div>
+				{showAnalysis && (
+					<section className="rd-analysis">
+						{analysisError && <div className="analysis-error">{analysisError}</div>}
+						{analysisLoading && !analysis && <div className="analysis-loading">Analyzing...</div>}
+						{analysis && <AnnotatedText analysis={analysis} loading={analysisLoading} />}
+					</section>
+				)}
 
-					<div className="reading-detail-footer">
-						<p className="text-muted">
-							Created: {new Date(passage.createdAt).toLocaleDateString("vi-VN")}
-						</p>
-					</div>
-				</article>
-			</main>
+				<footer className="rd-footer">Created: {new Date(passage.createdAt).toLocaleDateString()}</footer>
+			</div>
 		</div>
 	);
-};
+}
 
 export default ReadingDetailViewPage;

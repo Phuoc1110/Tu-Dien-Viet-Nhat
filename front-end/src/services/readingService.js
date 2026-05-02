@@ -20,6 +20,26 @@ const getReadingPassageDetail = (id) => {
 		});
 };
 
+const createReadingPassage = (data = {}) => {
+	return axios
+		.post("/api/reading/passages", data)
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+			return { errCode: 1, errMessage: "Khong tao duoc bai doc", passage: null };
+		});
+};
+
+const updateReadingPassage = (id, data = {}) => {
+	return axios
+		.put(`/api/reading/passages/${id}`, data)
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+			return { errCode: 1, errMessage: "Khong cap nhat duoc bai doc", passage: null };
+		});
+};
+
 const upsertReadingProgress = (id, status, lastReadAt, completedAt) => {
 	return axios
 		.post(`/api/reading/passages/${id}/progress`, {
@@ -57,6 +77,8 @@ const getPassageAnalysis = (id) => {
 export {
 	getReadingPassages,
 	getReadingPassageDetail,
+	createReadingPassage,
+	updateReadingPassage,
 	upsertReadingProgress,
 	getMyReadingProgresses,
 	getPassageAnalysis,
