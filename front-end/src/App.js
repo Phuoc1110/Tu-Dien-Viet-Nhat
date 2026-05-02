@@ -8,6 +8,7 @@ import { Bounce, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Navbar from "./components/Navbar/Navbar";
 import Footer from "./components/Footer/Footer";
+import SelectionLookup from "./components/SelectionLookup/SelectionLookup";
 
 function App() {
 	const { user } = useContext(UserContext);
@@ -36,6 +37,7 @@ function App() {
 						<Footer />
 					</div>
 				)}
+				<SelectionLookup />
 			</Router>
 			<ToastContainer
 				position="top-right"
