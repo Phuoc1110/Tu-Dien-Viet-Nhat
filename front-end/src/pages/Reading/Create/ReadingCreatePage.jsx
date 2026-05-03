@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
-import { AlertCircle, ArrowLeft, BookText, Clock3, Languages, PencilLine, Sparkles, X } from "lucide-react";
+import { AlertCircle, BookText, Clock3, Languages, PencilLine, X } from "lucide-react";
 import { createReadingPassage, getReadingPassageDetail, updateReadingPassage } from "../../../services/readingService";
 import "./ReadingCreatePage.css";
 
@@ -42,11 +42,11 @@ const ReadingCreatePage = () => {
 
 	const preview = useMemo(() => {
 		return {
-			title: form.title.trim() || "Untitled passage",
-			summary: excerpt(form.summary, 160) || "No summary provided.",
-			content: excerpt(form.content, 280) || "Original text will appear here.",
-			translation: excerpt(form.translation, 200) || "Translation will appear here.",
-			topic: form.topic.trim() || "general",
+			title: form.title.trim() || "Bài đọc chưa có tiêu đề",
+			summary: excerpt(form.summary, 160) || "Chưa có tóm tắt.",
+			content: excerpt(form.content, 280) || "Text gốc sẽ hiển thị ở đây.",
+			translation: excerpt(form.translation, 200) || "Bản dịch sẽ hiển thị ở đây.",
+			topic: form.topic.trim() || "chung",
 			level: form.level || "mixed",
 			time: `${form.estimatedMinutes || 5} min`,
 		};
@@ -146,21 +146,6 @@ const ReadingCreatePage = () => {
 		return (
 			<div className="reading-create-page">
 				<div className="reading-create-shell">
-					<div className="reading-create-top glass-panel">
-						<div className="reading-create-brand">
-							<div className="reading-create-brand-mark">
-								<Sparkles size={16} />
-							</div>
-							<div>
-								<p>Yomu Studio</p>
-								<span>{pageTitle}</span>
-							</div>
-						</div>
-						<button type="button" className="reading-create-back" onClick={() => history.push(exitRoute)}>
-							<ArrowLeft size={16} />
-							<span>Quay lai</span>
-						</button>
-					</div>
 					<div className="reading-create-state glass-panel">Dang tai bai doc...</div>
 				</div>
 			</div>
@@ -171,21 +156,6 @@ const ReadingCreatePage = () => {
 		return (
 			<div className="reading-create-page">
 				<div className="reading-create-shell">
-					<div className="reading-create-top glass-panel">
-						<div className="reading-create-brand">
-							<div className="reading-create-brand-mark">
-								<Sparkles size={16} />
-							</div>
-							<div>
-								<p>Yomu Studio</p>
-								<span>{pageTitle}</span>
-							</div>
-						</div>
-						<button type="button" className="reading-create-back" onClick={() => history.push(exitRoute)}>
-							<ArrowLeft size={16} />
-							<span>Quay lai</span>
-						</button>
-					</div>
 					<div className="reading-create-error-state glass-panel">
 						<AlertCircle size={18} />
 						<span>{pageError}</span>
@@ -198,47 +168,30 @@ const ReadingCreatePage = () => {
 	return (
 		<div className="reading-create-page">
 			<div className="reading-create-shell">
-				<div className="reading-create-top glass-panel">
-					<div className="reading-create-brand">
-						<div className="reading-create-brand-mark">
-							<Sparkles size={16} />
-						</div>
-						<div>
-							<p>Yomu Studio</p>
-							<span>{isEditing ? "Edit passage" : "Create passage"}</span>
-						</div>
-					</div>
-					<button type="button" className="reading-create-back" onClick={() => history.push(exitRoute)}>
-						<ArrowLeft size={16} />
-						<span>Quay lai</span>
-					</button>
-				</div>
-
 				<section className="reading-create-hero glass-panel">
 					<div className="reading-create-hero-copy">
 						<div className="reading-create-kicker">
 							<PencilLine size={16} />
 							<span>{pageTitle}</span>
 						</div>
-						<h1>{isEditing ? "Polish an existing passage" : "Build a new reading passage from scratch"}</h1>
+						<h1>{isEditing ? "Chỉnh sửa bài đọc này" : "Tạo một bài đọc mới từ đầu"}</h1>
 						<p>
-							Keep the left side focused on the raw editor and use the preview rail to check how the final
-							reading will feel before saving.
+							Tập trung vào trình soạn ở bên trái và sử dụng khung xem trước bên phải để kiểm tra cách bài đọc cuối cùng sẽ trông như thế nào trước khi lưu.
 						</p>
 					</div>
 
 					<div className="reading-create-hero-meta">
 						<div className="reading-create-mini-stat">
 							<BookText size={16} />
-							<span>Original + translation</span>
+							<span>Gốc + bản dịch</span>
 						</div>
 						<div className="reading-create-mini-stat">
 							<Languages size={16} />
-							<span>Level, topic, timing</span>
+							<span>Trình độ, chủ đề, thời gian</span>
 						</div>
 						<div className="reading-create-mini-stat">
 							<Clock3 size={16} />
-							<span>Designed for fast review</span>
+							<span>Thiết kế để ôn tập nhanh</span>
 						</div>
 					</div>
 				</section>
@@ -257,52 +210,52 @@ const ReadingCreatePage = () => {
 
 						<div className="reading-create-form-grid">
 							<label className="reading-create-field reading-create-field-wide">
-								<span>Title *</span>
+								<span>Tiêu đề *</span>
 								<input
 									type="text"
-									placeholder="Vi du: Cuoc song o Tokyo"
+									placeholder="Ví dụ: Cuộc sống ở Tokyo"
 									value={form.title}
 									onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
 								/>
 							</label>
 
 							<label className="reading-create-field reading-create-field-wide">
-								<span>Summary</span>
+								<span>Tóm tắt</span>
 								<textarea
 									rows={3}
-									placeholder="Mo ta ngan ve noi dung bai doc"
+									placeholder="Mô tả ngắn về nội dung bài đọc"
 									value={form.summary}
 									onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))}
 								/>
 							</label>
 
 							<label className="reading-create-field reading-create-field-wide">
-								<span>Original text *</span>
+								<span>Text gốc *</span>
 								<textarea
 									rows={10}
-									placeholder="Nhap doan bai doc tieng Nhat"
+									placeholder="Nhập đoạn bài đọc tiếng Nhật"
 									value={form.content}
 									onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
 								/>
 							</label>
 
 							<label className="reading-create-field reading-create-field-wide">
-								<span>Translation</span>
+								<span>Bản dịch</span>
 								<textarea
 									rows={7}
-									placeholder="Nhap ban dich tieng Viet"
+									placeholder="Nhập bản dịch tiếng Việt"
 									value={form.translation}
 									onChange={(event) => setForm((prev) => ({ ...prev, translation: event.target.value }))}
 								/>
 							</label>
 
 							<label className="reading-create-field">
-								<span>Level</span>
+								<span>Trình độ</span>
 								<select
 									value={form.level}
 									onChange={(event) => setForm((prev) => ({ ...prev, level: event.target.value }))}
 								>
-									<option value="mixed">Mixed</option>
+									<option value="mixed">Hỗn hợp</option>
 									<option value="N5">N5</option>
 									<option value="N4">N4</option>
 									<option value="N3">N3</option>
@@ -312,17 +265,17 @@ const ReadingCreatePage = () => {
 							</label>
 
 							<label className="reading-create-field">
-								<span>Topic</span>
+								<span>Chủ đề</span>
 								<input
 									type="text"
-									placeholder="Vi du: travel, school, life"
+									placeholder="Ví dụ: du lịch, trường học, cuộc sống"
 									value={form.topic}
 									onChange={(event) => setForm((prev) => ({ ...prev, topic: event.target.value }))}
 								/>
 							</label>
 
 							<label className="reading-create-field">
-								<span>Estimated minutes</span>
+								<span>Thời gian ước tính (phút)</span>
 								<input
 									type="number"
 									min="1"
@@ -337,20 +290,20 @@ const ReadingCreatePage = () => {
 
 						<div className="reading-create-actions">
 							<button type="button" className="reading-create-secondary" onClick={handleReset} disabled={loading}>
-								Lam moi
+								Làm mới
 							</button>
 							<button type="button" className="reading-create-secondary" onClick={() => history.push(exitRoute)} disabled={loading}>
-								Huy
+								Hủy
 							</button>
 							<button type="button" className="reading-create-primary" onClick={handleSubmit} disabled={loading}>
-								{loading ? (isEditing ? "Dang luu..." : "Dang tao...") : submitLabel}
+								{loading ? (isEditing ? "Đang lưu..." : "Đang tạo...") : submitLabel}
 							</button>
 						</div>
 					</section>
 
 					<aside className="reading-preview-card glass-panel">
 						<div className="reading-preview-head">
-							<p className="reading-create-kicker">Live preview</p>
+							<p className="reading-create-kicker">Xem trước trực tiếp</p>
 							<h2>{preview.title}</h2>
 							<p>{preview.summary}</p>
 						</div>
@@ -362,12 +315,12 @@ const ReadingCreatePage = () => {
 						</div>
 
 						<div className="reading-preview-block">
-							<span className="reading-preview-label">Original</span>
+							<span className="reading-preview-label">Gốc</span>
 							<p className="japanese-font">{preview.content}</p>
 						</div>
 
 						<div className="reading-preview-block is-translation">
-							<span className="reading-preview-label">Translation</span>
+							<span className="reading-preview-label">Dịch</span>
 							<p>{preview.translation}</p>
 						</div>
 					</aside>

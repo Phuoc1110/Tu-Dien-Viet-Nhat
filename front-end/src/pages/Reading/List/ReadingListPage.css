@@ -344,6 +344,35 @@
 	gap: 14px;
 }
 
+.reading-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	border-radius: 14px;
+	padding: 10px 12px;
+}
+
+.reading-page-btn {
+	border: 1px solid #cbd5e1;
+	background: #ffffff;
+	color: #1e293b;
+	padding: 7px 12px;
+	border-radius: 999px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.reading-page-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.reading-page-indicator {
+	color: #334155;
+	font-weight: 700;
+}
+
 .reading-state-box,
 .reading-empty {
 	padding: 24px;
