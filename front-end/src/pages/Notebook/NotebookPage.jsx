@@ -95,8 +95,9 @@ const NotebookPage = () => {
 	const myNotebooks = useMemo(() => {
 		return [...overview.myNotebooks]
 			.sort((a, b) => (b.itemsCount || 0) - (a.itemsCount || 0))
-			.slice(0, 5);
+			.slice(0, 7);
 	}, [overview.myNotebooks]);
+	const curatedPreview = useMemo(() => curatedNotebooks.slice(0, 8), [curatedNotebooks]);
 	const discoverNotebooks = useMemo(
 		() => overview.discoverNotebooks.slice(0, 4),
 		[overview.discoverNotebooks]
@@ -234,9 +235,18 @@ const NotebookPage = () => {
 			<section className="section-card premium-section bento-surface">
 				<div className="section-title-row">
 					<h2>Bộ sổ tay biên soạn</h2>
+					{curatedNotebooks.length > 8 && (
+						<button
+							type="button"
+							className="view-more-btn"
+							onClick={() => history.push("/notebook/curated")}
+						>
+							Xem thêm
+						</button>
+					)}
 				</div>
 				<div className="cards-grid premium-grid">
-					{curatedNotebooks.map((item) => (
+					{curatedPreview.map((item) => (
 						<button
 							type="button"
 							key={item.id}

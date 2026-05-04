@@ -11,6 +11,7 @@ import NotebookPage from "../pages/Notebook/NotebookPage";
 import NotebookListPage from "../pages/NotebookList/NotebookListPage";
 import NotebookDetailPage from "../pages/NotebookDetail/NotebookDetailPage";
 import ExploreNotebookPage from "../pages/ExploreNotebook/ExploreNotebookPage";
+import CuratedNotebookPage from "../pages/CuratedNotebook/CuratedNotebookPage";
 import ReadingListPage from "../pages/Reading/List/ReadingListPage";
 import ReadingDetailViewPage from "../pages/Reading/Detail/ReadingDetailViewPage";
 import ReadingCreatePage from "../pages/Reading/Create/ReadingCreatePage";
@@ -42,6 +43,7 @@ const ClientRoute = () => {
 				<Route path="/notebook" exact component={NotebookPage} />
 				<Route path="/notebook/list" component={NotebookListPage} />
 				<Route path="/notebook/explore" component={ExploreNotebookPage} />
+				<Route path="/notebook/curated" component={CuratedNotebookPage} />
 				<Route path="/notebook/:id" component={NotebookDetailPage} />
 				<Route path={["/reading", "/jplt", "/jlpt"]} exact component={ReadingListPage} />
 				<Route path="/reading/create" component={ReadingCreatePage} />
