@@ -164,7 +164,7 @@ const formatNotebook = async (notebook, itemLimit = null, userId = null) => {
 };
 
 const getNotebookOverview = async (userId, limit = 6) => {
-	const normalizedLimit = Math.min(Math.max(Number(limit) || 6, 1), 12);
+	const normalizedLimit = Math.min(Math.max(Number(limit) || 6, 1), 200);
 
 	const [mineRaw, discoverRaw] = await Promise.all([
 		db.Notebook.findAll({

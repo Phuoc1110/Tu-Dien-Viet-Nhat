@@ -222,6 +222,53 @@
   gap: 14px;
 }
 
+.notebook-list-pagination {
+  border-top: 1px solid #dbe5f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px 12px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.notebook-list-pagination-controls,
+.notebook-list-pagination-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notebook-page-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(149, 170, 199, 0.42);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2f6ba4;
+  cursor: pointer;
+}
+
+.notebook-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notebook-page-number {
+  min-width: 68px;
+  text-align: center;
+  font-weight: 700;
+  color: #3f5c82;
+}
+
+.notebook-list-pagination-meta span {
+  font-size: 0.82rem;
+  color: var(--nbl-muted);
+  font-weight: 600;
+}
+
 .notebook-list-page .my-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

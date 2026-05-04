@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { Search, Filter } from "lucide-react";
 import { getNotebookOverview } from "../../services/notebookService";
@@ -15,6 +15,8 @@ const formatDate = (value) => {
 	return date.toISOString().slice(0, 10);
 };
 
+const PAGE_SIZE = 16;
+
 const ExploreNotebookPage = () => {
 	const history = useHistory();
 	const [loading, setLoading] = useState(true);
@@ -22,6 +24,7 @@ const ExploreNotebookPage = () => {
 	const [filteredNotebooks, setFilteredNotebooks] = useState([]);
 	const [searchKeyword, setSearchKeyword] = useState("");
 	const [message, setMessage] = useState("");
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const loadExplore = useCallback(async () => {
 		setLoading(true);
@@ -31,6 +34,7 @@ const ExploreNotebookPage = () => {
 			setDiscoverNotebooks(notebooks);
 			setFilteredNotebooks(notebooks);
 			setMessage("");
+			setCurrentPage(1);
 		} else if (res?.errCode === -2) {
 			history.push("/login");
 			return;
@@ -57,6 +61,43 @@ const ExploreNotebookPage = () => {
 		});
 		setFilteredNotebooks(filtered);
 	}, [searchKeyword, discoverNotebooks]);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [searchKeyword, discoverNotebooks]);
+
+	const totalPages = useMemo(() => {
+		const total = Math.ceil(filteredNotebooks.length / PAGE_SIZE);
+		return Math.max(total, 1);
+	}, [filteredNotebooks.length]);
+
+	const currentPageSafe = Math.min(currentPage, totalPages);
+
+	useEffect(() => {
+		setCurrentPage((page) => Math.min(page, totalPages));
+	}, [totalPages]);
+
+	const pagedNotebooks = useMemo(() => {
+		const startIndex = (currentPageSafe - 1) * PAGE_SIZE;
+		return filteredNotebooks.slice(startIndex, startIndex + PAGE_SIZE);
+	}, [filteredNotebooks, currentPageSafe]);
+
+	const paginationSummary = useMemo(() => {
+		if (!filteredNotebooks.length) {
+			return { start: 0, end: 0, total: 0 };
+		}
+		const start = (currentPageSafe - 1) * PAGE_SIZE + 1;
+		const end = Math.min(currentPageSafe * PAGE_SIZE, filteredNotebooks.length);
+		return { start, end, total: filteredNotebooks.length };
+	}, [filteredNotebooks.length, currentPageSafe]);
+
+	const gotoFirstPage = useCallback(() => setCurrentPage(1), []);
+	const gotoPreviousPage = useCallback(() => setCurrentPage((page) => Math.max(1, page - 1)), []);
+	const gotoNextPage = useCallback(
+		() => setCurrentPage((page) => Math.min(totalPages, page + 1)),
+		[totalPages]
+	);
+	const gotoLastPage = useCallback(() => setCurrentPage(totalPages), [totalPages]);
 
 	return (
 		<div className="explore-notebook-page">
@@ -98,23 +139,72 @@ const ExploreNotebookPage = () => {
 					)}
 
 					{!loading && filteredNotebooks.length > 0 && (
-						<div className="explore-grid">
-							{filteredNotebooks.map((notebook) => (
-								<button
-									type="button"
-									key={notebook.id}
-									className="explore-card"
-									onClick={() => history.push(`/notebook/${notebook.id}`, { fromExplore: true })}
-								>
-									<h3>{notebook.name}</h3>
-									<p className="card-count">({notebook.itemsCount || 0} từ)</p>
-									<div className="card-meta">
-										<span className="owner">{notebook.owner?.username || "Ẩn danh"}</span>
-										<span className="date">Ngày tạo: {formatDate(notebook.createdAt)}</span>
+						<>
+							<div className="explore-grid">
+								{pagedNotebooks.map((notebook) => (
+									<button
+										type="button"
+										key={notebook.id}
+										className="explore-card"
+										onClick={() => history.push(`/notebook/${notebook.id}`, { fromExplore: true })}
+									>
+										<h3>{notebook.name}</h3>
+										<p className="card-count">({notebook.itemsCount || 0} từ)</p>
+										<div className="card-meta">
+											<span className="owner">{notebook.owner?.username || "Ẩn danh"}</span>
+											<span className="date">Ngày tạo: {formatDate(notebook.createdAt)}</span>
+										</div>
+									</button>
+								))}
+							</div>
+
+							{totalPages > 1 && (
+								<div className="explore-pagination">
+									<div className="explore-pagination-controls">
+										<button
+											type="button"
+											className="explore-page-btn"
+											onClick={gotoFirstPage}
+											disabled={currentPageSafe === 1}
+										>
+											&laquo;
+										</button>
+										<button
+											type="button"
+											className="explore-page-btn"
+											onClick={gotoPreviousPage}
+											disabled={currentPageSafe === 1}
+										>
+											&lsaquo;
+										</button>
+										<span className="explore-page-number">
+											{currentPageSafe}/{totalPages}
+										</span>
+										<button
+											type="button"
+											className="explore-page-btn"
+											onClick={gotoNextPage}
+											disabled={currentPageSafe >= totalPages}
+										>
+											&rsaquo;
+										</button>
+										<button
+											type="button"
+											className="explore-page-btn"
+											onClick={gotoLastPage}
+											disabled={currentPageSafe >= totalPages}
+										>
+											&raquo;
+										</button>
 									</div>
-								</button>
-							))}
-						</div>
+									<div className="explore-pagination-meta">
+										<span>
+											Hiển thị {paginationSummary.start}-{paginationSummary.end} / {paginationSummary.total}
+										</span>
+									</div>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</div>
