@@ -5,7 +5,7 @@ import {
 	recognizeImageText,
 	searchWords,
 } from "../../services/dictionaryService";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import {
 	clearWordSearchHistory,
 	getWordSearchHistory,
@@ -86,6 +86,7 @@ const HomePage = () => {
 	const historyListRef = useRef(null);
 	const communityListRef = useRef(null);
 	const history = useHistory();
+	const location = useLocation();
 	const { user } = useContext(UserContext);
 	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
@@ -242,7 +243,14 @@ const HomePage = () => {
 	const handleSearch = (event) => {
 		event.preventDefault();
 		if (searchInput.trim()) {
-			const convertedKeyword = normalizeSearchKeyword(searchInput.trim());
+			const text = searchInput.trim();
+			if (text.length > 25 || /[。、！？\n]/.test(text)) {
+				history.push(`/?text=${encodeURIComponent(text)}`);
+				setIsDropdownOpen(false);
+				setHighlightedDropdownIndex(-1);
+				return;
+			}
+			const convertedKeyword = normalizeSearchKeyword(text);
 			setSearchInput(convertedKeyword);
 			history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
 			setIsDropdownOpen(false);
@@ -502,8 +510,9 @@ const HomePage = () => {
 		}
 	};
 
-	const handleAnalyzeParagraph = async () => {
-		const text = String(paragraphInput || "").trim();
+	const handleAnalyzeParagraph = async (overrideText) => {
+		const textToAnalyze = typeof overrideText === 'string' ? overrideText : paragraphInput;
+		const text = String(textToAnalyze || "").trim();
 		if (!text) {
 			setParagraphError("Vui lòng nhập đoạn tiếng Nhật trước khi phân tích.");
 			setAnalyzedTokens([]);
@@ -527,6 +536,19 @@ const HomePage = () => {
 		setMatchedWords([]);
 		setAnalyzeLoading(false);
 	};
+
+	useEffect(() => {
+		const params = new URLSearchParams(location.search);
+		const textParam = params.get("text");
+		if (textParam) {
+			setParagraphInput(textParam);
+			handleAnalyzeParagraph(textParam);
+			setTimeout(() => {
+				const panel = document.querySelector('.paragraph-analyze-panel');
+				if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}, 100);
+		}
+	}, [location.search]);
 
 	const handleUseMatchedWord = (word) => {
 		const selected = String(word?.word || "").trim();

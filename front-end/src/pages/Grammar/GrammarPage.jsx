@@ -3,6 +3,7 @@ import { useHistory, useLocation } from "react-router-dom";
 import { searchGrammars } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
+import { SearchX } from "lucide-react";
 import "./GrammarPage.css";
 
 const GrammarPage = () => {
@@ -187,6 +188,10 @@ const GrammarPage = () => {
 
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
+				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
+					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					return;
+				}
 				history.push(`/grammar?q=${newKeyword.trim()}`);
 				setIsDropdownOpen(false);
 				setHighlightedDropdownIndex(-1);
@@ -266,7 +271,22 @@ const GrammarPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>🔍</button>
+							<button 
+								type="button"
+								onClick={() => {
+									if (searchInput.trim()) {
+										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
+											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											return;
+										}
+										history.push(`/grammar?q=${searchInput.trim()}`);
+										setIsDropdownOpen(false);
+										setHighlightedDropdownIndex(-1);
+									}
+								}}
+							>
+								🔍
+							</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>
@@ -306,15 +326,35 @@ const GrammarPage = () => {
 				/>
 
 				<div className="grammar-content-grid">
-					<div className="grammar-left">
-						<div className="detail-card grammar-detail-card">
-							{loading && <p>Dang tai...</p>}
-							{error && <p className="sentence-error">{error}</p>}
-							{!loading && !error && !activeGrammar && (
-								<p>Chua co ngu phap de hien thi.</p>
+					{(!activeGrammar || loading || error) ? (
+						<div className="detail-card grammar-detail-card empty-state-container" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+							{loading && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<p style={{ color: "#64748b" }}>Đang tải...</p>
+								</div>
 							)}
-							{activeGrammar && (
-								<>
+							{error && !loading && (
+								<div className="empty-state-content error-state" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "100px", height: "100px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+										<SearchX size={48} color="#64748b" />
+									</div>
+									<h3 style={{ fontSize: "24px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>Không tìm thấy Ngữ pháp</h3>
+									<p style={{ color: "#475569", fontSize: "16px", maxWidth: "420px", margin: "0 auto", lineHeight: "1.6" }}>
+										Rất tiếc, không có kết quả nào phù hợp với từ khóa <strong style={{ color: "#0f172a" }}>"{keyword}"</strong>. Hãy kiểm tra lại chính tả hoặc thử một từ khóa khác.
+									</p>
+								</div>
+							)}
+							{!loading && !error && !activeGrammar && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>文</div>
+									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập một ngữ pháp để bắt đầu</h3>
+								</div>
+							)}
+						</div>
+					) : (
+						<>
+							<div className="grammar-left">
+								<div className="detail-card grammar-detail-card">
 									<div className="grammar-head">
 										<div>
 											<h1>{activeGrammar.title}</h1>
@@ -382,35 +422,30 @@ const GrammarPage = () => {
 											)}
 										</div>
 									</div>
+								</div>
+							</div>
 
-									{/* <div className="detail-section contribution-box">
-										<h3>Co 7 y kien dong gop</h3>
-										<p>Ban co the them gop y hoac vi du de bo sung muc nay.</p>
-									</div> */}
-								</>
-							)}
-						</div>
-					</div>
-
-					<div className="grammar-right">
-						<div className="lookup-panel grammar-list-panel">
-							{displayedGrammars.map((item) => (
-								<button
-									key={item.id}
-									type="button"
-									className={`grammar-list-item ${
-										activeGrammar && activeGrammar.id === item.id ? "active" : ""
-									}`}
-									onClick={() => setActiveGrammar(item)}
-								>
-									<span className="grammar-list-jlpt">N{item.jlptLevel || "?"}</span>
-									<strong>{item.title}</strong>
-									<p>{item.meaning}</p>
-								</button>
-							))}
-							{displayedGrammars.length === 0 && !loading && <p>Chua co du lieu ngu phap.</p>}
-						</div>
-					</div>
+							<div className="grammar-right">
+								<div className="lookup-panel grammar-list-panel">
+									{displayedGrammars.map((item) => (
+										<button
+											key={item.id}
+											type="button"
+											className={`grammar-list-item ${
+												activeGrammar && activeGrammar.id === item.id ? "active" : ""
+											}`}
+											onClick={() => setActiveGrammar(item)}
+										>
+											<span className="grammar-list-jlpt">N{item.jlptLevel || "?"}</span>
+											<strong>{item.title}</strong>
+											<p>{item.meaning}</p>
+										</button>
+									))}
+									{displayedGrammars.length === 0 && !loading && <p>Chua co du lieu ngu phap.</p>}
+								</div>
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 		</div>

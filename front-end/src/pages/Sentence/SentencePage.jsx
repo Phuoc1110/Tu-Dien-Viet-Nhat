@@ -7,6 +7,7 @@ import {
 } from "../../services/searchHistoryService";
 import { getLatestWordContributions } from "../../services/wordContributionService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
+import { SearchX } from "lucide-react";
 import "./SentencePage.css";
 
 const SentencePage = () => {
@@ -175,6 +176,10 @@ const SentencePage = () => {
 
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
+				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
+					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					return;
+				}
 				history.push(`/sentence?q=${newKeyword.trim()}`);
 				setIsDropdownOpen(false);
 				setHighlightedDropdownIndex(-1);
@@ -241,7 +246,22 @@ const SentencePage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>🔍</button>
+							<button 
+								type="button"
+								onClick={() => {
+									if (searchInput.trim()) {
+										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
+											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											return;
+										}
+										history.push(`/sentence?q=${searchInput.trim()}`);
+										setIsDropdownOpen(false);
+										setHighlightedDropdownIndex(-1);
+									}
+								}}
+							>
+								🔍
+							</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>
@@ -274,26 +294,45 @@ const SentencePage = () => {
 				/>
 
 				<div className="sentence-results sentence-layout">
-					<div className="sentence-card">
-						<h2>
-							Ket qua tra cuu mau cau cua <span>{keyword || "..."}</span>
-						</h2>
-						{!hasKeyword && (
-							<p className="sentence-empty-tip">
-								Nhap tu khoa de tim vi du. Ben phai la cac thong tin de ban thao tac nhanh.
-							</p>
-						)}
-						{loading && <p>Dang tai...</p>}
-						{error && <p className="sentence-error">{error}</p>}
-						{!loading &&
-							!error &&
-							sentences.map((item) => (
+					{(!hasKeyword || loading || error) ? (
+						<div className="sentence-card empty-state-container" style={{ gridColumn: (!hasKeyword ? undefined : '1 / -1'), display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+							{!hasKeyword && !loading && !error && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>例</div>
+									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập từ khóa để tìm ví dụ</h3>
+									<p style={{ color: "#64748b" }}>Bên phải là các thông tin để bạn thao tác nhanh.</p>
+								</div>
+							)}
+							{loading && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<p style={{ color: "#64748b" }}>Đang tải kết quả...</p>
+								</div>
+							)}
+							{error && !loading && (
+								<div className="empty-state-content error-state" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "100px", height: "100px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+										<SearchX size={48} color="#64748b" />
+									</div>
+									<h3 style={{ fontSize: "24px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>Không tìm thấy Mẫu câu</h3>
+									<p style={{ color: "#475569", fontSize: "16px", maxWidth: "420px", margin: "0 auto", lineHeight: "1.6" }}>
+										Rất tiếc, không có kết quả nào phù hợp với từ khóa <strong style={{ color: "#0f172a" }}>"{keyword}"</strong>. Hãy kiểm tra lại chính tả hoặc thử một từ khóa khác.
+									</p>
+								</div>
+							)}
+						</div>
+					) : (
+						<div className="sentence-card">
+							<h2>
+								Kết quả tra cứu mẫu câu của <span>{keyword}</span>
+							</h2>
+							{sentences.map((item) => (
 								<div className="sentence-item" key={item.id}>
 									<p className="sentence-jp">{item.japaneseSentence}</p>
 									<p className="sentence-vi">{item.vietnameseTranslation}</p>
 								</div>
 							))}
-					</div>
+						</div>
+					)}
 
 					{!hasKeyword && (
 						<aside className="sentence-side-grid">

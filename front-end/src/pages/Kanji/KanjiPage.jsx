@@ -8,6 +8,7 @@ import {
 import { getLatestWordContributions } from "../../services/wordContributionService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
+import { SearchX } from "lucide-react";
 import "./KanjiPage.css";
 
 const KanjiPage = () => {
@@ -327,6 +328,10 @@ const KanjiPage = () => {
 
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
+				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
+					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					return;
+				}
 				history.push(`/kanji?q=${newKeyword.trim()}`);
 				setIsDropdownOpen(false);
 				setHighlightedDropdownIndex(-1);
@@ -460,7 +465,22 @@ const KanjiPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button>🔍</button>
+							<button 
+								type="button"
+								onClick={() => {
+									if (searchInput.trim()) {
+										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
+											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											return;
+										}
+										history.push(`/kanji?q=${searchInput.trim()}`);
+										setIsDropdownOpen(false);
+										setHighlightedDropdownIndex(-1);
+									}
+								}}
+							>
+								🔍
+							</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
 						</div>
 						<button className="lang-switch">Nhật - Việt</button>
@@ -501,20 +521,36 @@ const KanjiPage = () => {
 				/>
 
 				<div className="mazii-content-grid detail-mode">
-					<div className="detail-left">
-						{loading && <div className="detail-card">Đang tải...</div>}
-						{error && <div className="detail-card error">{error}</div>}
-						{!loading && !error && !kanjiDetail && (
-							<div className="detail-card empty-state-card">
-								<div className="empty-state-visual">漢</div>
-								<h3>Nhap mot chu kanji de bat dau</h3>
-								<p>
-									Ban co the tim theo chu kanji, am han viet hoac ve kanji bang nut A文.
-								</p>
-							</div>
-						)}
-						{kanjiDetail && (
-							<div className="detail-card">
+					{(!kanjiDetail || loading || error) ? (
+						<div className="detail-card empty-state-container" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+							{loading && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<p style={{ color: "#64748b" }}>Đang tải...</p>
+								</div>
+							)}
+							{error && !loading && (
+								<div className="empty-state-content error-state" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "100px", height: "100px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+										<SearchX size={48} color="#64748b" />
+									</div>
+									<h3 style={{ fontSize: "24px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>Không tìm thấy Hán tự</h3>
+									<p style={{ color: "#475569", fontSize: "16px", maxWidth: "420px", margin: "0 auto", lineHeight: "1.6" }}>
+										Rất tiếc, không có kết quả nào phù hợp với từ khóa <strong style={{ color: "#0f172a" }}>"{keyword}"</strong>. Hãy kiểm tra lại chính tả hoặc thử một từ khóa khác.
+									</p>
+								</div>
+							)}
+							{!loading && !error && !kanjiDetail && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>漢</div>
+									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập một chữ kanji để bắt đầu</h3>
+									<p style={{ color: "#64748b" }}>Bạn có thể tìm theo chữ kanji, âm hán việt hoặc vẽ kanji bằng nút A文.</p>
+								</div>
+							)}
+						</div>
+					) : (
+						<>
+							<div className="detail-left">
+								<div className="detail-card">
 								<div className="detail-overview-grid">
 									<div>
 										<div className="detail-head">
@@ -630,8 +666,7 @@ const KanjiPage = () => {
 									</div>
 								)}
 							</div>
-						)}
-					</div>
+						</div>
 					<div className="detail-right">
 						{hasKeyword ? (
 							<div className="lookup-panel">
@@ -711,6 +746,8 @@ const KanjiPage = () => {
 							</>
 						)}
 					</div>
+						</>
+					)}
 				</div>
 			</div>
 		</div>

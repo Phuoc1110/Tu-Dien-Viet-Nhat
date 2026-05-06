@@ -17,6 +17,7 @@ import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
+import { SearchX } from "lucide-react";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -695,6 +696,10 @@ const DictionaryPage = () => {
 
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
+				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
+					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					return;
+				}
 				const convertedKeyword = normalizeSearchKeyword(newKeyword.trim());
 				setSearchInput(convertedKeyword);
 				history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
@@ -797,7 +802,22 @@ const DictionaryPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button type="button" onClick={() => setIsDropdownOpen(true)}>
+							<button 
+								type="button" 
+								onClick={() => {
+									if (searchInput.trim()) {
+										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
+											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											return;
+										}
+										const convertedKeyword = normalizeSearchKeyword(searchInput.trim());
+										setSearchInput(convertedKeyword);
+										history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
+										setIsDropdownOpen(false);
+										setHighlightedDropdownIndex(-1);
+									}
+								}}
+							>
 								🔍
 							</button>
 							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
@@ -809,13 +829,13 @@ const DictionaryPage = () => {
 					</div>
 					<div className="mazii-mode-tabs">
 						<button className="tab-active">Từ vựng</button>
-						<button onClick={() => history.push(`/kanji?q=${keyword}`)}>
+						<button onClick={() => history.push(`/kanji?q=${searchInput}`)}>
 							Hán tự
 						</button>
-						<button onClick={() => history.push(`/sentence?q=${keyword}`)}>
+						<button onClick={() => history.push(`/sentence?q=${searchInput}`)}>
 							Mẫu câu
 						</button>
-						<button onClick={() => history.push(`/grammar?q=${keyword}`)}>
+						<button onClick={() => history.push(`/grammar?q=${searchInput}`)}>
 							Ngữ pháp
 						</button>
 						{/* <button>Nhật - Nhật</button> */}
@@ -844,20 +864,36 @@ const DictionaryPage = () => {
 				/>
 
 				<div className="mazii-content-grid detail-mode">
-					<div className="detail-left">
-						{loading && <div className="detail-card">Đang tải...</div>}
-						{error && <div className="detail-card error">{error}</div>}
-						{!loading && !error && !wordDetail && (
-							<div className="detail-card empty-state-card">
-								<div className="empty-state-visual">辞</div>
-								<h3>Nhập một từ để bắt đầu tra cứu</h3>
-								<p>
-									Bạn có thể tìm theo chữ Nhật, kana, romaji hoặc gõ từ tiếng Việt nếu dữ liệu hỗ trợ.
-								</p>
-							</div>
-						)}
-						{wordDetail && (
-							<div className="detail-card">
+					{(!wordDetail || loading || error) ? (
+						<div className="detail-card empty-state-container" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+							{loading && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<p style={{ color: "#64748b" }}>Đang tải...</p>
+								</div>
+							)}
+							{error && !loading && (
+								<div className="empty-state-content error-state" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "100px", height: "100px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+										<SearchX size={48} color="#64748b" />
+									</div>
+									<h3 style={{ fontSize: "24px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>Không tìm thấy từ vựng</h3>
+									<p style={{ color: "#475569", fontSize: "16px", maxWidth: "420px", margin: "0 auto", lineHeight: "1.6" }}>
+										Rất tiếc, không có kết quả nào phù hợp với từ khóa <strong style={{ color: "#0f172a" }}>"{keyword}"</strong>. Hãy kiểm tra lại chính tả hoặc thử một từ khóa khác.
+									</p>
+								</div>
+							)}
+							{!loading && !error && !wordDetail && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>辞</div>
+									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập một từ để bắt đầu tra cứu</h3>
+									<p style={{ color: "#64748b" }}>Bạn có thể tìm theo chữ Nhật, kana, romaji hoặc gõ từ tiếng Việt nếu dữ liệu hỗ trợ.</p>
+								</div>
+							)}
+						</div>
+					) : (
+						<>
+							<div className="detail-left">
+								<div className="detail-card">
 								<div className="detail-topline">
 									<div className="detail-tag">Từ đang xem</div>
 									<div className="detail-tag soft">{wordDetail.word?.length || 0} ký tự</div>
@@ -964,8 +1000,7 @@ const DictionaryPage = () => {
 								</div>
 
 							</div>
-						)}
-					</div>
+						</div>
 					<div className="detail-right">
 						{hasKeyword ? (
 							<>
@@ -1084,6 +1119,8 @@ const DictionaryPage = () => {
 							</>
 						)}
 					</div>
+						</>
+					)}
 				</div>
 			</div>
 		</div>
