@@ -62,6 +62,9 @@ const deleteAdminNotebookCollection = (id) =>
 const getAdminNotebooks = (params = {}) =>
 	axios.get("/api/admin/notebooks", { params });
 
+const getAdminNotebookDetail = (id, params = {}) =>
+	axios.get(`/api/admin/notebooks/${id}`, { params });
+
 const createAdminNotebook = (data) =>
 	axios.post("/api/admin/notebooks", data);
 
@@ -76,6 +79,18 @@ const getAdminNotebookBulkSummary = (id, params = {}) =>
 
 const addAdminNotebookItemsByJlpt = (id, data) =>
 	axios.post(`/api/admin/notebooks/${id}/add-by-jlpt`, data);
+
+const getAdminUserNotebooks = (params = {}) =>
+	axios.get("/api/admin/user-notebooks", { params });
+
+const getAdminUserNotebookDetail = (id, params = {}) =>
+	axios.get(`/api/admin/user-notebooks/${id}`, { params });
+
+const updateAdminUserNotebook = (id, data) =>
+	axios.put(`/api/admin/user-notebooks/${id}`, data);
+
+const deleteAdminUserNotebook = (id) =>
+	axios.delete(`/api/admin/user-notebooks/${id}`);
 
 export {
     HandleAdminLogin,
@@ -97,9 +112,14 @@ export {
 	updateAdminNotebookCollection,
 	deleteAdminNotebookCollection,
 	getAdminNotebooks,
+	getAdminNotebookDetail,
 	createAdminNotebook,
 	updateAdminNotebook,
 	deleteAdminNotebook,
 	getAdminNotebookBulkSummary,
 	addAdminNotebookItemsByJlpt,
+	getAdminUserNotebooks,
+	getAdminUserNotebookDetail,
+	updateAdminUserNotebook,
+	deleteAdminUserNotebook,
 };

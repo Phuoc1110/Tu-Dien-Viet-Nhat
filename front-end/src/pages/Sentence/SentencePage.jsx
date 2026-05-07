@@ -268,14 +268,14 @@ const SentencePage = () => {
 					</div>
 					<div className="mazii-mode-tabs">
 						<button onClick={() => history.push(`/dictionary?q=${searchInput}`)}>
-							Tu vung
+							Từ vựng
 						</button>
 						<button onClick={() => history.push(`/kanji?q=${searchInput}`)}>
-							Han tu
+							Hán tự
 						</button>
-						<button className="tab-active">Mau cau</button>
+						<button className="tab-active">Mẫu câu</button>
 						<button onClick={() => history.push(`/grammar?q=${searchInput}`)}>
-							Ngu phap
+							Ngữ pháp
 						</button>
 						{/* <button>Nhat - Nhat</button> */}
 					</div>

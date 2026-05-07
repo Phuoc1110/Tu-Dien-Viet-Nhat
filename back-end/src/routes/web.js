@@ -155,11 +155,16 @@ let initWebRoutes = (app) => {
 	router.put("/api/admin/notebook-collections/:id", adminController.updateNotebookCollection);
 	router.delete("/api/admin/notebook-collections/:id", adminController.deleteNotebookCollection);
 	router.get("/api/admin/notebooks", adminController.getAdminNotebooks);
+	router.get("/api/admin/notebooks/:id", adminController.getAdminNotebookDetail);
 	router.post("/api/admin/notebooks", adminController.createAdminNotebook);
 	router.put("/api/admin/notebooks/:id", adminController.updateAdminNotebook);
 	router.delete("/api/admin/notebooks/:id", adminController.deleteAdminNotebook);
 	router.get("/api/admin/notebooks/:id/add-by-jlpt/summary", adminController.getAdminNotebookBulkSummary);
 	router.post("/api/admin/notebooks/:id/add-by-jlpt", adminController.addAdminNotebookItemsByJlpt);
+	router.get("/api/admin/user-notebooks", adminController.getAdminUserNotebooks);
+	router.get("/api/admin/user-notebooks/:id", adminController.getAdminUserNotebookDetail);
+	router.put("/api/admin/user-notebooks/:id", adminController.updateAdminUserNotebook);
+	router.delete("/api/admin/user-notebooks/:id", adminController.deleteAdminUserNotebook);
 
 	return app.use("/", router);
 };

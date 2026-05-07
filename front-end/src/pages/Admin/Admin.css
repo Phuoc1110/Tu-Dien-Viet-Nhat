@@ -233,6 +233,21 @@
 	color: #334155;
 }
 
+.admin2-inline-stats {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-bottom: 10px;
+	color: #334155;
+}
+
+.admin2-inline-stats p {
+	margin: 0;
+	padding: 6px 10px;
+	border: 1px solid #dbe4ef;
+	background: #f8fafc;
+}
+
 .admin2-actions button,
 .row-actions button {
 	border: 1px solid #dbe4ef;

@@ -276,6 +276,88 @@ const getAdminNotebooks = async (req, res) => {
 	}
 };
 
+const getAdminNotebookDetail = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.getAdminNotebookDetail({
+			adminId,
+			notebookId: req.params.id,
+			itemType: req.query?.itemType,
+			page: req.query?.page,
+			limit: req.query?.limit,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getAdminNotebookDetail error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Detail failed" });
+	}
+};
+
+const getAdminUserNotebooks = async (req, res) => {
+	try {
+		if (!ensureAdmin(req, res)) return;
+		const data = await adminService.getAdminUserNotebooks({
+			query: req.query?.query,
+			ownerQuery: req.query?.ownerQuery,
+			ownerStatus: req.query?.ownerStatus,
+			page: req.query?.page,
+			limit: req.query?.limit,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getAdminUserNotebooks error:", e);
+		return res.status(500).json({ errCode: -1, errMessage: e.message || "Internal server error" });
+	}
+};
+
+const getAdminUserNotebookDetail = async (req, res) => {
+	try {
+		if (!ensureAdmin(req, res)) return;
+		const data = await adminService.getAdminUserNotebookDetail({
+			notebookId: req.params.id,
+			itemType: req.query?.itemType,
+			page: req.query?.page,
+			limit: req.query?.limit,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getAdminUserNotebookDetail error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Detail failed" });
+	}
+};
+
+const updateAdminUserNotebook = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		const data = await adminService.updateAdminUserNotebook({
+			adminId,
+			notebookId: req.params.id,
+			payload: req.body || {},
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Updated", data });
+	} catch (e) {
+		console.error("updateAdminUserNotebook error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
+const deleteAdminUserNotebook = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		await adminService.deleteAdminUserNotebook({
+			adminId,
+			notebookId: req.params.id,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Deleted" });
+	} catch (e) {
+		console.error("deleteAdminUserNotebook error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Delete failed" });
+	}
+};
+
 const createAdminNotebook = async (req, res) => {
 	try {
 		const adminId = ensureAdmin(req, res);
@@ -375,6 +457,11 @@ module.exports = {
 	updateNotebookCollection,
 	deleteNotebookCollection,
 	getAdminNotebooks,
+	getAdminNotebookDetail,
+	getAdminUserNotebooks,
+	getAdminUserNotebookDetail,
+	updateAdminUserNotebook,
+	deleteAdminUserNotebook,
 	createAdminNotebook,
 	updateAdminNotebook,
 	deleteAdminNotebook,

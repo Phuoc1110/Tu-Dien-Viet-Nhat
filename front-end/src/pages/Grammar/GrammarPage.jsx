@@ -293,15 +293,15 @@ const GrammarPage = () => {
 					</div>
 					<div className="mazii-mode-tabs">
 						<button onClick={() => history.push(`/dictionary?q=${searchInput}`)}>
-							Tu vung
+							Từ vựng
 						</button>
 						<button onClick={() => history.push(`/kanji?q=${searchInput}`)}>
-							Han tu
+							Hán tự
 						</button>
 						<button onClick={() => history.push(`/sentence?q=${searchInput}`)}>
-							Mau cau
+							Mẫu câu
 						</button>
-						<button className="tab-active">Ngu phap</button>
+						<button className="tab-active">Ngữ pháp</button>
 					</div>
 					{isDropdownOpen && searchInput.trim() && (
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>
@@ -386,7 +386,7 @@ const GrammarPage = () => {
 									</div>
 
 									<div className="detail-section">
-										<h3>Cau truc</h3>
+										<h3>Cấu trúc</h3>
 										<ul className="grammar-dot-list">
 											{toBulletLines(activeGrammar.formation).map((line, idx) => (
 												<li key={idx}>{line}</li>
@@ -396,7 +396,7 @@ const GrammarPage = () => {
 									</div>
 
 									<div className="detail-section">
-										<h3>Nghia</h3>
+										<h3>Nghĩa</h3>
 										<ul className="grammar-dot-list">
 											{toBulletLines(activeGrammar.usageNote || activeGrammar.meaning).map(
 												(line, idx) => (
@@ -407,7 +407,7 @@ const GrammarPage = () => {
 									</div>
 
 									<div className="detail-section">
-										<h3>Vi du</h3>
+										<h3>Ví dụ</h3>
 										<div className="grammar-example-list">
 											{(activeGrammar.examples || []).map((example) => (
 												<div className="grammar-example-item" key={example.id}>
