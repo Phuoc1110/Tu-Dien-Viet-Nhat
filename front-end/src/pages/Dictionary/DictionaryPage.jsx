@@ -884,7 +884,7 @@ const DictionaryPage = () => {
 							)}
 							{!loading && !error && !wordDetail && (
 								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
-									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>辞</div>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "80px", height: "80px", borderRadius: "20px", background: "linear-gradient(135deg, #ebf4ff, #fff0db)", border: "1px solid #d3e5f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "40px", fontWeight: "900", color: "#1f5f95" }}>辞</div>
 									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập một từ để bắt đầu tra cứu</h3>
 									<p style={{ color: "#64748b" }}>Bạn có thể tìm theo chữ Nhật, kana, romaji hoặc gõ từ tiếng Việt nếu dữ liệu hỗ trợ.</p>
 								</div>

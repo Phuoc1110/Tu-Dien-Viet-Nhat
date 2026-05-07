@@ -541,7 +541,7 @@ const KanjiPage = () => {
 							)}
 							{!loading && !error && !kanjiDetail && (
 								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
-									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>漢</div>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "80px", height: "80px", borderRadius: "20px", background: "linear-gradient(135deg, #ebf4ff, #fff0db)", border: "1px solid #d3e5f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "40px", fontWeight: "900", color: "#1f5f95" }}>漢</div>
 									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập một chữ kanji để bắt đầu</h3>
 									<p style={{ color: "#64748b" }}>Bạn có thể tìm theo chữ kanji, âm hán việt hoặc vẽ kanji bằng nút A文.</p>
 								</div>

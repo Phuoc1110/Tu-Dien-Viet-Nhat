@@ -3,6 +3,7 @@ import { Op } from "sequelize";
 import path from "path";
 
 const kuromoji = require("kuromoji");
+const wanakana = require("wanakana");
 
 const splitVariants = (raw) =>
 	String(raw || "")
@@ -1029,7 +1030,8 @@ let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
 	for (const token of rawTokens) {
 		const surface = stripTilde(normalizeTokenText(token.surface_form));
 		const baseForm = stripTilde(normalizeTokenText(token.basic_form));
-		const reading = stripTilde(normalizeTokenText(token.reading));
+		const rawReading = stripTilde(normalizeTokenText(token.reading));
+		const reading = rawReading ? wanakana.toHiragana(rawReading) : "";
 		const pos = normalizeTokenText(token.pos);
 
 		if (!surface || !isJapaneseText(surface)) {
@@ -1047,9 +1049,13 @@ let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
 			partOfSpeech: pos,
 		});
 
-		pushIfUseful(wordCandidates, surface);
-		pushIfUseful(wordCandidates, baseForm);
-		pushIfUseful(readingCandidates, reading);
+		// Skip dictionary matching for particles and auxiliary verbs to avoid false positives
+		// e.g. 'は' (particle) matching '派' (noun)
+		if (pos !== "助詞" && pos !== "助動詞" && pos !== "記号" && pos !== "フィラー") {
+			pushIfUseful(wordCandidates, surface);
+			pushIfUseful(wordCandidates, baseForm);
+			pushIfUseful(readingCandidates, reading);
+		}
 	}
 
 	const uniqueWordCandidates = [...new Set(wordCandidates)].slice(0, 1200);
@@ -1083,6 +1089,13 @@ let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
 				uniqueReadingCandidates.length
 					? {
 						reading: {
+							[Op.in]: uniqueReadingCandidates,
+						},
+					}
+					: null,
+				uniqueReadingCandidates.length
+					? {
+						word: {
 							[Op.in]: uniqueReadingCandidates,
 						},
 					}
@@ -1122,10 +1135,15 @@ let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
 
 	const matchedWordMap = new Map();
 	const tokens = normalizedTokens.map((token) => {
-		const matched =
-			variantToWord.get(token.surface) ||
-			(token.baseForm ? variantToWord.get(token.baseForm) : null) ||
-			(token.reading ? variantToWord.get(token.reading) : null);
+		const tokenReadingHiragana = token.reading ? wanakana.toHiragana(token.reading) : null;
+		
+		let matched = null;
+		if (token.partOfSpeech !== "助詞" && token.partOfSpeech !== "助動詞" && token.partOfSpeech !== "記号" && token.partOfSpeech !== "フィラー") {
+			matched =
+				variantToWord.get(token.surface) ||
+				(token.baseForm ? variantToWord.get(token.baseForm) : null) ||
+				(tokenReadingHiragana ? variantToWord.get(tokenReadingHiragana) : null);
+		}
 
 		if (!matched) {
 			return {

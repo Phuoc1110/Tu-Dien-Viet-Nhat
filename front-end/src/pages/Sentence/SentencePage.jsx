@@ -298,7 +298,7 @@ const SentencePage = () => {
 						<div className="sentence-card empty-state-container" style={{ gridColumn: (!hasKeyword ? undefined : '1 / -1'), display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
 							{!hasKeyword && !loading && !error && (
 								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
-									<div className="empty-state-visual" style={{ fontSize: "64px", color: "#cbd5e1", marginBottom: "20px" }}>例</div>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "80px", height: "80px", borderRadius: "20px", background: "linear-gradient(135deg, #ebf4ff, #eef2ff)", border: "1px solid #d3e5f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "40px", fontWeight: "900", color: "#1f5f95" }}>例</div>
 									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập từ khóa để tìm ví dụ</h3>
 									<p style={{ color: "#64748b" }}>Bên phải là các thông tin để bạn thao tác nhanh.</p>
 								</div>
