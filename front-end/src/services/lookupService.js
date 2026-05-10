@@ -106,7 +106,21 @@ const lookup = async (text) => {
 
     const word = pickBestWord(wordRes?.words || [], query);
     const grammar = Array.isArray(grammarRes?.grammars) ? grammarRes.grammars[0] || null : null;
-    const kanji = formatKanji(chooseBestKanji(kanjiRes?.kanjis || [], query));
+    let kanji = null;
+    // If the query is only kanji characters and contains multiple characters,
+    // fetch each character's kanji info separately so we can show details for all kanji.
+    if (isKanjiOnly(query) && query.length > 1) {
+      const chars = Array.from(query);
+      const perCharPromises = chars.map((ch) =>
+        axios.get(`/api/dictionary/kanji/search?q=${encodeURIComponent(ch)}&limit=5`).catch(() => ({ kanjis: [] }))
+      );
+      const perCharResults = await Promise.all(perCharPromises);
+      const infos = perCharResults.map((res, idx) => formatKanji(chooseBestKanji(res?.kanjis || [], chars[idx]))).filter(Boolean);
+      kanji = infos.length ? infos : null;
+    } else {
+      kanji = formatKanji(chooseBestKanji(kanjiRes?.kanjis || [], query));
+    }
+
     const examples = formatExamples(sentenceRes?.sentences || []);
 
     return {

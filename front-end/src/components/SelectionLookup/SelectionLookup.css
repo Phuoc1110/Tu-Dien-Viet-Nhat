@@ -74,3 +74,39 @@
 .examples-list{margin:6px 0 0 16px;padding:0}
 .pop-loading{color:#666}
 .pop-error{color:#b00020}
+
+.multiple-kanji-list .kanji-entry:not(:last-child) {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.kanji-related-words ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+
+.kanji-related-words li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.kanji-related-words li span {
+  font-weight: 500;
+  color: #333;
+}
+
+.kanji-related-words li em {
+  font-style: normal;
+  color: #666;
+}
+
+.kanji-related-words li p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #888;
+}

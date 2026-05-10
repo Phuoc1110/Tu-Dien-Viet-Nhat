@@ -74,6 +74,7 @@ const Admin = () => {
 	const [vocabularyForm, setVocabularyForm] = useState(defaultForm);
 
 	const [adminNotebooks, setAdminNotebooks] = useState([]);
+	const [adminNotebookOptions, setAdminNotebookOptions] = useState([]);
 	const [adminNotebookQuery, setAdminNotebookQuery] = useState("");
 	const [adminNotebookJlpt, setAdminNotebookJlpt] = useState("");
 	const [adminNotebookForm, setAdminNotebookForm] = useState(defaultNotebookForm);
@@ -152,6 +153,20 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể tải danh sách người dùng");
 	};
 
+	const loadAdminNotebookOptions = async () => {
+		const res = await getAdminNotebooks({ limit: 1000 });
+		if (res?.errCode === 0) {
+			const items = res.data || [];
+			setAdminNotebookOptions(items);
+			if (!jlptTargetNotebookId && items.length) {
+				setJlptTargetNotebookId(String(items[0].id));
+			}
+			if (!selectedAdminNotebookId && items.length) {
+				setSelectedAdminNotebookId(String(items[0].id));
+			}
+		}
+	};
+
 	const loadAdminNotebooks = async () => {
 		const res = await getAdminNotebooks({
 			query: adminNotebookQuery,
@@ -161,15 +176,6 @@ const Admin = () => {
 		if (res?.errCode === 0) {
 			const notebookItems = res.data || [];
 			setAdminNotebooks(notebookItems);
-			if (!jlptTargetNotebookId && notebookItems.length) {
-				setJlptTargetNotebookId(String(notebookItems[0].id));
-			}
-			if (!selectedAdminNotebookId && notebookItems.length) {
-				setSelectedAdminNotebookId(String(notebookItems[0].id));
-			}
-			if (selectedAdminNotebookId && !notebookItems.some((item) => String(item.id) === String(selectedAdminNotebookId))) {
-				setSelectedAdminNotebookId(notebookItems.length ? String(notebookItems[0].id) : "");
-			}
 			return;
 		}
 		toast.error(res?.errMessage || "Không thể tải danh sách notebook admin");
@@ -239,9 +245,6 @@ const Admin = () => {
 			if (!selectedUserNotebookId && items.length) {
 				setSelectedUserNotebookId(String(items[0].id));
 			}
-			if (selectedUserNotebookId && !items.some((item) => String(item.id) === String(selectedUserNotebookId))) {
-				setSelectedUserNotebookId(items.length ? String(items[0].id) : "");
-			}
 			return;
 		}
 
@@ -276,10 +279,11 @@ const Admin = () => {
 		try {
 			if (tab === "dashboard") await loadDashboard();
 			if (tab === "content") await loadVocabularies();
-			if (tab === "notebooks") {
+			if (tab === "admin_notebooks") {
+				await loadAdminNotebookOptions();
 				await loadAdminNotebooks();
-				await loadUserNotebooks(1);
 			}
+			if (tab === "user_notebooks") await loadUserNotebooks(1);
 			if (tab === "users") await loadUsers();
 			if (tab === "audit") await loadAuditLogs();
 		} finally {
@@ -300,14 +304,14 @@ const Admin = () => {
 	}, [vocabularyQuery, vocabularyJlpt]);
 
 	useEffect(() => {
-		if (tab === "notebooks") {
+		if (tab === "admin_notebooks") {
 			loadAdminNotebooks();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [adminNotebookQuery, adminNotebookJlpt]);
 
 	useEffect(() => {
-		if (tab !== "notebooks") {
+		if (tab !== "user_notebooks") {
 			return;
 		}
 		loadUserNotebooks(1);
@@ -591,7 +595,7 @@ const Admin = () => {
 	};
 
 	useEffect(() => {
-		if (tab !== "notebooks") {
+		if (tab !== "admin_notebooks") {
 			return;
 		}
 		loadBulkSummary();
@@ -599,7 +603,7 @@ const Admin = () => {
 	}, [tab, jlptTargetNotebookId, jlptBulkItemType, jlptBulkLevel, jlptBulkLimitMode, jlptBulkCustomLimit]);
 
 	useEffect(() => {
-		if (tab !== "notebooks") {
+		if (tab !== "admin_notebooks") {
 			return;
 		}
 		loadAdminNotebookDetail();
@@ -607,7 +611,7 @@ const Admin = () => {
 	}, [tab, selectedAdminNotebookId, adminNotebookDetailType, adminNotebookDetailPage]);
 
 	useEffect(() => {
-		if (tab !== "notebooks") {
+		if (tab !== "user_notebooks") {
 			return;
 		}
 		loadUserNotebookDetail();
@@ -694,8 +698,11 @@ const Admin = () => {
 				<button className={tab === "content" ? "active" : ""} onClick={() => setTab("content")}>
 					<BookOpen size={16} /> Vocabulary & Content
 				</button>
-				<button className={tab === "notebooks" ? "active" : ""} onClick={() => setTab("notebooks")}>
-					<Users size={16} /> Notebook
+				<button className={tab === "admin_notebooks" ? "active" : ""} onClick={() => setTab("admin_notebooks")}>
+					<ClipboardList size={16} /> Admin Notebooks
+				</button>
+				<button className={tab === "user_notebooks" ? "active" : ""} onClick={() => setTab("user_notebooks")}>
+					<Users size={16} /> User Notebooks
 				</button>
 				<button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
 					<UserCog size={16} /> Users & Roles
@@ -884,7 +891,7 @@ const Admin = () => {
 				</div>
 			)}
 
-			{tab === "notebooks" && (
+			{tab === "admin_notebooks" && (
 				<div className="admin2-grid">
 					<div className="admin2-panel">
 						<h3>Tạo notebook biên soạn</h3>
@@ -929,7 +936,7 @@ const Admin = () => {
 								onChange={(e) => setJlptTargetNotebookId(e.target.value)}
 							>
 								<option value="">Chọn notebook đích</option>
-								{adminNotebooks.map((item) => (
+								{adminNotebookOptions.map((item) => (
 									<option key={item.id} value={item.id}>
 										{item.name}
 									</option>
@@ -1000,7 +1007,7 @@ const Admin = () => {
 								}}
 							>
 								<option value="">Chọn notebook</option>
-								{adminNotebooks.map((item) => (
+								{adminNotebookOptions.map((item) => (
 									<option key={item.id} value={item.id}>
 										{item.name}
 									</option>
@@ -1153,7 +1160,11 @@ const Admin = () => {
 							</table>
 						</div>
 					</div>
+				</div>
+			)}
 
+			{tab === "user_notebooks" && (
+				<div className="admin2-grid">
 					<div className="admin2-panel">
 						<h3>Sửa notebook người dùng</h3>
 						<div className="admin2-form-grid">
@@ -1190,20 +1201,6 @@ const Admin = () => {
 					<div className="admin2-panel">
 						<h3>Chi tiết notebook người dùng</h3>
 						<div className="admin2-filters">
-							<select
-								value={selectedUserNotebookId}
-								onChange={(e) => {
-									setSelectedUserNotebookId(e.target.value);
-									setUserNotebookDetailPage(1);
-								}}
-							>
-								<option value="">Chọn notebook user</option>
-								{userNotebooks.map((item) => (
-									<option key={item.id} value={item.id}>
-										{item.name} - {item.owner?.username || "Unknown"}
-									</option>
-								))}
-							</select>
 							<select
 								value={userNotebookDetailType}
 								onChange={(e) => {

@@ -446,6 +446,11 @@ const HomePage = () => {
 		await runWordSearch(keyword, 12);
 	};
 
+	const openDictionaryForWord = (word) => {
+		const normalizedWord = normalizeSearchKeyword(String(word || "").trim());
+		history.push(`/dictionary?q=${encodeURIComponent(normalizedWord)}`);
+	};
+
 	const handleSelectWord = (word) => {
 		const selectedQuery = String(word?.word || "").trim() || pickBestQueryToken(word, searchInput);
 		const convertedQuery = normalizeSearchKeyword(selectedQuery);
@@ -862,7 +867,7 @@ const HomePage = () => {
 							</div>
 							<div className="chip-list">
 								{hotKeywords.map((word) => (
-									<button key={word} type="button" onClick={() => applyHintAndSearch(word)}>
+									<button key={word} type="button" onClick={() => openDictionaryForWord(word)}>
 										{word}
 									</button>
 								))}

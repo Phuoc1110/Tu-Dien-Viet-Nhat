@@ -190,6 +190,16 @@ const SelectionLookup = ({ containerSelector = "body" }) => {
                       Mẫu câu
                     </button>
                   )}
+                  {((data?.kanjiInfo && !Array.isArray(data.kanjiInfo) && data.kanjiInfo.relatedWords?.length > 0) ||
+                    (Array.isArray(data.kanjiInfo) && data.kanjiInfo.some((k) => k.relatedWords?.length > 0))) && (
+                    <button
+                      type="button"
+                      className={activeTab === "related" ? "tab-btn active" : "tab-btn"}
+                      onClick={() => setActiveTab("related")}
+                    >
+                      Từ liên quan
+                    </button>
+                  )}
                 </div>
 
                 {activeTab === "vocabulary" && (
@@ -215,20 +225,60 @@ const SelectionLookup = ({ containerSelector = "body" }) => {
 
                 {activeTab === "kanji" && data?.kanjiInfo && (
                   <div className="selection-lookup-panel pop-kanji-section">
-                    <div className="kanji-meta-grid">
-                      <div className="kanji-glyph">{data.kanjiInfo.characterKanji || data.kanji}</div>
-                      <div className="kanji-meta-lines">
-                        {data.kanjiInfo.meaning && <div><strong>Nghĩa:</strong> {data.kanjiInfo.meaning}</div>}
-                        {data.kanjiInfo.onyomi && <div><strong>Âm Hán:</strong> {data.kanjiInfo.onyomi}</div>}
-                        {data.kanjiInfo.kunyomi && <div><strong>Kun:</strong> {data.kanjiInfo.kunyomi}</div>}
-                        {data.kanjiInfo.strokeCount && <div><strong>Nét:</strong> {data.kanjiInfo.strokeCount}</div>}
-                        {data.kanjiInfo.jlptLevel && <div><strong>JLPT:</strong> N{data.kanjiInfo.jlptLevel}</div>}
+                    {Array.isArray(data.kanjiInfo) ? (
+                      <div className="multiple-kanji-list">
+                        {data.kanjiInfo.map((k, idx) => (
+                          <div key={idx} className="kanji-entry">
+                            <div className="kanji-meta-grid">
+                              <div className="kanji-glyph">{k.characterKanji || ""}</div>
+                              <div className="kanji-meta-lines">
+                                {k.meaning && <div><strong>Nghĩa:</strong> {k.meaning}</div>}
+                                {k.onyomi && <div><strong>Âm Hán:</strong> {k.onyomi}</div>}
+                                {k.kunyomi && <div><strong>Kun:</strong> {k.kunyomi}</div>}
+                                {k.strokeCount && <div><strong>Nét:</strong> {k.strokeCount}</div>}
+                                {k.jlptLevel && <div><strong>JLPT:</strong> N{k.jlptLevel}</div>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="kanji-meta-grid">
+                        <div className="kanji-glyph">{data.kanjiInfo.characterKanji || data.kanji}</div>
+                        <div className="kanji-meta-lines">
+                          {data.kanjiInfo.meaning && <div><strong>Nghĩa:</strong> {data.kanjiInfo.meaning}</div>}
+                          {data.kanjiInfo.onyomi && <div><strong>Âm Hán:</strong> {data.kanjiInfo.onyomi}</div>}
+                          {data.kanjiInfo.kunyomi && <div><strong>Kun:</strong> {data.kanjiInfo.kunyomi}</div>}
+                          {data.kanjiInfo.strokeCount && <div><strong>Nét:</strong> {data.kanjiInfo.strokeCount}</div>}
+                          {data.kanjiInfo.jlptLevel && <div><strong>JLPT:</strong> N{data.kanjiInfo.jlptLevel}</div>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                    {Array.isArray(data.kanjiInfo.relatedWords) && data.kanjiInfo.relatedWords.length > 0 && (
+                {activeTab === "related" && data?.kanjiInfo && (
+                  <div className="selection-lookup-panel">
+                    <div className="panel-section-heading">Từ liên quan</div>
+                    {Array.isArray(data.kanjiInfo) ? (
+                      data.kanjiInfo.map((k, idx) =>
+                        Array.isArray(k.relatedWords) && k.relatedWords.length > 0 ? (
+                          <div key={idx} className="kanji-related-words">
+                            <strong>{k.characterKanji}</strong>
+                            <ul>
+                              {k.relatedWords.map((item, i) => (
+                                <li key={`${item.word || item.reading || i}`}>
+                                  <span>{item.word || "-"}</span>
+                                  {item.reading ? <em>{item.reading}</em> : null}
+                                  {item.meaning ? <p>{item.meaning}</p> : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null
+                      )
+                    ) : Array.isArray(data.kanjiInfo.relatedWords) && data.kanjiInfo.relatedWords.length > 0 ? (
                       <div className="kanji-related-words">
-                        <strong>Từ liên quan</strong>
                         <ul>
                           {data.kanjiInfo.relatedWords.map((item, idx) => (
                             <li key={`${item.word || item.reading || idx}`}>
@@ -239,7 +289,7 @@ const SelectionLookup = ({ containerSelector = "body" }) => {
                           ))}
                         </ul>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
 
