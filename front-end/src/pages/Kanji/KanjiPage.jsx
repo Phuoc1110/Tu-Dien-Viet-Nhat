@@ -27,6 +27,7 @@ const KanjiPage = () => {
 	const searchWrapRef = useRef(null);
 	const [activeKanji, setActiveKanji] = useState(null);
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
+	const [replayKey, setReplayKey] = useState(0);
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
@@ -77,6 +78,7 @@ const KanjiPage = () => {
 
 	useEffect(() => {
 		setCurrentStrokeIndex(0);
+		setReplayKey((prev) => prev + 1);
 	}, [kanjiDetail?.id, strokePaths.length]);
 
 	useEffect(() => {
@@ -84,14 +86,20 @@ const KanjiPage = () => {
 			return undefined;
 		}
 
-		const timer = setInterval(() => {
-			setCurrentStrokeIndex((prev) =>
-				prev >= strokePaths.length - 1 ? 0 : prev + 1
-			);
-		}, 900);
+		const isLastStroke = currentStrokeIndex >= strokePaths.length - 1;
+		const delay = isLastStroke ? 2500 : 900;
 
-		return () => clearInterval(timer);
-	}, [strokePaths]);
+		const timer = setTimeout(() => {
+			if (isLastStroke) {
+				setCurrentStrokeIndex(0);
+				setReplayKey((prev) => prev + 1);
+			} else {
+				setCurrentStrokeIndex((prev) => prev + 1);
+			}
+		}, delay);
+
+		return () => clearTimeout(timer);
+	}, [strokePaths, currentStrokeIndex, replayKey]);
 
 	const kanjiWords = useMemo(() => {
 		if (!kanjiDetail?.words || !Array.isArray(kanjiDetail.words)) {
@@ -423,10 +431,21 @@ const KanjiPage = () => {
 		return (
 			<div className="stroke-side-card">
 				<div className="stroke-side-toolbar">
-					<span className="stroke-auto-badge">Nét vẽ</span>
-					<span className="stroke-progress">Nét {maxStrokeIndex + 1}/{strokePaths.length}</span>
+					<div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+						<span className="stroke-auto-badge">Nét vẽ</span>
+						<span className="stroke-progress">Nét {maxStrokeIndex + 1}/{strokePaths.length}</span>
+					</div>
+					<button
+						className="stroke-replay-btn"
+						onClick={() => {
+							setCurrentStrokeIndex(0);
+							setReplayKey((prev) => prev + 1);
+						}}
+					>
+						Vẽ lại
+					</button>
 				</div>
-				<svg viewBox="0 0 109 109" className="stroke-guide-svg" aria-label="Kanji stroke guide">
+				<svg key={`stroke-svg-${kanjiDetail.id}-${replayKey}`} viewBox="0 0 109 109" className="stroke-guide-svg" aria-label="Kanji stroke guide">
 					<rect x="0" y="0" width="109" height="109" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
 					<path d="M54.5 0V109" stroke="#dbe4ef" strokeWidth="1" />
 					<path d="M0 54.5H109" stroke="#dbe4ef" strokeWidth="1" />
@@ -442,6 +461,12 @@ const KanjiPage = () => {
 								strokeLinecap="round"
 								strokeLinejoin="round"
 								opacity={isCurrentStroke ? "1" : "0.55"}
+								pathLength="1"
+								className={isCurrentStroke ? "kanji-stroke-animate" : ""}
+								style={{
+									strokeDasharray: 1,
+									strokeDashoffset: isCurrentStroke ? 1 : 0
+								}}
 							/>
 						);
 					})}
@@ -465,7 +490,7 @@ const KanjiPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button 
+							<button
 								type="button"
 								onClick={() => {
 									if (searchInput.trim()) {
@@ -551,201 +576,201 @@ const KanjiPage = () => {
 						<>
 							<div className="detail-left">
 								<div className="detail-card">
-								<div className="detail-overview-grid">
-									<div>
-										<div className="detail-head">
-											<div>
-												<h1>{kanjiDetail.characterKanji}</h1>
-												<div className="detail-reading">{kanjiDetail.meaning}</div>
-											</div>
-											<div className="detail-actions">
-												<button
-													type="button"
-													onClick={() => {
-													setNotebookPickerItem({
-														type: "kanji",
-														id: kanjiDetail.id,
-														label: kanjiDetail.characterKanji,
-														subtitle: kanjiDetail.sinoVietnamese,
-														meaning: kanjiDetail.meaning,
-													});
-													setIsNotebookPickerOpen(true);
-												}}
-												>
-													+
-												</button>
-												<button>SVG</button>
-											</div>
-										</div>
-										<div className="detail-meta">
-											<div>Số nét: {kanjiDetail.strokeCount}</div>
-											<div>JLPT: {kanjiDetail.jlptLevel ? `N${kanjiDetail.jlptLevel}` : "-"}</div>
-											<div>Tần suất: #{kanjiDetail.frequencyRank}/2500</div>
-										</div>
-									</div>
-									<div className="detail-stroke-wrap">
-										{renderStrokeOrder()}
-									</div>
-								</div>
-								<div className="detail-section">
-									<h3>Kunyomi</h3>
-									{getReadingItems(kanjiDetail.kunyomi).length ? (
-										<ul className="reading-list">
-											{getReadingItems(kanjiDetail.kunyomi).map((item, idx) => (
-												<li key={idx}>{item.trim()}</li>
-											))}
-										</ul>
-									) : (
-										<p>-</p>
-									)}
-								</div>
-								<div className="detail-section">
-									<h3>Onyomi</h3>
-									{getReadingItems(kanjiDetail.onyomi).length ? (
-										<ul className="reading-list">
-											{getReadingItems(kanjiDetail.onyomi).map((item, idx) => (
-												<li key={idx}>{item.trim()}</li>
-											))}
-										</ul>
-									) : (
-										<p>-</p>
-									)}
-								</div>
-								{kanjiDetail.components && (
-									<div className="detail-section">
-										<h3>Bộ - Kanji Breakdown</h3>
-										<div className="kanji-components">
-											<div className="component-item">
-												<span className="component-symbol">+</span>
-												<span className="component-name">{kanjiDetail.components}</span>
-											</div>
-										</div>
-									</div>
-								)}
-								<div className="detail-section">
-									<h3>Nghĩa</h3>
-									<p>{kanjiDetail.meaning}</p>
-								</div>
-								{kanjiWords.length > 0 && (
-									<div className="detail-section">
-										<h3>Từ vựng chứa kanji này</h3>
-										<div className="kanji-word-table-wrap">
-											<table className="kanji-word-table">
-												<thead>
-													<tr>
-														<th>Từ</th>
-														<th>Đọc</th>
-														<th>Nghĩa</th>
-													</tr>
-												</thead>
-												<tbody>
-													{kanjiWords.map((word) => (
-														<tr key={word.id}>
-															<td>{word.word}</td>
-															<td>{word.reading || "-"}</td>
-															<td>{word.meanings?.[0]?.definition || "-"}</td>
-														</tr>
-													))}
-												</tbody>
-											</table>
-										</div>
-									</div>
-								)}
-								{displayedKanjiExamples.length > 0 && (
-									<div className="detail-section">
-										<h3>Ví dụ</h3>
-										<div className="kanji-example-list">
-											{displayedKanjiExamples.map((example) => (
-												<div className="kanji-example-item" key={example.id}>
-													<p className="kanji-example-jp">{example.japaneseSentence}</p>
-													<p className="kanji-example-vi">{example.vietnameseTranslation}</p>
-													<small>Từ liên quan: {example.relatedWord}</small>
+									<div className="detail-overview-grid">
+										<div>
+											<div className="detail-head">
+												<div>
+													<h1>{kanjiDetail.characterKanji}</h1>
+													<div className="detail-reading">{kanjiDetail.meaning}</div>
 												</div>
+												<div className="detail-actions">
+													<button
+														type="button"
+														onClick={() => {
+															setNotebookPickerItem({
+																type: "kanji",
+																id: kanjiDetail.id,
+																label: kanjiDetail.characterKanji,
+																subtitle: kanjiDetail.sinoVietnamese,
+																meaning: kanjiDetail.meaning,
+															});
+															setIsNotebookPickerOpen(true);
+														}}
+													>
+														+
+													</button>
+													<button>SVG</button>
+												</div>
+											</div>
+											<div className="detail-meta">
+												<div>Số nét: {kanjiDetail.strokeCount}</div>
+												<div>JLPT: {kanjiDetail.jlptLevel ? `N${kanjiDetail.jlptLevel}` : "-"}</div>
+												<div>Tần suất: #{kanjiDetail.frequencyRank}/2500</div>
+											</div>
+										</div>
+										<div className="detail-stroke-wrap">
+											{renderStrokeOrder()}
+										</div>
+									</div>
+									<div className="detail-section">
+										<h3>Kunyomi</h3>
+										{getReadingItems(kanjiDetail.kunyomi).length ? (
+											<ul className="reading-list">
+												{getReadingItems(kanjiDetail.kunyomi).map((item, idx) => (
+													<li key={idx}>{item.trim()}</li>
+												))}
+											</ul>
+										) : (
+											<p>-</p>
+										)}
+									</div>
+									<div className="detail-section">
+										<h3>Onyomi</h3>
+										{getReadingItems(kanjiDetail.onyomi).length ? (
+											<ul className="reading-list">
+												{getReadingItems(kanjiDetail.onyomi).map((item, idx) => (
+													<li key={idx}>{item.trim()}</li>
+												))}
+											</ul>
+										) : (
+											<p>-</p>
+										)}
+									</div>
+									{kanjiDetail.components && (
+										<div className="detail-section">
+											<h3>Bộ - Kanji Breakdown</h3>
+											<div className="kanji-components">
+												<div className="component-item">
+													<span className="component-symbol">+</span>
+													<span className="component-name">{kanjiDetail.components}</span>
+												</div>
+											</div>
+										</div>
+									)}
+									<div className="detail-section">
+										<h3>Nghĩa</h3>
+										<p>{kanjiDetail.meaning}</p>
+									</div>
+									{kanjiWords.length > 0 && (
+										<div className="detail-section">
+											<h3>Từ vựng chứa kanji này</h3>
+											<div className="kanji-word-table-wrap">
+												<table className="kanji-word-table">
+													<thead>
+														<tr>
+															<th>Từ</th>
+															<th>Đọc</th>
+															<th>Nghĩa</th>
+														</tr>
+													</thead>
+													<tbody>
+														{kanjiWords.map((word) => (
+															<tr key={word.id}>
+																<td>{word.word}</td>
+																<td>{word.reading || "-"}</td>
+																<td>{word.meanings?.[0]?.definition || "-"}</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											</div>
+										</div>
+									)}
+									{displayedKanjiExamples.length > 0 && (
+										<div className="detail-section">
+											<h3>Ví dụ</h3>
+											<div className="kanji-example-list">
+												{displayedKanjiExamples.map((example) => (
+													<div className="kanji-example-item" key={example.id}>
+														<p className="kanji-example-jp">{example.japaneseSentence}</p>
+														<p className="kanji-example-vi">{example.vietnameseTranslation}</p>
+														<small>Từ liên quan: {example.relatedWord}</small>
+													</div>
+												))}
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
+							<div className="detail-right">
+								{hasKeyword ? (
+									<div className="lookup-panel">
+										<h3>Kết quả tra cứu kanji</h3>
+										<div className="related-list">
+											{relatedKanjis.map((item) => (
+												<button
+													key={item.id}
+													className={
+														activeKanji && activeKanji.id === item.id
+															? "related-active"
+															: ""
+													}
+													onClick={() => handleSelectRelatedKanji(item)}
+												>
+													<strong>{item.characterKanji}</strong>
+													<span>{item.sinoVietnamese}</span>
+												</button>
 											))}
 										</div>
 									</div>
+								) : (
+									<>
+										<div className="lookup-panel">
+											<h3>Lich su gan day</h3>
+											<div className="related-list default-list">
+												{recentHistory.slice(0, 6).map((item) => {
+													const term = getTermLabel(item);
+													if (!term) return null;
+													return (
+														<button
+															type="button"
+															key={item.id}
+															onClick={() => history.push(`/kanji?q=${encodeURIComponent(term)}`)}
+														>
+															<strong>{term}</strong>
+														</button>
+													);
+												})}
+												{recentHistory.length === 0 && <p className="side-empty">Chua co lich su.</p>}
+											</div>
+										</div>
+
+										<div className="lookup-panel">
+											<h3>Tu khoa hot</h3>
+											<div className="chip-list">
+												{topKeywords.slice(0, 8).map((item, index) => {
+													const term = getTermLabel(item);
+													if (!term) return null;
+													return (
+														<button
+															type="button"
+															key={`${term}-${index}`}
+															onClick={() => history.push(`/kanji?q=${encodeURIComponent(term)}`)}
+														>
+															{term}
+															<span>{getTermCount(item)}</span>
+														</button>
+													);
+												})}
+												{topKeywords.length === 0 && <p className="side-empty">Chua co du lieu hot.</p>}
+											</div>
+										</div>
+
+										<div className="lookup-panel">
+											<h3>Gop y moi</h3>
+											<div className="feedback-list">
+												{latestContributions.slice(0, 4).map((item) => (
+													<div key={item.id} className="feedback-item">
+														<strong>{item.word || "Tu vung"}</strong>
+														<p>{item.content}</p>
+													</div>
+												))}
+												{latestContributions.length === 0 && <p className="side-empty">Chua co gop y.</p>}
+											</div>
+										</div>
+									</>
 								)}
 							</div>
-						</div>
-					<div className="detail-right">
-						{hasKeyword ? (
-							<div className="lookup-panel">
-								<h3>Kết quả tra cứu kanji</h3>
-								<div className="related-list">
-									{relatedKanjis.map((item) => (
-										<button
-											key={item.id}
-											className={
-												activeKanji && activeKanji.id === item.id
-													? "related-active"
-													: ""
-											}
-											onClick={() => handleSelectRelatedKanji(item)}
-										>
-											<strong>{item.characterKanji}</strong>
-											<span>{item.sinoVietnamese}</span>
-										</button>
-									))}
-								</div>
-							</div>
-						) : (
-							<>
-								<div className="lookup-panel">
-									<h3>Lich su gan day</h3>
-									<div className="related-list default-list">
-										{recentHistory.slice(0, 6).map((item) => {
-											const term = getTermLabel(item);
-											if (!term) return null;
-											return (
-												<button
-													type="button"
-													key={item.id}
-													onClick={() => history.push(`/kanji?q=${encodeURIComponent(term)}`)}
-												>
-													<strong>{term}</strong>
-												</button>
-											);
-										})}
-										{recentHistory.length === 0 && <p className="side-empty">Chua co lich su.</p>}
-									</div>
-								</div>
-
-								<div className="lookup-panel">
-									<h3>Tu khoa hot</h3>
-									<div className="chip-list">
-										{topKeywords.slice(0, 8).map((item, index) => {
-											const term = getTermLabel(item);
-											if (!term) return null;
-											return (
-												<button
-													type="button"
-													key={`${term}-${index}`}
-													onClick={() => history.push(`/kanji?q=${encodeURIComponent(term)}`)}
-												>
-													{term}
-													<span>{getTermCount(item)}</span>
-												</button>
-											);
-										})}
-										{topKeywords.length === 0 && <p className="side-empty">Chua co du lieu hot.</p>}
-									</div>
-								</div>
-
-								<div className="lookup-panel">
-									<h3>Gop y moi</h3>
-									<div className="feedback-list">
-										{latestContributions.slice(0, 4).map((item) => (
-											<div key={item.id} className="feedback-item">
-												<strong>{item.word || "Tu vung"}</strong>
-												<p>{item.content}</p>
-											</div>
-										))}
-										{latestContributions.length === 0 && <p className="side-empty">Chua co gop y.</p>}
-									</div>
-								</div>
-							</>
-						)}
-					</div>
 						</>
 					)}
 				</div>
