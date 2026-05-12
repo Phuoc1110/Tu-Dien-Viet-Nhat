@@ -337,7 +337,7 @@ const KanjiPage = () => {
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
 				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
-					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					history.push(`/analysis?text=${encodeURIComponent(newKeyword.trim())}`);
 					return;
 				}
 				history.push(`/kanji?q=${newKeyword.trim()}`);
@@ -495,7 +495,7 @@ const KanjiPage = () => {
 								onClick={() => {
 									if (searchInput.trim()) {
 										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
-											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											history.push(`/analysis?text=${encodeURIComponent(searchInput.trim())}`);
 											return;
 										}
 										history.push(`/kanji?q=${searchInput.trim()}`);
@@ -520,6 +520,9 @@ const KanjiPage = () => {
 						</button>
 						<button onClick={() => history.push(`/grammar?q=${searchInput}`)}>
 							Ngữ pháp
+						</button>
+						<button onClick={() => history.push(`/analysis?text=${encodeURIComponent(searchInput)}`)}>
+							Phân tích
 						</button>
 						{/* <button>Nhật - Nhật</button> */}
 					</div>

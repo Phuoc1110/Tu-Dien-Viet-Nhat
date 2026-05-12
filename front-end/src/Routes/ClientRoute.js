@@ -7,6 +7,7 @@ import DictionaryPage from "../pages/Dictionary/DictionaryPage";
 import KanjiPage from "../pages/Kanji/KanjiPage";
 import SentencePage from "../pages/Sentence/SentencePage";
 import GrammarPage from "../pages/Grammar/GrammarPage";
+import AnalysisPage from "../pages/Analysis/AnalysisPage";
 import NotebookPage from "../pages/Notebook/NotebookPage";
 import NotebookListPage from "../pages/NotebookList/NotebookListPage";
 import NotebookDetailPage from "../pages/NotebookDetail/NotebookDetailPage";
@@ -40,6 +41,7 @@ const ClientRoute = () => {
 				<Route path="/kanji" component={KanjiPage} />
 				<Route path="/sentence" component={SentencePage} />
 				<Route path="/grammar" component={GrammarPage} />
+				<Route path="/analysis" component={AnalysisPage} />
 				<Route path="/notebook" exact component={NotebookPage} />
 				<Route path="/notebook/list" component={NotebookListPage} />
 				<Route path="/notebook/explore" component={ExploreNotebookPage} />

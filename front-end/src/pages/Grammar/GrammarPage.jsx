@@ -189,7 +189,7 @@ const GrammarPage = () => {
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
 				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
-					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					history.push(`/analysis?text=${encodeURIComponent(newKeyword.trim())}`);
 					return;
 				}
 				history.push(`/grammar?q=${newKeyword.trim()}`);
@@ -276,7 +276,7 @@ const GrammarPage = () => {
 								onClick={() => {
 									if (searchInput.trim()) {
 										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
-											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											history.push(`/analysis?text=${encodeURIComponent(searchInput.trim())}`);
 											return;
 										}
 										history.push(`/grammar?q=${searchInput.trim()}`);
@@ -302,6 +302,9 @@ const GrammarPage = () => {
 							Mẫu câu
 						</button>
 						<button className="tab-active">Ngữ pháp</button>
+						<button onClick={() => history.push(`/analysis?text=${searchInput}`)}>
+							Phân tích
+						</button>
 					</div>
 					{isDropdownOpen && searchInput.trim() && (
 						<div className="mazii-dropdown">{renderDropdownBody()}</div>

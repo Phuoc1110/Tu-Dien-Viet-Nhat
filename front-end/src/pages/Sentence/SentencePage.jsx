@@ -177,7 +177,7 @@ const SentencePage = () => {
 			const newKeyword = e.target.value;
 			if (newKeyword.trim()) {
 				if (newKeyword.trim().length > 25 || /[。、！？\n]/.test(newKeyword.trim())) {
-					history.push(`/?text=${encodeURIComponent(newKeyword.trim())}`);
+					history.push(`/analysis?text=${encodeURIComponent(newKeyword.trim())}`);
 					return;
 				}
 				history.push(`/sentence?q=${newKeyword.trim()}`);
@@ -251,7 +251,7 @@ const SentencePage = () => {
 								onClick={() => {
 									if (searchInput.trim()) {
 										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
-											history.push(`/?text=${encodeURIComponent(searchInput.trim())}`);
+											history.push(`/analysis?text=${encodeURIComponent(searchInput.trim())}`);
 											return;
 										}
 										history.push(`/sentence?q=${searchInput.trim()}`);
@@ -276,6 +276,9 @@ const SentencePage = () => {
 						<button className="tab-active">Mẫu câu</button>
 						<button onClick={() => history.push(`/grammar?q=${searchInput}`)}>
 							Ngữ pháp
+						</button>
+						<button onClick={() => history.push(`/analysis?text=${encodeURIComponent(searchInput)}`)}>
+							Phân tích
 						</button>
 						{/* <button>Nhat - Nhat</button> */}
 					</div>

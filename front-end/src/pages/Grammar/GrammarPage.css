@@ -105,28 +105,29 @@
 }
 
 .grammar-page .mazii-mode-tabs {
-  margin-top: 10px;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .grammar-page .mazii-mode-tabs button {
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.56);
-  color: #49658d;
-  font-weight: 700;
+  padding: 10px 20px;
+  border: none;
+  background-color: transparent;
   cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
 
-.grammar-page .mazii-mode-tabs .tab-active,
 .grammar-page .mazii-mode-tabs button:hover {
-  border-color: rgba(124, 164, 207, 0.5);
-  background: rgba(255, 255, 255, 0.92);
-  color: #1c4f80;
+  color: #111827;
+}
+
+.grammar-page .mazii-mode-tabs button.tab-active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
 }
 
 .grammar-page .mazii-dropdown {

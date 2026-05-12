@@ -224,7 +224,7 @@ const HomePage = () => {
 			window.removeEventListener("focus", syncLocalData);
 			window.removeEventListener("storage", syncLocalData);
 		};
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isLoggedIn]);
 
 	useEffect(() => {
@@ -245,7 +245,7 @@ const HomePage = () => {
 		if (searchInput.trim()) {
 			const text = searchInput.trim();
 			if (text.length > 25 || /[。、！？\n]/.test(text)) {
-				history.push(`/?text=${encodeURIComponent(text)}`);
+				history.push(`/analysis?text=${encodeURIComponent(text)}`);
 				setIsDropdownOpen(false);
 				setHighlightedDropdownIndex(-1);
 				return;
@@ -688,6 +688,18 @@ const HomePage = () => {
 						>
 							Ngữ pháp
 						</button>
+						<button
+							type="button"
+							onClick={() => {
+								if (searchInput.trim()) {
+									history.push(`/analysis?text=${searchInput.trim()}`);
+								} else {
+									history.push(`/analysis`);
+								}
+							}}
+						>
+							Phân tích
+						</button>
 					</nav>
 
 				</header>
@@ -791,9 +803,9 @@ const HomePage = () => {
 							<div className="panel-head">
 								<h3>Phân tích đoạn tiếng Nhật</h3>
 								<div className="panel-controls">
-									<button 
-										type="button" 
-										onClick={openParagraphImagePicker} 
+									<button
+										type="button"
+										onClick={openParagraphImagePicker}
 										disabled={isParagraphImageUploading}
 										title="Tải ảnh để trích xuất text"
 									>
@@ -860,10 +872,10 @@ const HomePage = () => {
 						<article className="surface-panel bento-surface">
 							<div className="panel-head">
 								<h3>Từ khóa hot hôm nay</h3>
-								<button type="button" onClick={() => setSearchInput("")}>
+								{/* <button type="button" onClick={() => setSearchInput("")}>
 									<RefreshCcw size={13} />
 									Làm mới
-								</button>
+								</button> */}
 							</div>
 							<div className="chip-list">
 								{hotKeywords.map((word) => (
