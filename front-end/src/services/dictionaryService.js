@@ -67,6 +67,17 @@ const analyzeJapaneseParagraph = (text, limit = 100) => {
 		});
 };
 
+const translateText = (text, source = "ja", target = "vi") => {
+	const cleanedText = stripTilde(text);
+	return axios
+		.post(`/api/dictionary/translate`, { text: cleanedText, source, target })
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Translate text error:", err);
+			return { errCode: 1, errMessage: "Translate failed", translation: "" };
+		});
+};
+
 const searchSentences = (query, limit = 20) => {
 	const cleanedQuery = stripTilde(query);
 	return axios
@@ -95,6 +106,7 @@ export {
 	recognizeKanjiInk,
 	recognizeImageText,
 	analyzeJapaneseParagraph,
+	translateText,
 	searchSentences,
 	searchGrammars,
 };

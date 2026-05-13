@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
-import { analyzeJapaneseParagraph } from "../../services/dictionaryService";
+import { analyzeJapaneseParagraph, translateText } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import { Search, SearchX } from "lucide-react";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
@@ -16,6 +16,9 @@ const AnalysisPage = () => {
 	const [error, setError] = useState("");
 	const [analyzedTokens, setAnalyzedTokens] = useState([]);
 	const [matchedWords, setMatchedWords] = useState([]);
+	const [translation, setTranslation] = useState("");
+	const [translationLoading, setTranslationLoading] = useState(false);
+	const [translationError, setTranslationError] = useState("");
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 
 	const keyword = useMemo(() => {
@@ -56,6 +59,39 @@ const AnalysisPage = () => {
 		};
 
 		runAnalysis();
+	}, [keyword]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		const runTranslation = async () => {
+			if (!keyword.trim()) {
+				setTranslation("");
+				setTranslationError("");
+				setTranslationLoading(false);
+				return;
+			}
+
+			setTranslationLoading(true);
+			setTranslationError("");
+			const res = await translateText(keyword.trim(), "ja", "vi");
+			if (cancelled) {
+				return;
+			}
+			if (res && res.errCode === 0) {
+				setTranslation(String(res.translation || "").trim());
+			} else {
+				setTranslation("");
+				setTranslationError(res?.errMessage || "Dịch thất bại.");
+			}
+			setTranslationLoading(false);
+		};
+
+		runTranslation();
+
+		return () => {
+			cancelled = true;
+		};
 	}, [keyword]);
 
 	const handleSearch = (event) => {
@@ -192,8 +228,15 @@ const AnalysisPage = () => {
 										))}
 									</div>
 									<div className="analysis-translation">
-										<strong>Dịch tự động (Đang phát triển)</strong>
-										<p>Bản dịch cho câu này chưa được hỗ trợ. Hãy tham khảo từ vựng bên dưới.</p>
+										<strong>Dịch tự động</strong>
+										{translationLoading && <p>Đang dịch...</p>}
+										{!translationLoading && translationError && (
+											<p className="analysis-translate-error">{translationError}</p>
+										)}
+										{!translationLoading && !translationError && translation && <p>{translation}</p>}
+										{!translationLoading && !translationError && !translation && (
+											<p>Chưa có bản dịch. Vui lòng thử lại sau.</p>
+										)}
 									</div>
 								</div>
 

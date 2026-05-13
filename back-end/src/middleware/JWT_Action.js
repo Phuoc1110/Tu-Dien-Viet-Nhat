@@ -19,6 +19,7 @@ const nonSecurePaths = [
 	"/api/reset-otp/verify",
 	"/api/reset-password",
 	"/api/dictionary/paragraph/analyze",
+	"/api/dictionary/translate",
 	"/api/dictionary/image-recognize",
 ];
 

@@ -262,6 +262,10 @@
 	margin: 0;
 }
 
+.analysis-translate-error {
+	color: #b91c1c;
+}
+
 .analysis-ai-list {
 	display: grid;
 	gap: 10px;

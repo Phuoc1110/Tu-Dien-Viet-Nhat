@@ -9,6 +9,36 @@ import FormData from "form-data";
 const OCR_SERVER_URL = process.env.OCR_SERVER_URL || "http://127.0.0.1:5001";
 const OCR_ENDPOINT = `${OCR_SERVER_URL}/ocr`;
 
+const normalizeTranslateUrl = (value) => {
+	const trimmed = String(value || "").trim();
+	if (!trimmed) {
+		return "";
+	}
+	if (trimmed.endsWith("/translate")) {
+		return trimmed;
+	}
+	return `${trimmed.replace(/\/+$/, "")}/translate`;
+};
+
+const splitTranslateUrls = (raw) =>
+	String(raw || "")
+		.split(",")
+		.map((item) => normalizeTranslateUrl(item))
+		.filter(Boolean);
+
+const DEFAULT_TRANSLATE_URLS = [
+	"https://translate.argosopentech.com/translate",
+	"https://libretranslate.de/translate",
+	"https://libretranslate.com/translate",
+];
+
+const TRANSLATE_API_URLS = Array.from(
+	new Set([...splitTranslateUrls(process.env.TRANSLATE_API_URL), ...DEFAULT_TRANSLATE_URLS])
+);
+const TRANSLATE_API_KEY = process.env.TRANSLATE_API_KEY || "";
+const DEFAULT_TRANSLATE_SOURCE = process.env.TRANSLATE_SOURCE || "ja";
+const DEFAULT_TRANSLATE_TARGET = process.env.TRANSLATE_TARGET || "vi";
+
 let HandleSearchWords = async (req, res) => {
 	try {
 		let query = req.query.q || req.query.keyword || "";
@@ -161,6 +191,121 @@ let HandleAnalyzeJapaneseParagraph = async (req, res) => {
 			text: "",
 			tokens: [],
 			matchedWords: [],
+		});
+	}
+};
+
+let HandleTranslateText = async (req, res) => {
+	try {
+		const text = req.body?.text || req.body?.q || "";
+		const source = req.body?.source || DEFAULT_TRANSLATE_SOURCE;
+		const target = req.body?.target || DEFAULT_TRANSLATE_TARGET;
+
+		if (!String(text || "").trim()) {
+			return res.status(200).json({
+				errCode: 1,
+				errMessage: "Missing text",
+				translation: "",
+			});
+		}
+
+		// Try Google Translate API first (free, no API key required)
+		try {
+			const gtUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURIComponent(String(text).trim())}`;
+			const response = await fetch(gtUrl, { timeout: 15000 });
+			if (response.ok) {
+				const data = await response.json();
+				if (data && Array.isArray(data[0])) {
+					const translation = data[0].map(item => item[0]).join("").trim();
+					if (translation) {
+						return res.status(200).json({
+							errCode: 0,
+							errMessage: "OK",
+							translation,
+						});
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Google Translate request error:", error);
+		}
+
+		const payload = {
+			q: String(text).trim(),
+			source,
+			target,
+			format: "text",
+		};
+
+		if (TRANSLATE_API_KEY) {
+			payload.api_key = TRANSLATE_API_KEY;
+		}
+
+		let lastError = "Translate failed";
+
+		for (const endpoint of TRANSLATE_API_URLS) {
+			try {
+				const response = await fetch(endpoint, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+					},
+					body: JSON.stringify(payload),
+					timeout: 30000,
+				});
+
+				const rawText = await response.text();
+				let data = null;
+				try {
+					data = rawText ? JSON.parse(rawText) : null;
+				} catch (parseError) {
+					console.error("Translate response parse error:", parseError);
+					console.error("Translate response body:", rawText.slice(0, 200));
+					lastError = "Translate server returned invalid response";
+					continue;
+				}
+
+				if (!response.ok) {
+					console.error(
+						`Translate server error: ${response.status} ${response.statusText}`
+					);
+					lastError = data?.error || data?.message || "Translate server error";
+					continue;
+				}
+
+				const translation = String(
+					data?.translatedText || data?.translation || data?.text || ""
+				)
+					.trim();
+
+				if (!translation) {
+					lastError = "Translate server returned empty translation";
+					continue;
+				}
+
+				return res.status(200).json({
+					errCode: 0,
+					errMessage: "OK",
+					translation,
+				});
+			} catch (error) {
+				console.error("Translate request error:", error);
+				lastError = error?.message || "Translate request failed";
+			}
+		}
+
+		return res.status(200).json({
+			errCode: 2,
+			errMessage: lastError,
+			translation: "",
+		});
+	} catch (e) {
+		console.error("HandleTranslateText error:", e);
+		return res.status(200).json({
+			errCode: -1,
+			errMessage: e?.message || "Internal server error",
+			translation: "",
 		});
 	}
 };
@@ -384,10 +529,7 @@ let HandleGetWordContributions = async (req, res) => {
 			});
 		}
 
-		const contributions = await dictionaryService.getWordContributions(
-			{ word, wordId },
-			limit
-		);
+		const contributions = await dictionaryService.getWordContributions({ word, wordId }, limit);
 
 		return res.status(200).json({
 			errCode: 0,
@@ -481,6 +623,7 @@ module.exports = {
 	HandleSearchKanjis,
 	HandleRecognizeKanji,
 	HandleAnalyzeJapaneseParagraph,
+	HandleTranslateText,
 	HandleRecognizeTextFromImage,
 	HandleSearchSentences,
 	HandleSearchGrammars,
