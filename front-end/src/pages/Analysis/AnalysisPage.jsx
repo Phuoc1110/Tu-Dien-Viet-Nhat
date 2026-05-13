@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { analyzeJapaneseParagraph, translateText } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
-import { Search, SearchX } from "lucide-react";
+import { Search, SearchX, PenTool } from "lucide-react";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
 import "./Analysis.css";
 
@@ -146,9 +146,11 @@ const AnalysisPage = () => {
 						<div className="search-actions">
 							<button type="button" onClick={handleSearchBtnClick} title="Phân tích">
 								<Search size={15} />
+								<span>Tìm</span>
 							</button>
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
-								A文
+							<button type="button" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay">
+								<PenTool size={15} />
+								<span>Write</span>
 							</button>
 						</div>
 						<button className="lang-switch">Nhật - Việt</button>

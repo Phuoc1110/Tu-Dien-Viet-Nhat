@@ -1,10 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./HomePage.css";
-import {
-	analyzeJapaneseParagraph,
-	recognizeImageText,
-	searchWords,
-} from "../../services/dictionaryService";
+import { recognizeImageText, searchWords } from "../../services/dictionaryService";
 import { useHistory, useLocation } from "react-router-dom";
 import {
 	clearWordSearchHistory,
@@ -74,15 +70,8 @@ const HomePage = () => {
 	const [communityLoadingMore, setCommunityLoadingMore] = useState(false);
 	const [hotKeywords, setHotKeywords] = useState([]);
 	const [isImageUploading, setIsImageUploading] = useState(false);
-	const [paragraphInput, setParagraphInput] = useState("");
-	const [analyzeLoading, setAnalyzeLoading] = useState(false);
-	const [paragraphError, setParagraphError] = useState("");
-	const [analyzedTokens, setAnalyzedTokens] = useState([]);
-	const [matchedWords, setMatchedWords] = useState([]);
-	const [isParagraphImageUploading, setIsParagraphImageUploading] = useState(false);
 	const searchWrapRef = useRef(null);
 	const imageInputRef = useRef(null);
-	const paragraphImageInputRef = useRef(null);
 	const historyListRef = useRef(null);
 	const communityListRef = useRef(null);
 	const history = useHistory();
@@ -318,53 +307,6 @@ const HomePage = () => {
 		}
 	};
 
-	const openParagraphImagePicker = () => {
-		if (isParagraphImageUploading) {
-			return;
-		}
-		paragraphImageInputRef.current?.click();
-	};
-
-	const handleParagraphImagePick = async (event) => {
-		const file = event.target.files?.[0];
-		event.target.value = "";
-
-		if (!file) {
-			return;
-		}
-
-		if (!file.type.startsWith("image/")) {
-			setParagraphError("Vui lòng chọn một file ảnh hợp lệ.");
-			return;
-		}
-
-		const formData = new FormData();
-		formData.append("image", file);
-
-		setIsParagraphImageUploading(true);
-		setParagraphError("");
-
-		try {
-			const response = await recognizeImageText(formData);
-			if (response && response.errCode === 0) {
-				const recognizedText = String(response.text || response.words?.join(" ") || "").trim();
-				if (recognizedText) {
-					setParagraphInput(recognizedText);
-					return;
-				}
-
-				setParagraphError("Không nhận được chữ nào từ ảnh này.");
-				return;
-			}
-
-			setParagraphError(response?.errMessage || "Không thể đọc ảnh lúc này.");
-		} catch (error) {
-			console.error("Image OCR error:", error);
-			setParagraphError("Không thể đọc ảnh lúc này.");
-		} finally {
-			setIsParagraphImageUploading(false);
-		}
-	};
 
 	const handleSearchInputKeyDown = (event) => {
 		if (event.key === "ArrowDown") {
@@ -515,57 +457,16 @@ const HomePage = () => {
 		}
 	};
 
-	const handleAnalyzeParagraph = async (overrideText) => {
-		const textToAnalyze = typeof overrideText === 'string' ? overrideText : paragraphInput;
-		const text = String(textToAnalyze || "").trim();
-		if (!text) {
-			setParagraphError("Vui lòng nhập đoạn tiếng Nhật trước khi phân tích.");
-			setAnalyzedTokens([]);
-			setMatchedWords([]);
-			return;
-		}
-
-		setAnalyzeLoading(true);
-		setParagraphError("");
-
-		const response = await analyzeJapaneseParagraph(text, 120);
-		if (response && response.errCode === 0) {
-			setAnalyzedTokens(Array.isArray(response.tokens) ? response.tokens : []);
-			setMatchedWords(Array.isArray(response.matchedWords) ? response.matchedWords : []);
-			setAnalyzeLoading(false);
-			return;
-		}
-
-		setParagraphError(response?.errMessage || "Không thể phân tích đoạn văn lúc này.");
-		setAnalyzedTokens([]);
-		setMatchedWords([]);
-		setAnalyzeLoading(false);
-	};
-
 	useEffect(() => {
+		if (!location.search) {
+			return;
+		}
 		const params = new URLSearchParams(location.search);
 		const textParam = params.get("text");
 		if (textParam) {
-			setParagraphInput(textParam);
-			handleAnalyzeParagraph(textParam);
-			setTimeout(() => {
-				const panel = document.querySelector('.paragraph-analyze-panel');
-				if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			}, 100);
+			history.push(`/analysis?text=${encodeURIComponent(textParam)}`);
 		}
-	}, [location.search]);
-
-	const handleUseMatchedWord = (word) => {
-		const selected = String(word?.word || "").trim();
-		if (!selected) {
-			return;
-		}
-
-		setSearchInput(selected);
-		history.push(`/dictionary?q=${encodeURIComponent(selected)}`);
-		setIsDropdownOpen(false);
-		setHighlightedDropdownIndex(-1);
-	};
+	}, [history, location.search]);
 
 	const historyPreviewItems = historyItems.slice(0, 8);
 
@@ -652,15 +553,6 @@ const HomePage = () => {
 							onChange={handleImagePick}
 							style={{ display: "none" }}
 						/>
-						<input
-							ref={paragraphImageInputRef}
-							type="file"
-							accept="image/*"
-							capture="environment"
-							onChange={handleParagraphImagePick}
-							style={{ display: "none" }}
-						/>
-
 						{isDropdownOpen && searchInput.trim() && (
 							<div className="home-dropdown">{renderDropdownBody()}</div>
 						)}
@@ -799,67 +691,6 @@ const HomePage = () => {
 
 				<main className="home-content-grid">
 					<section className="home-main-column">
-						<article className="surface-panel bento-surface paragraph-analyze-panel">
-							<div className="panel-head">
-								<h3>Phân tích đoạn tiếng Nhật</h3>
-								<div className="panel-controls">
-									<button
-										type="button"
-										onClick={openParagraphImagePicker}
-										disabled={isParagraphImageUploading}
-										title="Tải ảnh để trích xuất text"
-									>
-										<Camera size={18} />
-									</button>
-									<button type="button" onClick={handleAnalyzeParagraph} disabled={analyzeLoading}>
-										{analyzeLoading ? "Đang phân tích..." : "Phân tích"}
-									</button>
-								</div>
-							</div>
-							<textarea
-								className="paragraph-input"
-								placeholder="Ví dụ: 日本語の文章をここに入力してください。"
-								value={paragraphInput}
-								onChange={(event) => setParagraphInput(event.target.value)}
-							/>
-							<p className="paragraph-hint">
-								Hệ thống sẽ tách từ trong đoạn văn và đánh dấu từ nào đã có trong từ điển.
-							</p>
-							{paragraphError && <p className="paragraph-error">{paragraphError}</p>}
-
-							{analyzedTokens.length > 0 && (
-								<div className="token-cloud">
-									{analyzedTokens.map((token, index) => (
-										<span
-											key={`${token.surface}-${index}`}
-											className={`token-chip ${token.isMatched ? "matched" : "unmatched"}`}
-											title={token.partOfSpeech || "Token"}
-										>
-											{token.surface}
-										</span>
-									))}
-								</div>
-							)}
-
-							{matchedWords.length > 0 && (
-								<div className="matched-words-wrap">
-									<h4>Từ tìm thấy trong hệ thống</h4>
-									<div className="matched-words-list">
-										{matchedWords.map((word) => (
-											<button
-												type="button"
-												key={word.id}
-												onClick={() => handleUseMatchedWord(word)}
-											>
-												<strong>{word.word}</strong>
-												<span>{word.reading || "-"}</span>
-											</button>
-										))}
-									</div>
-								</div>
-							)}
-						</article>
-
 						<article className="surface-panel tips-panel bento-surface">
 							<h3>Mẹo tra cứu nhanh</h3>
 							<ul>

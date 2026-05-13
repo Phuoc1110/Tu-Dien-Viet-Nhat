@@ -17,7 +17,7 @@ import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
-import { SearchX } from "lucide-react";
+import { Search, PenTool, SearchX } from "lucide-react";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -802,26 +802,23 @@ const DictionaryPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
-							<button 
-								type="button" 
-								onClick={() => {
+							<button type="button" title="Tìm kiếm" onClick={() => {
 									if (searchInput.trim()) {
 										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
 											history.push(`/analysis?text=${encodeURIComponent(searchInput.trim())}`);
 											return;
 										}
-										const convertedKeyword = normalizeSearchKeyword(searchInput.trim());
-										setSearchInput(convertedKeyword);
-										history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
+										history.push(`/dictionary?q=${encodeURIComponent(searchInput.trim())}`);
 										setIsDropdownOpen(false);
 										setHighlightedDropdownIndex(-1);
 									}
-								}}
-							>
-								🔍
+								}}>
+								<Search size={15} />
+								<span>Tìm</span>
 							</button>
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>
-								A文
+							<button type="button" title="Nhập chữ viết tay" onClick={() => setIsKanjiDrawOpen(true)}>
+								<PenTool size={15} />
+								<span>Write</span>
 							</button>
 						</div>
 

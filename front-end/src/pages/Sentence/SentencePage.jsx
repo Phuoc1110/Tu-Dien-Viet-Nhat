@@ -7,7 +7,7 @@ import {
 } from "../../services/searchHistoryService";
 import { getLatestWordContributions } from "../../services/wordContributionService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
-import { SearchX } from "lucide-react";
+import { Search, PenTool, SearchX } from "lucide-react";
 import "./SentencePage.css";
 
 const SentencePage = () => {
@@ -248,6 +248,7 @@ const SentencePage = () => {
 						<div className="search-actions">
 							<button 
 								type="button"
+								title="Tìm kiếm"
 								onClick={() => {
 									if (searchInput.trim()) {
 										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
@@ -260,9 +261,13 @@ const SentencePage = () => {
 									}
 								}}
 							>
-								🔍
+								<Search size={15} />
+								<span>Tìm</span>
 							</button>
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
+							<button type="button" title="Nhập chữ viết tay" onClick={() => setIsKanjiDrawOpen(true)}>
+								<PenTool size={15} />
+								<span>Write</span>
+							</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>
 					</div>

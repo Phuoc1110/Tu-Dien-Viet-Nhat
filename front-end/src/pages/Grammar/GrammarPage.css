@@ -91,6 +91,16 @@
   color: #3f5f86;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.grammar-page .search-actions button:hover,
+.grammar-page .grammar-add-btn:hover {
+  transform: translateY(-1px);
+  border-color: #8fb8e2;
 }
 
 .grammar-page .lang-switch {

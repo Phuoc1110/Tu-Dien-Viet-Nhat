@@ -98,10 +98,15 @@
   color: #3f5f86;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
 }
 
 .dictionary-page .search-actions button:hover,
 .dictionary-page .detail-actions button:hover {
+  transform: translateY(-1px);
   border-color: #8fb8e2;
 }
 

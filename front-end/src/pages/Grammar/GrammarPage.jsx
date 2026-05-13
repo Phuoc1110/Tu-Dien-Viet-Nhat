@@ -3,7 +3,7 @@ import { useHistory, useLocation } from "react-router-dom";
 import { searchGrammars } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
-import { SearchX } from "lucide-react";
+import { Search, PenTool, SearchX } from "lucide-react";
 import "./GrammarPage.css";
 
 const GrammarPage = () => {
@@ -273,6 +273,7 @@ const GrammarPage = () => {
 						<div className="search-actions">
 							<button 
 								type="button"
+								title="Tìm kiếm"
 								onClick={() => {
 									if (searchInput.trim()) {
 										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
@@ -285,9 +286,13 @@ const GrammarPage = () => {
 									}
 								}}
 							>
-								🔍
+								<Search size={15} />
+								<span>Tìm</span>
 							</button>
-							<button type="button" onClick={() => setIsKanjiDrawOpen(true)}>A文</button>
+							<button type="button" title="Nhập chữ viết tay" onClick={() => setIsKanjiDrawOpen(true)}>
+								<PenTool size={15} />
+								<span>Write</span>
+							</button>
 						</div>
 						<button className="lang-switch">Nhat - Viet</button>
 					</div>
