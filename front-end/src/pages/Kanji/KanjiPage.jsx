@@ -275,6 +275,16 @@ const KanjiPage = () => {
 		return () => document.removeEventListener("mousedown", handleOutsideClick);
 	}, []);
 
+	useEffect(() => {
+		if (isDropdownOpen && highlightedDropdownIndex >= 0) {
+			const dropdownList = searchWrapRef.current?.querySelector('.dropdown-list');
+			const activeItem = dropdownList?.querySelector('.active');
+			if (activeItem) {
+				activeItem.scrollIntoView({ block: "nearest" });
+			}
+		}
+	}, [highlightedDropdownIndex, isDropdownOpen]);
+
 	const runDropdownSearch = async (query) => {
 		setLoadingDropdown(true);
 		setErrorDropdown("");

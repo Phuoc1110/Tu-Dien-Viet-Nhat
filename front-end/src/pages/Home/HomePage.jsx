@@ -112,6 +112,16 @@ const HomePage = () => {
 		return () => document.removeEventListener("mousedown", handleOutsideClick);
 	}, []);
 
+	useEffect(() => {
+		if (isDropdownOpen && highlightedDropdownIndex >= 0) {
+			const dropdownList = searchWrapRef.current?.querySelector('.dropdown-list');
+			const activeItem = dropdownList?.querySelector('.dropdown-item.active');
+			if (activeItem) {
+				activeItem.scrollIntoView({ block: "nearest" });
+			}
+		}
+	}, [highlightedDropdownIndex, isDropdownOpen]);
+
 	const loadHistoryPage = async (reset = false) => {
 		if (!isLoggedIn || historyLoadingMore) {
 			return;

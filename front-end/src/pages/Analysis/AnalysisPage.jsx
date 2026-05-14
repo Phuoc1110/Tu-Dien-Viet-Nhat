@@ -183,25 +183,28 @@ const AnalysisPage = () => {
 
 				<div className="mazii-content-grid detail-mode">
 					{!hasKeyword || loading || error ? (
-						<div className="detail-card empty-state-container">
-							{loading && <div className="analysis-loading">Đang phân tích dữ liệu...</div>}
+						<div className="detail-card empty-state-container" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+							{loading && (
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<p style={{ color: "#64748b" }}>Đang phân tích dữ liệu...</p>
+								</div>
+							)}
 							{error && !loading && (
-								<div className="analysis-empty error">
-									<div className="analysis-empty-visual">
-										<SearchX size={38} />
+								<div className="empty-state-content error-state" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "100px", height: "100px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+										<SearchX size={48} color="#64748b" />
 									</div>
-									<h3>Không thể phân tích đoạn văn</h3>
-									<p>
-										Rất tiếc, không có kết quả phù hợp cho từ khóa
-										 <strong>"{keyword}"</strong>. Hãy thử một đoạn khác.
+									<h3 style={{ fontSize: "24px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>Không thể phân tích đoạn văn</h3>
+									<p style={{ color: "#475569", fontSize: "16px", maxWidth: "420px", margin: "0 auto", lineHeight: "1.6" }}>
+										Rất tiếc, không có kết quả phù hợp cho từ khóa <strong style={{ color: "#0f172a" }}>"{keyword}"</strong>. Hãy thử một đoạn khác.
 									</p>
 								</div>
 							)}
 							{!hasKeyword && !loading && !error && (
-								<div className="analysis-empty">
-									<div className="analysis-empty-visual">文</div>
-									<h3>Nhập đoạn văn tiếng Nhật để phân tích</h3>
-									<p>Hệ thống sẽ tách từ, nhận diện từ loại và thể từ điển.</p>
+								<div className="empty-state-content" style={{ textAlign: "center", padding: "60px 20px" }}>
+									<div className="empty-state-visual" style={{ margin: "0 auto 24px", width: "80px", height: "80px", borderRadius: "20px", background: "linear-gradient(135deg, #ebf4ff, #eef2ff)", border: "1px solid #d3e5f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "40px", fontWeight: "900", color: "#1f5f95" }}>文</div>
+									<h3 style={{ fontSize: "20px", color: "#1e293b", marginBottom: "8px" }}>Nhập đoạn văn tiếng Nhật để phân tích</h3>
+									<p style={{ color: "#64748b" }}>Hệ thống sẽ tách từ, nhận diện từ loại và thể từ điển.</p>
 								</div>
 							)}
 						</div>
@@ -242,17 +245,7 @@ const AnalysisPage = () => {
 									</div>
 								</div>
 
-								<div className="detail-card">
-									<h3>Hỏi nhanh Mazii AI</h3>
-									<div className="analysis-ai-list">
-										<button type="button" className="analysis-ai-btn">
-											<Search size={14} /> {displayKeyword} là gì?
-										</button>
-										<button type="button" className="analysis-ai-btn">
-											<Search size={14} /> {displayKeyword} とは?
-										</button>
-									</div>
-								</div>
+
 
 								<div className="detail-card">
 									<h3>{displayKeyword || "Đoạn văn"} có thể được phân tích như sau</h3>
