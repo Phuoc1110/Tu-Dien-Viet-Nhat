@@ -7,11 +7,11 @@
 
 .kanji-draw-modal {
 	width: min(94vw, 980px);
-	background: #ffffff;
-	border: 1px solid #dbe4ef;
+	background: var(--da-card);
+	border: 1px solid var(--da-border);
 	border-radius: 14px;
 	padding: 14px 14px 12px;
-	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.35);
 	position: fixed;
 	left: 50%;
 	top: 88px;
@@ -32,14 +32,15 @@
 .kanji-draw-head h3 {
 	margin: 0;
 	font-size: 1.1rem;
-	color: #0f172a;
+	color: var(--da-text);
+	font-family: var(--font-heading);
 }
 
 .kanji-draw-head button,
 .kanji-draw-actions button {
-	border: 1px solid #d6dee8;
-	background: #f8fafc;
-	color: #334155;
+	border: 1px solid var(--da-border);
+	background: var(--da-surface);
+	color: var(--da-text-muted);
 	border-radius: 8px;
 	padding: 8px 10px;
 	font-weight: 700;
@@ -49,13 +50,13 @@
 .kanji-draw-hint {
 	margin: 8px 0 10px;
 	font-size: 0.9rem;
-	color: #475569;
+	color: var(--da-text-muted);
 	line-height: 1.4;
 }
 
 .kanji-draw-board-wrap {
-	background: #f8fafc;
-	border: 1px solid #e2e8f0;
+	background: var(--da-surface);
+	border: 1px solid var(--da-border);
 	border-radius: 12px;
 	padding: 8px;
 }
@@ -63,8 +64,8 @@
 .kanji-draw-canvas {
 	width: 100%;
 	height: 260px;
-	background: #ffffff;
-	border: 1px dashed #94a3b8;
+	background: var(--da-surface);
+	border: 1px dashed var(--da-border);
 	border-radius: 10px;
 	touch-action: none;
 	display: block;
@@ -84,13 +85,13 @@
 .kanji-draw-error {
 	margin: 10px 0 0;
 	font-size: 0.9rem;
-	color: #b91c1c;
+	color: var(--da-accent-red);
 }
 
 .kanji-draw-working {
 	margin: 10px 0 0;
 	font-size: 0.9rem;
-	color: #0f766e;
+	color: var(--da-accent-gold);
 }
 
 .kanji-draw-candidates {
@@ -104,8 +105,8 @@
 }
 
 .kanji-draw-candidates button {
-	border: 1px solid #cbd5e1;
-	background: #ffffff;
+	border: 1px solid var(--da-border);
+	background: var(--da-surface);
 	border-radius: 8px;
 	padding: 6px 10px;
 	font-size: 1.1rem;
@@ -119,12 +120,14 @@
 }
 
 .kanji-draw-pick-row input {
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--da-border);
 	border-radius: 8px;
 	padding: 9px 10px;
 	font: inherit;
 	outline: none;
 	width: min(100%, 320px);
+	background: var(--da-surface);
+	color: var(--da-text);
 }
 
 @media (max-width: 720px) {
@@ -139,6 +142,6 @@
 }
 
 .kanji-draw-pick-row input:focus {
-	border-color: #60a5fa;
-	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+	border-color: var(--da-accent-gold);
+	box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.2);
 }

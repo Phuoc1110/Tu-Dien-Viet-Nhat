@@ -1,23 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@500;700&display=swap");
+/* Curated Notebook Page - Dark Academia x Japanese Ink */
 
 .curated-notebook-page {
-  --cur-bg: #f2f6fb;
-  --cur-paper: rgba(255, 255, 255, 0.84);
-  --cur-line: rgba(149, 170, 199, 0.34);
-  --cur-text: #17263f;
-  --cur-muted: #5f7190;
-  --cur-primary: #1f7a8c;
-  --cur-primary-2: #1d5f9d;
-  --cur-accent: #ef6a32;
+  --cur-bg: var(--da-bg);
+  --cur-paper: var(--da-card);
+  --cur-line: var(--da-border);
+  --cur-text: var(--da-text);
+  --cur-muted: var(--da-text-muted);
+  --cur-primary: var(--da-accent-gold);
+  --cur-primary-2: #b5953e;
+  --cur-accent: var(--da-accent-red);
   min-height: calc(100vh - 130px);
   padding: 20px 16px 42px;
   color: var(--cur-text);
-  font-family: "Be Vietnam Pro", "Noto Sans JP", system-ui, sans-serif;
-  background:
-    radial-gradient(circle at 8% 9%, rgba(239, 127, 77, 0.2), transparent 30%),
-    radial-gradient(circle at 88% 10%, rgba(50, 124, 197, 0.2), transparent 34%),
-    radial-gradient(circle at 50% 120%, rgba(31, 122, 140, 0.16), transparent 44%),
-    linear-gradient(180deg, #f8fbff 0%, var(--cur-bg) 100%);
+  font-family: var(--font-body);
+  background: var(--cur-bg);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 .curated-notebook-shell {
@@ -31,8 +28,9 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 14px;
-  color: #556477;
+  color: var(--da-text-dark);
   font-size: 0.9rem;
+  font-family: var(--font-mono);
 }
 
 .breadcrumb-link-btn {
@@ -41,12 +39,13 @@
   padding: 0;
   color: var(--cur-primary);
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+  transition: color 0.2s ease;
 }
 
 .breadcrumb-link-btn:hover {
-  text-decoration: underline;
+  color: var(--da-accent-red);
 }
 
 .curated-header {
@@ -56,8 +55,9 @@
 .curated-header h1 {
   margin: 0;
   font-size: clamp(1.5rem, 4vw, 2.2rem);
-  color: #123457;
+  color: var(--cur-text);
   letter-spacing: -0.01em;
+  font-family: var(--font-heading);
 }
 
 .curated-tools {
@@ -67,14 +67,19 @@
 .search-box {
   width: min(520px, 100%);
   min-height: 48px;
-  border-radius: 14px;
+  border-radius: 4px;
   border: 1px solid var(--cur-line);
-  background: rgba(255, 253, 248, 0.9);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  background: transparent;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 10px;
+  transition: border-color 0.2s ease;
+}
+
+.search-box:focus-within {
+  border-color: var(--cur-primary);
+  box-shadow: 0 0 0 2px var(--da-glow-gold);
 }
 
 .search-box input {
@@ -82,42 +87,50 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #1f2937;
+  color: var(--cur-text);
   font: inherit;
+  font-family: var(--font-body);
 }
 
 .search-box input::placeholder {
-  color: #94a3b8;
+  color: var(--da-text-dark);
 }
 
 .tiny-btn {
   width: 34px;
   height: 34px;
-  border: 1px solid #d8d1c3;
-  border-radius: 10px;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid var(--cur-line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cur-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.tiny-btn:hover {
+  background: var(--da-surface-hover);
+  color: var(--cur-text);
+  border-color: var(--cur-primary);
 }
 
 .curated-message {
   margin-bottom: 14px;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  background: #fff1f2;
-  color: #9f1239;
+  border: 1px solid var(--cur-accent);
+  border-radius: 4px;
+  background: var(--da-glow-red);
+  color: var(--cur-accent);
   padding: 12px 14px;
   font-size: 0.92rem;
+  font-weight: 600;
 }
 
 .curated-list-body {
   border: 1px solid var(--cur-line);
-  border-radius: 20px;
+  border-radius: 4px;
   background: var(--cur-paper);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
   min-height: 220px;
   overflow: hidden;
 }
@@ -128,6 +141,7 @@
   text-align: center;
   color: var(--cur-muted);
   font-size: 1rem;
+  font-weight: 600;
 }
 
 .curated-grid {
@@ -139,9 +153,9 @@
 
 .curated-card {
   min-height: 150px;
-  border: 1px solid #e1dbc9;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(240, 247, 255, 0.84));
+  border: 1px solid var(--cur-line);
+  border-radius: 4px;
+  background: transparent;
   padding: 14px;
   text-align: left;
   display: flex;
@@ -153,16 +167,16 @@
 
 .curated-card:hover {
   transform: translateY(-2px);
-  border-color: #b8d0e8;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  border-color: var(--cur-primary);
+  background: var(--da-surface-hover);
 }
 
 .curated-card h3 {
   margin: 0;
-  color: var(--cur-primary);
+  color: var(--cur-text);
   font-size: 1rem;
-  font-family: "Noto Sans JP", "Be Vietnam Pro", sans-serif;
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -177,7 +191,7 @@
 .card-meta-text {
   margin: 8px 0 0;
   font-size: 0.85rem;
-  color: #5d6c7f;
+  color: var(--da-text-dark);
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -192,11 +206,11 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 0.8rem;
-  color: #5f6c7e;
+  color: var(--da-text-dark);
 }
 
 .card-meta .owner {
-  color: #334155;
+  color: var(--cur-text);
   font-weight: 600;
   max-width: 70%;
   white-space: nowrap;
@@ -205,14 +219,14 @@
 }
 
 .curated-pagination {
-  border-top: 1px solid var(--cur-line);
+  border-top: 1px dashed var(--cur-line);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 14px 12px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--da-surface-hover);
 }
 
 .curated-pagination-controls,
@@ -226,11 +240,18 @@
 .curated-page-btn {
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(149, 170, 199, 0.42);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #2f6ba4;
+  border: 1px solid var(--cur-line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cur-muted);
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.curated-page-btn:hover:not(:disabled) {
+  border-color: var(--cur-primary);
+  color: var(--cur-primary);
+  background: var(--da-surface-hover);
 }
 
 .curated-page-btn:disabled {
@@ -241,8 +262,9 @@
 .curated-page-number {
   min-width: 68px;
   text-align: center;
-  font-weight: 700;
-  color: #3f5c82;
+  font-weight: 600;
+  color: var(--cur-primary);
+  font-family: var(--font-mono);
 }
 
 .curated-pagination-meta span {

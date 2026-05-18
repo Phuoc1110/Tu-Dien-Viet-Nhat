@@ -70,9 +70,9 @@ const WordImages = ({ word }) => {
 	return (
 		<div className="word-images-block">
 			<div className="word-images-header">
-				<h3>Ảnh minh họa</h3>
+				<div className="word-images-title">Hình ảnh từ vựng</div>
 				<a href={googleUrl} target="_blank" rel="noreferrer">
-					Xem thêm ảnh về {normalizedWord || "từ này"} trên Google
+					Xem thêm...
 				</a>
 			</div>
 
@@ -87,9 +87,12 @@ const WordImages = ({ word }) => {
 			{images.length > 0 && (
 				<div className="word-images-grid">
 					{images.map((imageUrl, index) => (
-						<div className="word-image-card" key={`${imageUrl}-${index}`}>
-							<img src={imageUrl} alt={`${normalizedWord} ${index + 1}`} />
-						</div>
+						<figure className="word-image-card" key={`${imageUrl}-${index}`}>
+							<div className="word-image-frame">
+								<img src={imageUrl} alt={`${normalizedWord} ${index + 1}`} />
+							</div>
+							<figcaption>Ảnh {index + 1}</figcaption>
+						</figure>
 					))}
 				</div>
 			)}

@@ -287,7 +287,10 @@ const Profile = () => {
   const avatarSrc = avatarPreview || profileData.profilePicture;
 
   return (
-    <div className="profile-page">
+    <div
+      className="profile-page"
+      style={{ backgroundColor: "var(--da-bg)", color: "var(--da-text)" }}
+    >
       {/* ── Sidebar ── */}
       <aside className="profile-sidebar">
         <div className="sidebar-avatar-block">

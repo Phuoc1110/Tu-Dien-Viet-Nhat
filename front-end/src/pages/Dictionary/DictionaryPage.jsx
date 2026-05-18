@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
-import { searchSentences, searchWords } from "../../services/dictionaryService";
+import { searchKanjis, searchSentences, searchWords } from "../../services/dictionaryService";
 import {
 	addWordSearchHistory,
 	getTopSearchKeywordsToday,
@@ -17,7 +17,7 @@ import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
-import { Search, PenTool, SearchX } from "lucide-react";
+import { Search, PenTool, SearchX, ChevronDown } from "lucide-react";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -97,6 +97,41 @@ const getReadingItems = (value) => {
 		.split(/[;；,、]/)
 		.map((item) => item.trim())
 		.filter(Boolean);
+};
+
+const normalizeStrokePaths = (value) => {
+	if (!value) return [];
+
+	if (Array.isArray(value)) {
+		return value
+			.map((item, index) => {
+				if (typeof item === "string") {
+					return { d: item, order: index + 1 };
+				}
+				if (item && typeof item === "object") {
+					return {
+						d: item.d || item.path || "",
+						order: item.order || index + 1,
+					};
+				}
+				return null;
+			})
+			.filter((item) => item && item.d);
+	}
+
+	if (typeof value === "string") {
+		try {
+			return normalizeStrokePaths(JSON.parse(value));
+		} catch (e) {
+			return [];
+		}
+	}
+
+	if (typeof value === "object" && Array.isArray(value.paths)) {
+		return normalizeStrokePaths(value.paths);
+	}
+
+	return [];
 };
 
 const getMeaningTexts = (entry) => {
@@ -352,12 +387,19 @@ const DictionaryPage = () => {
 	const [contributionError, setContributionError] = useState("");
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [kanjiDrawMode, setKanjiDrawMode] = useState("search");
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
 	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
 	const [recentHistory, setRecentHistory] = useState([]);
 	const [topKeywords, setTopKeywords] = useState([]);
 	const [latestContributions, setLatestContributions] = useState([]);
+	const [expandedKanjiId, setExpandedKanjiId] = useState(null);
+	const [kanjiStrokeMap, setKanjiStrokeMap] = useState({});
+	const [kanjiStrokeLoadingMap, setKanjiStrokeLoadingMap] = useState({});
+	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
+	const [replayKey, setReplayKey] = useState(0);
 	const searchWrapRef = useRef(null);
+	const detailGridRef = useRef(null);
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
@@ -402,6 +444,123 @@ const DictionaryPage = () => {
 	useEffect(() => {
 		setContributionError("");
 	}, [wordDetail?.id]);
+
+	useEffect(() => {
+		setExpandedKanjiId(null);
+		setKanjiStrokeMap({});
+		setKanjiStrokeLoadingMap({});
+		setCurrentStrokeIndex(0);
+		setReplayKey(0);
+	}, [wordDetail?.id]);
+
+	useEffect(() => {
+		if (!expandedKanjiId || !Array.isArray(wordDetail?.kanjis)) {
+			return;
+		}
+
+		const expandedKanji = wordDetail.kanjis.find(
+			(item) => (item.id || item.characterKanji) === expandedKanjiId
+		);
+
+		const targetChar = String(expandedKanji?.characterKanji || "").trim();
+		if (!targetChar || kanjiStrokeMap[targetChar] !== undefined) {
+			return;
+		}
+
+		let cancelled = false;
+		const inlinePaths = normalizeStrokePaths(expandedKanji?.strokePaths);
+
+		if (inlinePaths.length) {
+			setKanjiStrokeMap((prev) => ({ ...prev, [targetChar]: inlinePaths }));
+			return;
+		}
+
+		setKanjiStrokeLoadingMap((prev) => ({ ...prev, [targetChar]: true }));
+
+		const run = async () => {
+			try {
+				const response = await searchKanjis(targetChar, 8);
+				if (cancelled) {
+					return;
+				}
+				const items = Array.isArray(response?.kanjis) ? response.kanjis : [];
+				const matched =
+					items.find((item) => String(item?.characterKanji || "").trim() === targetChar) ||
+					items[0];
+				const paths = normalizeStrokePaths(matched?.strokePaths);
+				setKanjiStrokeMap((prev) => ({ ...prev, [targetChar]: paths }));
+			} catch (fetchError) {
+				if (!cancelled) {
+					setKanjiStrokeMap((prev) => ({ ...prev, [targetChar]: [] }));
+				}
+			} finally {
+				if (!cancelled) {
+					setKanjiStrokeLoadingMap((prev) => ({ ...prev, [targetChar]: false }));
+				}
+			}
+		};
+
+		run();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [expandedKanjiId, kanjiStrokeMap, wordDetail?.kanjis]);
+
+	useEffect(() => {
+		if (!expandedKanjiId || !Array.isArray(wordDetail?.kanjis)) {
+			return;
+		}
+
+		const expandedKanji = wordDetail.kanjis.find(
+			(item) => (item.id || item.characterKanji) === expandedKanjiId
+		);
+		const targetChar = String(expandedKanji?.characterKanji || "").trim();
+		const strokePaths =
+			normalizeStrokePaths(expandedKanji?.strokePaths).length > 0
+				? normalizeStrokePaths(expandedKanji?.strokePaths)
+				: kanjiStrokeMap[targetChar] || [];
+
+		if (!strokePaths.length) {
+			return;
+		}
+
+		setCurrentStrokeIndex(0);
+		setReplayKey((prev) => prev + 1);
+	}, [expandedKanjiId, kanjiStrokeMap, wordDetail?.kanjis]);
+
+	useEffect(() => {
+		if (!expandedKanjiId || !Array.isArray(wordDetail?.kanjis)) {
+			return undefined;
+		}
+
+		const expandedKanji = wordDetail.kanjis.find(
+			(item) => (item.id || item.characterKanji) === expandedKanjiId
+		);
+		const targetChar = String(expandedKanji?.characterKanji || "").trim();
+		const strokePaths =
+			normalizeStrokePaths(expandedKanji?.strokePaths).length > 0
+				? normalizeStrokePaths(expandedKanji?.strokePaths)
+				: kanjiStrokeMap[targetChar] || [];
+
+		if (!strokePaths.length) {
+			return undefined;
+		}
+
+		const isLastStroke = currentStrokeIndex >= strokePaths.length - 1;
+		const delay = isLastStroke ? 2500 : 900;
+
+		const timer = setTimeout(() => {
+			if (isLastStroke) {
+				setCurrentStrokeIndex(0);
+				setReplayKey((prev) => prev + 1);
+			} else {
+				setCurrentStrokeIndex((prev) => prev + 1);
+			}
+		}, delay);
+
+		return () => clearTimeout(timer);
+	}, [expandedKanjiId, currentStrokeIndex, kanjiStrokeMap, wordDetail?.kanjis, replayKey]);
 
 	useEffect(() => {
 		if (!wordDetail?.word) {
@@ -483,9 +642,9 @@ const DictionaryPage = () => {
 
 			setLoading(true);
 			setError("");
-				const normalizedKeyword = keyword.trim().toLowerCase();
-				const convertedKeyword = normalizeSearchKeyword(keyword.trim());
-				const res = await searchWords(convertedKeyword, 20);
+			const normalizedKeyword = keyword.trim().toLowerCase();
+			const convertedKeyword = normalizeSearchKeyword(keyword.trim());
+			const res = await searchWords(convertedKeyword, 20);
 
 			if (res && res.errCode === 0 && res.words && res.words.length > 0) {
 				const exactMatches = res.words.filter((item) => {
@@ -763,6 +922,103 @@ const DictionaryPage = () => {
 		setSubmittingContribution(false);
 	};
 
+	const handleContributionKeyDown = (event) => {
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			if (!submittingContribution && newContribution.trim()) {
+				handleAddContribution();
+			}
+		}
+	};
+
+	const openSearchDrawModal = () => {
+		setKanjiDrawMode("search");
+		setIsKanjiDrawOpen(true);
+	};
+
+	const openKanjiStrokeModal = (kanjiChar) => {
+		const normalizedChar = String(kanjiChar || "").trim();
+		if (!normalizedChar) {
+			return;
+		}
+		setKanjiDrawMode("kanji");
+		setSearchInput(normalizedChar);
+		setIsKanjiDrawOpen(true);
+	};
+
+	const renderLeftSidebar = () => (
+		<div className="detail-sidebar-left">
+			<div className="lookup-panel">
+				<h3>Khám phá nhanh</h3>
+				<div className="related-list default-list">
+					<button type="button" onClick={() => history.push(`/kanji?q=${encodeURIComponent(searchInput || keyword)}`)}>
+						<strong>Tra cứu Hán tự</strong>
+					</button>
+					<button type="button" onClick={() => history.push(`/sentence?q=${encodeURIComponent(searchInput || keyword)}`)}>
+						<strong>Mẫu câu liên quan</strong>
+					</button>
+					<button type="button" onClick={() => history.push(`/grammar?q=${encodeURIComponent(searchInput || keyword)}`)}>
+						<strong>Ngữ pháp liên quan</strong>
+					</button>
+				</div>
+			</div>
+
+			<div className="lookup-panel">
+				<h3>Lich su gan day</h3>
+				<div className="related-list default-list">
+					{recentHistory.slice(0, 6).map((item) => {
+						const term = getTermLabel(item);
+						if (!term) return null;
+						return (
+							<button
+								type="button"
+								key={item.id}
+								onClick={() => history.push(`/dictionary?q=${encodeURIComponent(term)}`)}
+							>
+								<strong>{term}</strong>
+							</button>
+						);
+					})}
+					{recentHistory.length === 0 && <p className="side-empty">Chua co lich su.</p>}
+				</div>
+			</div>
+
+			<div className="lookup-panel">
+				<h3>Tu khoa hot</h3>
+				<div className="chip-list">
+					{topKeywords.slice(0, 8).map((item, index) => {
+						const term = getTermLabel(item);
+						if (!term) return null;
+						return (
+							<button
+								type="button"
+								key={`${term}-${index}`}
+								onClick={() => history.push(`/dictionary?q=${encodeURIComponent(term)}`)}
+							>
+								{term}
+								<span>{getTermCount(item)}</span>
+							</button>
+						);
+					})}
+					{topKeywords.length === 0 && <p className="side-empty">Chua co du lieu hot.</p>}
+				</div>
+			</div>
+
+			<div className="lookup-panel">
+				<h3>Gop y moi</h3>
+				<div className="feedback-list">
+					{latestContributions.slice(0, 4).map((item) => (
+						<div key={item.id} className="feedback-item">
+							<strong>{item.word || "Tu vung"}</strong>
+							<p>{item.content}</p>
+						</div>
+					))}
+					{latestContributions.length === 0 && <p className="side-empty">Chua co gop y.</p>}
+				</div>
+			</div>
+		</div>
+	);
+
 	const renderDropdownBody = () => {
 		if (loadingDropdown) {
 			return <div className="dropdown-status">Đang tra cứu...</div>;
@@ -813,20 +1069,20 @@ const DictionaryPage = () => {
 						/>
 						<div className="search-actions">
 							<button type="button" title="Tìm kiếm" onClick={() => {
-									if (searchInput.trim()) {
-										if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
-											history.push(`/analysis?text=${encodeURIComponent(searchInput.trim())}`);
-											return;
-										}
-										history.push(`/dictionary?q=${encodeURIComponent(searchInput.trim())}`);
-										setIsDropdownOpen(false);
-										setHighlightedDropdownIndex(-1);
+								if (searchInput.trim()) {
+									if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
+										history.push(`/analysis?text=${encodeURIComponent(searchInput.trim())}`);
+										return;
 									}
-								}}>
+									history.push(`/dictionary?q=${encodeURIComponent(searchInput.trim())}`);
+									setIsDropdownOpen(false);
+									setHighlightedDropdownIndex(-1);
+								}
+							}}>
 								<Search size={15} />
 								<span>Tìm</span>
 							</button>
-							<button type="button" title="Nhập chữ viết tay" onClick={() => setIsKanjiDrawOpen(true)}>
+							<button type="button" title="Nhập chữ viết tay" onClick={openSearchDrawModal}>
 								<PenTool size={15} />
 								<span>Write</span>
 							</button>
@@ -857,9 +1113,19 @@ const DictionaryPage = () => {
 
 				<KanjiDrawModal
 					open={isKanjiDrawOpen}
-					onClose={() => setIsKanjiDrawOpen(false)}
-					anchorRef={searchWrapRef}
+					onClose={() => {
+						setIsKanjiDrawOpen(false);
+						setKanjiDrawMode("search");
+					}}
+					anchorRef={kanjiDrawMode === "kanji" ? detailGridRef : searchWrapRef}
 					onPick={(value) => {
+						if (kanjiDrawMode === "kanji") {
+							const picked = normalizeSearchKeyword(value);
+							history.push(`/kanji?q=${encodeURIComponent(picked)}`);
+							setIsKanjiDrawOpen(false);
+							setKanjiDrawMode("search");
+							return;
+						}
 						setSearchInput((prev) => `${prev || ""}${value}`);
 						setIsDropdownOpen(true);
 					}}
@@ -873,7 +1139,7 @@ const DictionaryPage = () => {
 					item={notebookPickerItem}
 				/>
 
-				<div className="mazii-content-grid detail-mode">
+				<div className="mazii-content-grid detail-mode" ref={detailGridRef}>
 					{(!wordDetail || loading || error) ? (
 						<div className="detail-card empty-state-container" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
 							{loading && (
@@ -902,233 +1168,258 @@ const DictionaryPage = () => {
 						</div>
 					) : (
 						<>
-							<div className="detail-left">
+							{renderLeftSidebar()}
+							<div className="detail-main detail-left">
 								<div className="detail-card">
-								<div className="detail-topline">
-									<div className="detail-tag">Từ đang xem</div>
-									<div className="detail-tag soft">{wordDetail.word?.length || 0} ký tự</div>
-								</div>
-								<div className="detail-head">
-									<div>
-										<h1>{wordDetail.word}</h1>
-										<div className="detail-reading">
-											{wordDetail.reading || "-"}
+									<div className="detail-topline">
+										<div className="detail-tag">Từ đang xem</div>
+										<div className="detail-tag soft">{wordDetail.word?.length || 0} ký tự</div>
+									</div>
+									<div className="detail-head">
+										<div>
+											<h1 className={wordDetail.word?.length <= 2 ? "kanji-display" : ""}>{wordDetail.word}</h1>
+											<div className="detail-reading">
+												{wordDetail.reading || "-"}
+											</div>
+										</div>
+										<div className="detail-actions">
+											<SpeakButton
+												text={wordDetail.word || wordDetail.reading}
+												title="Đọc từ"
+											/>
+											<button
+												type="button"
+												onClick={() => {
+													setNotebookPickerItem({
+														type: "word",
+														id: wordDetail.id,
+														label: wordDetail.word,
+														subtitle: wordDetail.reading,
+														meaning: wordDetail.meanings?.[0]?.definition || "",
+													});
+													setIsNotebookPickerOpen(true);
+												}}
+											>
+												Lưu
+											</button>
 										</div>
 									</div>
-									<div className="detail-actions">
-										<SpeakButton
-											text={wordDetail.word || wordDetail.reading}
-											title="Đọc từ"
-										/>
-										<button
-											type="button"
-											onClick={() => {
-											setNotebookPickerItem({
-												type: "word",
-												id: wordDetail.id,
-												label: wordDetail.word,
-												subtitle: wordDetail.reading,
-												meaning: wordDetail.meanings?.[0]?.definition || "",
-											});
-											setIsNotebookPickerOpen(true);
-											}}
-										>
-												Lưu
-										</button>
+									<div className="detail-meta">
+										<span>Cấp độ: {wordDetail.jlptLevel ? `N${wordDetail.jlptLevel}` : "-"}</span>
+										<span>Kanji: {wordDetail.kanjis?.length || 0}</span>
+										<span>Ví dụ: {displayedExamples.length}</span>
 									</div>
-								</div>
-								<div className="detail-meta">
-									<span>Cấp độ: {wordDetail.jlptLevel ? `N${wordDetail.jlptLevel}` : "-"}</span>
-									<span>Kanji: {wordDetail.kanjis?.length || 0}</span>
-									<span>Ví dụ: {displayedExamples.length}</span>
-								</div>
-								{Array.isArray(wordDetail.meanings) && wordDetail.meanings.length > 0 && (
-									<div className="meaning-preview-row">
-										{wordDetail.meanings.slice(0, 3).map((meaning) => (
-											<div className="meaning-chip" key={meaning.id}>
-												{/* <span>{meaning.partOfSpeech || "-"}</span> */}
-												<strong>{meaning.definition}</strong>
-											</div>
-										))}
-									</div>
-								)}
-
-								
-
-								{displayedExamples.length > 0 && (
-									<div className="detail-section">
-										<h3>Ví dụ</h3>
-										<ul>
-											{displayedExamples.map((example) => (
-												<li key={example.id}>
-													<strong>{example.japaneseSentence}</strong>
-													<p>{example.vietnameseTranslation}</p>
-												</li>
+									{Array.isArray(wordDetail.meanings) && wordDetail.meanings.length > 0 && (
+										<div className="meaning-preview-row">
+											{wordDetail.meanings.slice(0, 3).map((meaning) => (
+												<div className="meaning-chip" key={meaning.id}>
+													{/* <span>{meaning.partOfSpeech || "-"}</span> */}
+													<strong>{meaning.definition}</strong>
+												</div>
 											))}
-										</ul>
+										</div>
+									)}
+
+
+
+									{displayedExamples.length > 0 && (
+										<div className="detail-section">
+											<h3>Ví dụ</h3>
+											<ul>
+												{displayedExamples.map((example) => (
+													<li key={example.id}>
+														<strong>{example.japaneseSentence}</strong>
+														<p>{example.vietnameseTranslation}</p>
+													</li>
+												))}
+											</ul>
+										</div>
+									)}
+
+									<div className="detail-section">
+										{/* <h3>Hình ảnh từ vựng</h3> */}
+										<WordImages word={wordDetail.word} />
 									</div>
-								)}
 
-								<div className="detail-section">
-									<h3>Hình ảnh từ vựng</h3>
-									<WordImages word={wordDetail.word} />
+									<div className="detail-section">
+										<h3>Có {contributions.length} ý kiến đóng góp</h3>
+										<div className="contribution-list">
+											{contributions.map((item) => (
+												<div className="contribution-item" key={item.id}>
+													<p>{item.content}</p>
+													<div className="contribution-meta">
+														<small>{item.author}</small>
+														<small>{new Date(item.createdAt).toLocaleString("vi-VN")}</small>
+													</div>
+												</div>
+											))}
+											{contributions.length === 0 && (
+												<p className="contribution-empty">Chưa có đóng góp nào cho từ này.</p>
+											)}
+										</div>
+										<div className="contribution-form">
+											<textarea
+												value={newContribution}
+												onChange={(e) => setNewContribution(e.target.value)}
+												onKeyDown={handleContributionKeyDown}
+												placeholder="Thêm nghĩa hoặc ví dụ. Ấn SHIFT + ENTER để xuống dòng"
+											/>
+											{contributionError && (
+												<p className="contribution-empty">{contributionError}</p>
+											)}
+											<button
+												type="button"
+												onClick={handleAddContribution}
+												disabled={submittingContribution}
+											>
+												{submittingContribution ? "Đang gửi..." : "Gửi"}
+											</button>
+										</div>
+									</div>
+
 								</div>
+							</div>
+							<div className="detail-right">
+								{hasKeyword ? (
+									<>
+										{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
+											<div className="lookup-panel">
+												<h3>Các chữ kanji của {wordDetail.word}</h3>
+												<div className="kanji-list">
+														{wordDetail.kanjis.map((kanji) => {
+															const kanjiId = kanji.id || kanji.characterKanji;
+															const isExpanded = expandedKanjiId === kanjiId;
+															const onyomiItems = getReadingItems(kanji.onyomi);
+															const kunyomiItems = getReadingItems(kanji.kunyomi);
+																			const inlineStrokePaths = normalizeStrokePaths(kanji.strokePaths);
+																			const cachedStrokePaths = kanjiStrokeMap[kanji.characterKanji] || [];
+																			const strokePaths = inlineStrokePaths.length ? inlineStrokePaths : cachedStrokePaths;
+																			const isStrokeLoading = !!kanjiStrokeLoadingMap[kanji.characterKanji];
+																			const maxStrokeIndex = Math.min(currentStrokeIndex, Math.max(strokePaths.length - 1, 0));
+																			const displayedStrokes = strokePaths.slice(0, maxStrokeIndex + 1);
 
-								<div className="detail-section">
-									<h3>Có {contributions.length} ý kiến đóng góp</h3>
-									<div className="contribution-list">
-										{contributions.map((item) => (
-											<div className="contribution-item" key={item.id}>
-												<p>{item.content}</p>
-												<div className="contribution-meta">
-													<small>{item.author}</small>
-													<small>{new Date(item.createdAt).toLocaleString("vi-VN")}</small>
+															return (
+																<div
+																	key={kanjiId}
+																	className={`kanji-accordion-item${isExpanded ? " expanded" : ""}`}
+																>
+																	<button
+																		type="button"
+																		className="kanji-accordion-toggle"
+																		onClick={() => setExpandedKanjiId(isExpanded ? null : kanjiId)}
+																		aria-expanded={isExpanded}
+																	>
+																		<div className="kanji-toggle-main">
+																			<strong className="kanji-char">{kanji.characterKanji}</strong>
+																			<span className="kanji-head-reading">[{onyomiItems[0] || "-"}]</span>
+																			<span className="kanji-meaning">{(kanji.meaning || "-").toUpperCase()}</span>
+																		</div>
+																		<ChevronDown size={14} className={`kanji-chevron${isExpanded ? " open" : ""}`} />
+																	</button>
+																	<div className={`kanji-accordion-panel${isExpanded ? " open" : ""}`}>
+																		<div className="kanji-panel-inner">
+																			<button
+																				type="button"
+																				className="kanji-stroke-box"
+																				onClick={() => {
+																					if (strokePaths.length) {
+																						setCurrentStrokeIndex(0);
+																						setReplayKey((prev) => prev + 1);
+																						return;
+																					}
+																					openKanjiStrokeModal(kanji.characterKanji);
+																				}}
+																				title="Mở bảng vẽ / xem nét viết"
+																			>
+																				{isStrokeLoading ? (
+																					<span className="kanji-stroke-loading">Đang nạp nét...</span>
+																				) : strokePaths.length ? (
+																					<svg
+																						key={`stroke-svg-${kanjiId}-${replayKey}`}
+																						viewBox="0 0 109 109"
+																						className="kanji-stroke-guide-svg"
+																						aria-label={`Thu tu net ${kanji.characterKanji}`}
+																					>
+																						<rect x="0" y="0" width="109" height="109" fill="var(--da-surface)" stroke="var(--da-border)" strokeWidth="2" />
+																						<path d="M54.5 0V109" stroke="var(--da-border)" strokeWidth="1" />
+																						<path d="M0 54.5H109" stroke="var(--da-border)" strokeWidth="1" />
+																						{displayedStrokes.map((item, index) => {
+																							const isCurrentStroke = index === maxStrokeIndex;
+																							return (
+																								<path
+																									key={`stroke-guide-${kanjiId}-${index}`}
+																									d={item.d}
+																									fill="none"
+																									stroke={isCurrentStroke ? "var(--da-accent-red)" : "var(--da-accent-gold)"}
+																									strokeWidth={isCurrentStroke ? "4" : "3"}
+																									strokeLinecap="round"
+																									strokeLinejoin="round"
+																									opacity={isCurrentStroke ? "1" : "0.55"}
+																									pathLength="1"
+																									className={isCurrentStroke ? "kanji-stroke-animate" : ""}
+																									style={{
+																										strokeDasharray: 1,
+																										strokeDashoffset: isCurrentStroke ? 1 : 0,
+																									}}
+																								/>
+																							);
+																						})}
+																					</svg>
+																				) : (
+																					<span className="kanji-stroke-fallback">{kanji.characterKanji || "?"}</span>
+																				)}
+																			</button>
+																			<div className="kanji-meta-grid">
+																				<p>
+																					<span>Hán tự:</span> {(kanji.meaning || "-").toUpperCase()}
+																				</p>
+																				<p>
+																					<span>訓:</span> {kunyomiItems.join(" ") || "-"}
+																				</p>
+																				<p>
+																					<span>音:</span> {onyomiItems.join(" ") || "-"}
+																				</p>
+																				{kanji.jlptLevel ? (
+																					<small className="kanji-jlpt">JLPT N{kanji.jlptLevel}</small>
+																				) : (
+																					<small className="kanji-jlpt">JLPT -</small>
+																				)}
+																			</div>
+																		</div>
+																	</div>
+																</div>
+															);
+														})}
 												</div>
 											</div>
-										))}
-										{contributions.length === 0 && (
-											<p className="contribution-empty">Chưa có đóng góp nào cho từ này.</p>
 										)}
-									</div>
-									<div className="contribution-form">
-										<textarea
-											value={newContribution}
-											onChange={(e) => setNewContribution(e.target.value)}
-											placeholder="Thêm nghĩa hoặc ví dụ. Ấn SHIFT + ENTER để xuống dòng"
-										/>
-										{contributionError && (
-											<p className="contribution-empty">{contributionError}</p>
-										)}
-										<button
-											type="button"
-											onClick={handleAddContribution}
-											disabled={submittingContribution}
-										>
-											{submittingContribution ? "Đang gửi..." : "Gửi"}
-										</button>
-									</div>
-								</div>
 
-							</div>
-						</div>
-					<div className="detail-right">
-						{hasKeyword ? (
-							<>
-								{wordDetail?.kanjis && wordDetail.kanjis.length > 0 && (
-									<div className="lookup-panel">
-										<h3>Các chữ kanji của {wordDetail.word}</h3>
-										<div className="kanji-list">
-											{wordDetail.kanjis.map((kanji) => (
-												<button
-													key={kanji.id}
-													type="button"
-													className="kanji-info-card"
-													onClick={() => history.push(`/kanji?q=${kanji.characterKanji}`)}
-												>
-													<div className="kanji-card-head">
-														<strong className="kanji-char">{kanji.characterKanji}</strong>
-														<span className="kanji-head-reading">
-															[{getReadingItems(kanji.onyomi)[0] || "-"}]
-														</span>
-													</div>
-													<p className="kanji-meaning">{(kanji.meaning || "-").toUpperCase()}</p>
-													<div className="kanji-reading-lines">
-														<p>
-															<span>Hán tự:</span> {kanji.characterKanji} - {(kanji.meaning || "-").toUpperCase()}
-														</p>
-														<p>
-															<span>訓:</span> {getReadingItems(kanji.kunyomi).join(" ") || "-"}
-														</p>
-														<p>
-															<span>音:</span> {getReadingItems(kanji.onyomi).join(" ") || "-"}
-														</p>
-													</div>
-													{kanji.jlptLevel && (
-														<small className="kanji-jlpt">JLPT N{kanji.jlptLevel}</small>
-													)}
-												</button>
-											))}
-										</div>
-									</div>
-								)}
-
-								{relatedWords.length > 0 && (
-									<div className="lookup-panel">
-										<h3>Từ liên quan</h3>
-										<div className="related-list">
-											{relatedWords.map((item) => (
-												<button
-													type="button"
-													key={item.id}
-													onClick={() => history.push(`/dictionary?q=${encodeURIComponent(item.word || item.reading || "")}`)}
-												>
-													<strong>{item.word}</strong>
-													<span>{item.reading || "-"}</span>
-													<p>{item.meanings?.[0]?.definition || "Chưa có nghĩa"}</p>
-												</button>
-											))}
-										</div>
-									</div>
-								)}
-							</>
-						) : (
-							<>
-								<div className="lookup-panel">
-									<h3>Lich su gan day</h3>
-									<div className="related-list default-list">
-										{recentHistory.slice(0, 6).map((item) => {
-											const term = getTermLabel(item);
-											if (!term) return null;
-											return (
-												<button
-													type="button"
-													key={item.id}
-													onClick={() => history.push(`/dictionary?q=${encodeURIComponent(term)}`)}
-												>
-													<strong>{term}</strong>
-												</button>
-											);
-										})}
-										{recentHistory.length === 0 && <p className="side-empty">Chua co lich su.</p>}
-									</div>
-								</div>
-
-								<div className="lookup-panel">
-									<h3>Tu khoa hot</h3>
-									<div className="chip-list">
-										{topKeywords.slice(0, 8).map((item, index) => {
-											const term = getTermLabel(item);
-											if (!term) return null;
-											return (
-												<button
-													type="button"
-													key={`${term}-${index}`}
-													onClick={() => history.push(`/dictionary?q=${encodeURIComponent(term)}`)}
-												>
-													{term}
-													<span>{getTermCount(item)}</span>
-												</button>
-											);
-										})}
-										{topKeywords.length === 0 && <p className="side-empty">Chua co du lieu hot.</p>}
-									</div>
-								</div>
-
-								<div className="lookup-panel">
-									<h3>Gop y moi</h3>
-									<div className="feedback-list">
-										{latestContributions.slice(0, 4).map((item) => (
-											<div key={item.id} className="feedback-item">
-												<strong>{item.word || "Tu vung"}</strong>
-												<p>{item.content}</p>
+										{relatedWords.length > 0 && (
+											<div className="lookup-panel">
+												<h3>Từ liên quan</h3>
+												<div className="related-list">
+													{relatedWords.map((item) => (
+														<button
+															type="button"
+															key={item.id}
+															onClick={() => history.push(`/dictionary?q=${encodeURIComponent(item.word || item.reading || "")}`)}
+														>
+															<strong>{item.word}</strong>
+															<span>{item.reading || "-"}</span>
+															<p>{item.meanings?.[0]?.definition || "Chưa có nghĩa"}</p>
+														</button>
+													))}
+												</div>
 											</div>
-										))}
-										{latestContributions.length === 0 && <p className="side-empty">Chua co gop y.</p>}
+										)}
+									</>
+								) : (
+									<div className="lookup-panel">
+										<h3>Tu lien quan</h3>
+										<p className="side-empty">Nhap tu khoa de hien thi bo phan kanji va goi y mo rong.</p>
 									</div>
-								</div>
-							</>
-						)}
-					</div>
+								)}
+							</div>
 						</>
 					)}
 				</div>

@@ -28,8 +28,9 @@ const HandleGetNotebookOverview = async (req, res) => {
 
 const HandleGetCuratedNotebookCollections = async (req, res) => {
 	try {
+		const userId = req.user?.id || null;
 		const limit = Number(req.query.limit || 12);
-		const curatedNotebooks = await notebookService.getCuratedNotebookCollections(limit);
+		const curatedNotebooks = await notebookService.getCuratedNotebookCollections(userId, limit);
 		return res.status(200).json({
 			errCode: 0,
 			errMessage: "OK",

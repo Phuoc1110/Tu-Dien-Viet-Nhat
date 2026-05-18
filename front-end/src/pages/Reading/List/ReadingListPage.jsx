@@ -4,6 +4,10 @@ import {
 	ArrowRight,
 	BookOpenCheck,
 	BookText,
+	ChevronLeft,
+	ChevronRight,
+	ChevronsLeft,
+	ChevronsRight,
 	Clock3,
 	Filter,
 	Languages,
@@ -254,29 +258,29 @@ const ReadingListPage = () => {
 						</div>
 					)}
 
-					{!loading && !error && totalPages > 1 && (
-						<div className="reading-pagination glass-panel">
-							<button
-								type="button"
-								className="reading-page-btn"
-								onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-								disabled={currentPage === 1}
-							>
-								Trang trước
-							</button>
-							<span className="reading-page-indicator">
-								Trang {currentPage}/{totalPages}
-							</span>
-							<button
-								type="button"
-								className="reading-page-btn"
-								onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-								disabled={currentPage === totalPages}
-							>
-								Trang sau
-							</button>
-						</div>
-					)}
+					{!loading && !error && totalPages > 1 && (() => {
+						const delta = 2;
+						const rangeStart = Math.max(1, currentPage - delta);
+						const rangeEnd = Math.min(totalPages, currentPage + delta);
+						const range = [];
+						for (let i = rangeStart; i <= rangeEnd; i++) range.push(i);
+						return (
+							<div className="reading-pagination glass-panel">
+								<div className="reading-pagination-info">
+									Trang {currentPage} / {totalPages} &middot; {total} bài đọc
+								</div>
+								<div className="reading-pagination-controls">
+									<button type="button" className="reading-page-btn is-icon" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} title="Trang đầu"><ChevronsLeft size={15} /></button>
+									<button type="button" className="reading-page-btn is-icon" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} title="Trang trước"><ChevronLeft size={15} /></button>
+									{rangeStart > 1 && (<><button type="button" className="reading-page-btn is-num" onClick={() => setCurrentPage(1)}>1</button>{rangeStart > 2 && <span className="reading-page-ellipsis">…</span>}</>)}
+									{range.map((page) => (<button key={page} type="button" className={`reading-page-btn is-num${page === currentPage ? " is-current" : ""}`} onClick={() => setCurrentPage(page)}>{page}</button>))}
+									{rangeEnd < totalPages && (<>{rangeEnd < totalPages - 1 && <span className="reading-page-ellipsis">…</span>}<button type="button" className="reading-page-btn is-num" onClick={() => setCurrentPage(totalPages)}>{totalPages}</button></>)}
+									<button type="button" className="reading-page-btn is-icon" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} title="Trang sau"><ChevronRight size={15} /></button>
+									<button type="button" className="reading-page-btn is-icon" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} title="Trang cuối"><ChevronsRight size={15} /></button>
+								</div>
+							</div>
+						);
+					})()}
 				</section>
 			</div>
 		</div>

@@ -35,7 +35,7 @@ const chunkItems = (items, chunkSize = 2) => {
 
 const hasKanjiChar = (text) => /[\u4E00-\u9FFF]/.test(String(text || ""));
 const hasJapaneseChar = (text) => /[\u3040-\u30FF\u4E00-\u9FFF]/.test(String(text || ""));
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const WORDS_PER_PAGE = 10;
 
 const NotebookDetailPage = () => {
 	const history = useHistory();
@@ -55,7 +55,6 @@ const NotebookDetailPage = () => {
 	const [flashIndex, setFlashIndex] = useState(0);
 	const [isCardFlipped, setIsCardFlipped] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
-	const [wordsPerPage, setWordsPerPage] = useState(20);
 	const [pageInput, setPageInput] = useState("1");
 	const [fieldVisibility, setFieldVisibility] = useState({
 		vocabulary: true,
@@ -206,24 +205,24 @@ const NotebookDetailPage = () => {
 	}, [activeFlashItem]);
 
 	const totalPages = useMemo(() => {
-		const pages = Math.ceil(filteredItems.length / wordsPerPage);
+		const pages = Math.ceil(filteredItems.length / WORDS_PER_PAGE);
 		return pages > 0 ? pages : 1;
-	}, [filteredItems.length, wordsPerPage]);
+	}, [filteredItems.length]);
 
 	const paginatedItems = useMemo(() => {
-		const start = (currentPage - 1) * wordsPerPage;
-		const end = start + wordsPerPage;
+		const start = (currentPage - 1) * WORDS_PER_PAGE;
+		const end = start + WORDS_PER_PAGE;
 		return filteredItems.slice(start, end);
-	}, [currentPage, filteredItems, wordsPerPage]);
+	}, [currentPage, filteredItems]);
 
 	const paginationSummary = useMemo(() => {
 		if (!filteredItems.length) {
 			return { start: 0, end: 0 };
 		}
-		const start = (currentPage - 1) * wordsPerPage + 1;
+		const start = (currentPage - 1) * WORDS_PER_PAGE + 1;
 		const end = Math.min(start + paginatedItems.length - 1, filteredItems.length);
 		return { start, end };
-	}, [currentPage, filteredItems.length, paginatedItems.length, wordsPerPage]);
+	}, [currentPage, filteredItems.length, paginatedItems.length]);
 
 	const twoColumnRows = useMemo(() => chunkItems(paginatedItems, 2), [paginatedItems]);
 
@@ -262,11 +261,6 @@ const NotebookDetailPage = () => {
 		setCurrentPage(1);
 		setPageInput("1");
 	}, [searchKeyword, notebook?.id]);
-
-	useEffect(() => {
-		setCurrentPage(1);
-		setPageInput("1");
-	}, [wordsPerPage]);
 
 	useEffect(() => {
 		if (currentPage > totalPages) {
@@ -1557,14 +1551,6 @@ const NotebookDetailPage = () => {
 											<span>
 												Hiển thị {paginationSummary.start}-{paginationSummary.end} / {filteredItems.length}
 											</span>
-											<select
-												value={String(wordsPerPage)}
-												onChange={(event) => setWordsPerPage(Number(event.target.value))}
-											>
-												{PAGE_SIZE_OPTIONS.map((size) => (
-													<option key={size} value={size}>{size}/trang</option>
-												))}
-											</select>
 											<input
 												type="number"
 												min="1"

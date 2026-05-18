@@ -1,7 +1,11 @@
+/* Settings page - Dark Academia x Japanese Ink */
+
 .settings-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
+    font-family: var(--font-body);
+    color: var(--da-text);
 }
 
 .settings-header {
@@ -9,14 +13,15 @@
 }
 
 .settings-header h1 {
-    color: #fff;
+    color: var(--da-text);
     font-size: 2rem;
     font-weight: 700;
     margin: 0 0 0.5rem 0;
+    font-family: var(--font-heading);
 }
 
 .settings-header p {
-    color: #9ca3af;
+    color: var(--da-text-muted);
     margin: 0;
 }
 
@@ -28,8 +33,9 @@
 
 /* Sidebar Navigation */
 .settings-sidebar {
-    background: #1f2937;
-    border-radius: 0.75rem;
+    background: var(--da-card);
+    border: 1px solid var(--da-border);
+    border-radius: 4px;
     padding: 0.5rem;
     height: fit-content;
     position: sticky;
@@ -42,24 +48,24 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    background: none;
+    background: transparent;
     border: none;
-    color: #9ca3af;
-    border-radius: 0.5rem;
+    color: var(--da-text-muted);
+    border-radius: 2px;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.9375rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .settings-nav-item:hover {
-    background: #374151;
-    color: #fff;
+    background: var(--da-surface-hover);
+    color: var(--da-text);
 }
 
 .settings-nav-item.active {
-    background: #2563eb;
-    color: #fff;
+    background: var(--da-surface-hover);
+    color: var(--da-accent-red);
 }
 
 .settings-nav-item .chevron {
@@ -75,16 +81,18 @@
 
 /* Content Area */
 .settings-content {
-    background: #1f2937;
-    border-radius: 0.75rem;
+    background: var(--da-card);
+    border: 1px solid var(--da-border);
+    border-radius: 4px;
     padding: 2rem;
 }
 
 .settings-section h2 {
-    color: #fff;
+    color: var(--da-text);
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0 0 1.5rem 0;
+    font-family: var(--font-heading);
 }
 
 .settings-group {
@@ -95,16 +103,18 @@
 }
 
 .settings-group h3 {
-    color: #fff;
+    color: var(--da-text);
     font-size: 1.125rem;
     font-weight: 600;
     margin: 1rem 0 0.5rem 0;
+    font-family: var(--font-heading);
 }
 
 .subsection-title {
-    color: #d1d5db !important;
+    color: var(--da-text) !important;
     font-size: 1rem !important;
     margin-top: 1.5rem !important;
+    font-family: var(--font-heading);
 }
 
 .setting-item {
@@ -112,14 +122,15 @@
     align-items: center;
     justify-content: space-between;
     padding: 1.25rem;
-    background: #111827;
-    border-radius: 0.5rem;
-    border: 1px solid #374151;
+    background: transparent;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
     transition: border-color 0.2s;
 }
 
 .setting-item:hover {
-    border-color: #4b5563;
+    border-color: var(--da-accent-gold);
+    background: var(--da-surface-hover);
 }
 
 .setting-label {
@@ -130,19 +141,20 @@
 }
 
 .setting-label svg {
-    color: #9ca3af;
+    color: var(--da-text-muted);
     flex-shrink: 0;
 }
 
 .setting-label > div h3 {
-    color: #fff;
+    color: var(--da-text);
     font-size: 0.9375rem;
     font-weight: 600;
     margin: 0 0 0.25rem 0;
+    font-family: var(--font-heading);
 }
 
 .setting-label > div p {
-    color: #9ca3af;
+    color: var(--da-text-muted);
     font-size: 0.875rem;
     margin: 0;
 }
@@ -168,7 +180,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #374151;
+    background-color: var(--da-surface-hover);
+    border: 1px solid var(--da-border);
     transition: 0.3s;
     border-radius: 24px;
 }
@@ -176,86 +189,92 @@
 .toggle-slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
+    height: 16px;
+    width: 16px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
+    background-color: var(--da-text-muted);
     transition: 0.3s;
     border-radius: 50%;
 }
 
 input:checked + .toggle-slider {
-    background-color: #2563eb;
+    background-color: var(--da-accent-red);
+    border-color: var(--da-accent-red);
 }
 
 input:checked + .toggle-slider:before {
+    background-color: var(--da-bg);
     transform: translateX(24px);
 }
 
 /* Select Input */
 .select-input {
-    background: #111827;
-    border: 1px solid #374151;
-    border-radius: 0.5rem;
-    color: #fff;
+    background: var(--da-surface);
+    border: 1px solid var(--da-border);
+    border-radius: 4px;
+    color: var(--da-text);
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
     cursor: pointer;
     outline: none;
     transition: border-color 0.2s;
+    font-family: var(--font-body);
 }
 
 .select-input:hover {
-    border-color: #4b5563;
+    border-color: var(--da-accent-gold);
 }
 
 .select-input:focus {
-    border-color: #2563eb;
+    border-color: var(--da-accent-gold);
+    box-shadow: 0 0 0 2px var(--da-glow-gold);
 }
 
 /* Buttons */
 .btn-primary {
-    background: #2563eb;
-    color: white;
+    background: transparent;
+    color: var(--da-accent-gold);
     padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    border: none;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
     font-size: 0.9375rem;
 }
 
 .btn-primary:hover {
-    background: #1d4ed8;
+    background: var(--da-surface-hover);
+    border-color: var(--da-accent-gold);
 }
 
 .btn-secondary {
-    background: #374151;
-    color: white;
+    background: transparent;
+    color: var(--da-text-muted);
     padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid #4b5563;
-    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.875rem;
 }
 
 .btn-secondary:hover {
-    background: #4b5563;
+    background: var(--da-surface-hover);
+    color: var(--da-text);
 }
 
 .btn-danger {
-    background: #dc2626;
-    color: white;
+    background: transparent;
+    color: var(--da-accent-red);
     padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    border: none;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -263,15 +282,16 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-danger:hover {
-    background: #b91c1c;
+    background: var(--da-surface-hover);
+    border-color: var(--da-accent-red);
 }
 
 .btn-logout {
-    background: #374151;
-    color: white;
+    background: transparent;
+    color: var(--da-accent-red);
     padding: 0.875rem 1.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid #4b5563;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -282,8 +302,8 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-logout:hover {
-    background: #4b5563;
-    border-color: #6b7280;
+    background: var(--da-surface-hover);
+    border-color: var(--da-accent-red);
 }
 
 /* Password Form */
@@ -292,9 +312,9 @@ input:checked + .toggle-slider:before {
     flex-direction: column;
     gap: 1rem;
     padding: 1.25rem;
-    background: #111827;
-    border-radius: 0.5rem;
-    border: 1px solid #374151;
+    background: transparent;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
 }
 
 .form-group {
@@ -304,42 +324,44 @@ input:checked + .toggle-slider:before {
 }
 
 .form-group label {
-    color: #d1d5db;
+    color: var(--da-text);
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .form-group input {
-    background: #1f2937;
-    border: 1px solid #374151;
-    border-radius: 0.5rem;
-    color: #fff;
+    background: var(--da-surface);
+    border: 1px solid var(--da-border);
+    border-radius: 4px;
+    color: var(--da-text);
     padding: 0.75rem 1rem;
     font-size: 0.9375rem;
     outline: none;
     transition: border-color 0.2s;
+    font-family: var(--font-body);
 }
 
 .form-group input:focus {
-    border-color: #2563eb;
+    border-color: var(--da-accent-gold);
 }
 
 .form-group input::placeholder {
-    color: #6b7280;
+    color: var(--da-text-dark);
 }
 
 /* Danger Zone */
 .danger-zone {
     margin-top: 2rem;
     padding-top: 2rem;
-    border-top: 1px solid #374151;
+    border-top: 1px dashed var(--da-border);
 }
 
 .danger-zone h3 {
-    color: #dc2626;
+    color: var(--da-accent-red);
     font-size: 1.125rem;
     font-weight: 600;
     margin: 0 0 1rem 0;
+    font-family: var(--font-heading);
 }
 
 /* Help Links */
@@ -348,21 +370,21 @@ input:checked + .toggle-slider:before {
     align-items: center;
     gap: 1rem;
     padding: 1.25rem;
-    background: #111827;
-    border-radius: 0.5rem;
-    border: 1px solid #374151;
+    background: transparent;
+    border-radius: 4px;
+    border: 1px solid var(--da-border);
     text-decoration: none;
     color: inherit;
     transition: all 0.2s;
 }
 
 .help-link:hover {
-    border-color: #4b5563;
-    background: #1f2937;
+    border-color: var(--da-accent-gold);
+    background: var(--da-surface-hover);
 }
 
 .help-link svg {
-    color: #9ca3af;
+    color: var(--da-text-muted);
     flex-shrink: 0;
 }
 
@@ -371,14 +393,15 @@ input:checked + .toggle-slider:before {
 }
 
 .help-link h3 {
-    color: #fff;
+    color: var(--da-text);
     font-size: 0.9375rem;
     font-weight: 600;
     margin: 0 0 0.25rem 0;
+    font-family: var(--font-heading);
 }
 
 .help-link p {
-    color: #9ca3af;
+    color: var(--da-text-muted);
     font-size: 0.875rem;
     margin: 0;
 }
@@ -386,7 +409,7 @@ input:checked + .toggle-slider:before {
 .app-info {
     text-align: center;
     padding: 1.5rem;
-    color: #6b7280;
+    color: var(--da-text-dark);
     font-size: 0.875rem;
 }
 

@@ -4,6 +4,19 @@ import "./KanjiDrawModal.css";
 
 const KANJI_CANDIDATE_LIMIT = 20;
 
+const resolveThemeColor = (name, fallback) => {
+	if (typeof window === "undefined") {
+		return fallback;
+	}
+	const value = getComputedStyle(document.documentElement).getPropertyValue(name);
+	return value ? value.trim() : fallback;
+};
+
+const getCanvasThemeColors = () => ({
+	surface: resolveThemeColor("--da-surface", "#ffffff"),
+	ink: resolveThemeColor("--da-text", "#0f172a"),
+});
+
 const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 	const canvasRef = useRef(null);
 	const boardWrapRef = useRef(null);
@@ -38,12 +51,14 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 		canvas.style.height = `${displayHeight}px`;
 
 		const ctx = canvas.getContext("2d");
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.scale(ratio, ratio);
 		ctx.lineCap = "round";
 		ctx.lineJoin = "round";
 		ctx.lineWidth = 6;
-		ctx.strokeStyle = "#0f172a";
-		ctx.fillStyle = "#ffffff";
+		const theme = getCanvasThemeColors();
+		ctx.strokeStyle = theme.ink;
+		ctx.fillStyle = theme.surface;
 		ctx.fillRect(0, 0, displayWidth, displayHeight);
 		ctxRef.current = ctx;
 		strokesRef.current = [];
@@ -159,7 +174,8 @@ const KanjiDrawModal = ({ open, onClose, onPick, anchorRef }) => {
 			return;
 		}
 		const { width, height } = canvasSizeRef.current;
-		ctxRef.current.fillStyle = "#ffffff";
+		const theme = getCanvasThemeColors();
+		ctxRef.current.fillStyle = theme.surface;
 		ctxRef.current.fillRect(0, 0, width, height);
 		strokesRef.current = [];
 		currentStrokeRef.current = [];

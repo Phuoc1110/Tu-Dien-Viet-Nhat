@@ -532,13 +532,14 @@ const HomePage = () => {
 								onChange={handleSearchInputChange}
 								onKeyDown={handleSearchInputKeyDown}
 								placeholder="Nhật, nihon, Nhật Bản"
+								aria-label="Tìm kiếm từ"
 							/>
 							<div className="search-actions">
-								<button type="button" onClick={openImagePicker} title="Chụp ảnh để tra cứu" disabled={isImageUploading}>
+								<button type="button" onClick={openImagePicker} title="Chụp ảnh để tra cứu" disabled={isImageUploading} aria-label="Chọn ảnh để tra cứu">
 									<Camera size={15} />
 									<span>{isImageUploading ? "Đang đọc" : "Ảnh"}</span>
 								</button>
-								<button type="button" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay">
+								<button type="button" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay" aria-label="Mở trình viết tay">
 									<PenTool size={15} />
 									<span>Write</span>
 								</button>
@@ -546,12 +547,12 @@ const HomePage = () => {
 									<Mic size={15} />
 									<span>Voice</span>
 								</button> */}
-								<button type="button" onClick={openHistoryPopup}>
+								<button type="button" onClick={openHistoryPopup} aria-label="Mở lịch sử tra cứu">
 									<RefreshCcw size={15} />
 									His
 								</button>
 							</div>
-							<button className="lang-switch" type="submit">
+							<button className="lang-switch" type="submit" aria-label="Chuyển ngôn ngữ">
 								Nhật - Việt ▾
 							</button>
 						</form>
@@ -568,41 +569,49 @@ const HomePage = () => {
 						)}
 					</div>
 
-					<nav className="home-mode-tabs">
-						<button className="tab-active" type="button">
-							Từ vựng
-						</button>
-						<button
-							type="button"
-							onClick={() => history.push(`/kanji?q=${searchInput.trim()}`)}
-						>
-							Hán tự
-						</button>
-						<button
-							type="button"
-							onClick={() => history.push(`/sentence?q=${searchInput.trim()}`)}
-						>
-							Mẫu câu
-						</button>
-						<button
-							type="button"
-							onClick={() => history.push(`/grammar?q=${searchInput.trim()}`)}
-						>
-							Ngữ pháp
-						</button>
-						<button
-							type="button"
-							onClick={() => {
-								if (searchInput.trim()) {
-									history.push(`/analysis?text=${searchInput.trim()}`);
-								} else {
-									history.push(`/analysis`);
-								}
-							}}
-						>
-							Phân tích
-						</button>
-					</nav>
+						<nav className="home-mode-tabs" role="tablist" aria-label="Chế độ tra cứu">
+							<button className="tab-active" type="button" aria-pressed="true" aria-label="Chế độ Từ vựng">
+								Từ vựng
+							</button>
+							<button
+								type="button"
+								onClick={() => history.push(`/kanji?q=${searchInput.trim()}`)}
+								aria-pressed="false"
+								aria-label="Chế độ Hán tự"
+							>
+								Hán tự
+							</button>
+							<button
+								type="button"
+								onClick={() => history.push(`/sentence?q=${searchInput.trim()}`)}
+								aria-pressed="false"
+								aria-label="Chế độ Mẫu câu"
+							>
+								Mẫu câu
+							</button>
+							<button
+								type="button"
+								onClick={() => history.push(`/grammar?q=${searchInput.trim()}`)}
+								aria-pressed="false"
+								aria-label="Chế độ Ngữ pháp"
+							>
+								Ngữ pháp
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									if (searchInput.trim()) {
+										history.push(`/analysis?text=${searchInput.trim()}`);
+									} else {
+										history.push(`/analysis`);
+									}
+								}}
+								aria-pressed="false"
+								aria-label="Chế độ Phân tích"
+							>
+								Phân tích
+							</button>
+						</nav>
 
 				</header>
 

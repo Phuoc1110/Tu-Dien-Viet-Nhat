@@ -456,9 +456,9 @@ const KanjiPage = () => {
 					</button>
 				</div>
 				<svg key={`stroke-svg-${kanjiDetail.id}-${replayKey}`} viewBox="0 0 109 109" className="stroke-guide-svg" aria-label="Kanji stroke guide">
-					<rect x="0" y="0" width="109" height="109" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
-					<path d="M54.5 0V109" stroke="#dbe4ef" strokeWidth="1" />
-					<path d="M0 54.5H109" stroke="#dbe4ef" strokeWidth="1" />
+					<rect x="0" y="0" width="109" height="109" fill="var(--da-surface)" stroke="var(--da-border)" strokeWidth="2" />
+					<path d="M54.5 0V109" stroke="var(--da-border)" strokeWidth="1" />
+					<path d="M0 54.5H109" stroke="var(--da-border)" strokeWidth="1" />
 					{displayedStrokes.map((item, index) => {
 						const isCurrentStroke = index === maxStrokeIndex;
 						return (
@@ -466,7 +466,7 @@ const KanjiPage = () => {
 								key={`stroke-guide-${index}`}
 								d={item.d}
 								fill="none"
-								stroke={isCurrentStroke ? "#ef4444" : "#0ea5e9"}
+								stroke={isCurrentStroke ? "var(--da-accent-red)" : "var(--da-accent-gold)"}
 								strokeWidth={isCurrentStroke ? "4" : "3"}
 								strokeLinecap="round"
 								strokeLinejoin="round"

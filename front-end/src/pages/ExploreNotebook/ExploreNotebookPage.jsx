@@ -141,21 +141,45 @@ const ExploreNotebookPage = () => {
 					{!loading && filteredNotebooks.length > 0 && (
 						<>
 							<div className="explore-grid">
-								{pagedNotebooks.map((notebook) => (
-									<button
-										type="button"
-										key={notebook.id}
-										className="explore-card"
-										onClick={() => history.push(`/notebook/${notebook.id}`, { fromExplore: true })}
-									>
-										<h3>{notebook.name}</h3>
-										<p className="card-count">({notebook.itemsCount || 0} từ)</p>
-										<div className="card-meta">
-											<span className="owner">{notebook.owner?.username || "Ẩn danh"}</span>
-											<span className="date">Ngày tạo: {formatDate(notebook.createdAt)}</span>
-										</div>
-									</button>
-								))}
+								{pagedNotebooks.map((notebook, idx) => {
+									const colorPalette = ["#c0392b", "#2b8fd6", "#27ae60", "#f0c040", "#8e44ad", "#f39c12"];
+									const accent = colorPalette[idx % colorPalette.length];
+									const total = notebook.itemsCount || 0;
+									const reviewed = Number(
+										notebook.rememberedCount ?? notebook.reviewedCount ?? Math.floor((total || 0) * 0.15)
+									);
+									const progress = total > 0 ? Math.min(100, Math.round((reviewed / total) * 100)) : 0;
+
+									return (
+										<button
+											type="button"
+											key={notebook.id}
+											className="notebook-item-card bento-tile"
+											onClick={() => history.push(`/notebook/${notebook.id}`, { fromExplore: true })}
+											style={{ ["--card-accent"]: accent }}
+										>
+											<div className="card-top">
+												<div className="card-icon" style={{ background: accent + "22" }}>
+													{notebook.icon || "🌸"}
+												</div>
+											</div>
+											<h3>{notebook.name}</h3>
+											<div className="card-meta-inline">
+												<span>({total} từ)</span>
+												<span className="card-owner">{notebook.owner?.username || "Ẩn danh"}</span>
+											</div>
+											<div className="card-meta-date">Ngày tạo: {formatDate(notebook.createdAt)}</div>
+											<div className="card-progress">
+												<div className="progress-bar">
+													<div className="progress-fill" style={{ width: `${progress}%` }} />
+												</div>
+												<div className="progress-label">
+													Đã ôn {reviewed}/{total} từ
+												</div>
+											</div>
+										</button>
+									);
+								})}
 							</div>
 
 							{totalPages > 1 && (

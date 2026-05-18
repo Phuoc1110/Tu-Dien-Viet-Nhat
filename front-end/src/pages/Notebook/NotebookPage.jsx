@@ -28,6 +28,8 @@ const NotebookPage = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [createNotebookName, setCreateNotebookName] = useState("");
 	const [createLoading, setCreateLoading] = useState(false);
+	const [searchTerm, setSearchTerm] = useState("");
+	const [activeFilter, setActiveFilter] = useState("All");
 
 	const loadOverview = useCallback(async () => {
 		setLoading(true);
@@ -105,6 +107,7 @@ const NotebookPage = () => {
 
 	return (
 		<div className="notebook-page overview-only">
+			{/* Create modal kept but create card removed in favor of FAB */}
 			{isCreateModalOpen && (
 				<div className="create-modal-overlay" onMouseDown={() => setIsCreateModalOpen(false)}>
 					<div className="create-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -138,9 +141,10 @@ const NotebookPage = () => {
 
 			<section className="notebook-hero bento-surface">
 				<div className="notebook-hero-main bento-tile bento-tile-main">
+
 					<p className="hero-kicker">Notebook Workspace</p>
 					<h1>Quản lý sổ tay học tập theo cách trực quan hơn</h1>
-					<p>
+					<p className="hero-subtitle">
 						Tạo sổ mới, theo dõi sổ của bạn, khám phá nội dung cộng đồng và học theo bộ sổ tay
 						trong cùng một không gian.
 					</p>
@@ -153,18 +157,28 @@ const NotebookPage = () => {
 						</button>
 					</div>
 				</div>
-				<div className="notebook-hero-stats">
-					<div className="hero-stat-card bento-tile">
-						<span>Sổ tay của tôi</span>
-						<strong>{overview.myNotebooks.length}</strong>
-					</div>
-					<div className="hero-stat-card bento-tile">
-						<span>Sổ khám phá</span>
-						<strong>{overview.discoverNotebooks.length}</strong>
-					</div>
-					<div className="hero-stat-card bento-tile">
-						<span>Bộ biên soạn</span>
-						<strong>{curatedNotebooks.length}</strong>
+				<div className="notebook-hero-stats bento-tile">
+					<div className="stats-bar">
+						<div className="stat">
+							<div className="stat-ico">📚</div>
+							<div className="stat-value">{overview.myNotebooks.length}</div>
+							<div className="stat-label">Sổ tay</div>
+						</div>
+						<div className="stat">
+							<div className="stat-ico">📝</div>
+							<div className="stat-value">{overview.myNotebooks.reduce((s, n) => s + (n.itemsCount || 0), 0)}</div>
+							<div className="stat-label">Tổng từ đã lưu</div>
+						</div>
+						<div className="stat">
+							<div className="stat-ico">🔥</div>
+							<div className="stat-value">{overview.wordsToday || 0}</div>
+							<div className="stat-label">Ôn hôm nay</div>
+						</div>
+						<div className="stat">
+							<div className="stat-ico">📈</div>
+							<div className="stat-value">{overview.streak || 0}</div>
+							<div className="stat-label">Streak</div>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -180,23 +194,48 @@ const NotebookPage = () => {
 						Xem thêm
 					</button>
 				</div>
-				<div className="cards-grid my-grid">
-					<button
-						type="button"
-						className="create-notebook-card bento-tile"
-						onClick={() => setIsCreateModalOpen(true)}
-					>
-						<PlusCircle size={18} />
-						<span>Tạo sổ tay mới</span>
-					</button>
-
-					{myNotebooks.map((item) => (
-						<button type="button" key={item.id} className="notebook-item-card bento-tile" onClick={() => history.push(`/notebook/${item.id}`)}>
-							<h3>{item.name}</h3>
-							<p>({item.itemsCount || 0} từ)</p>
-							<div className="card-meta-date">Ngày tạo: {formatDate(item.createdAt)}</div>
+					<div className="cards-grid my-grid">
+						<button
+							type="button"
+							className="create-notebook-card"
+							onClick={() => setIsCreateModalOpen(true)}
+						>
+							<PlusCircle size={18} />
+							<span>Tạo sổ tay mới</span>
 						</button>
-					))}
+						{myNotebooks.map((item, idx) => {
+							const colorPalette = ["#c0392b", "#2b8fd6", "#27ae60", "#f0c040", "#8e44ad", "#f39c12"];
+							const accent = colorPalette[idx % colorPalette.length];
+							const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+							const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
+							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((item.itemsCount || 0) * 0.2));
+							const total = item.itemsCount || 20;
+							return (
+								<button
+									type="button"
+									key={item.id}
+									className="notebook-item-card bento-tile"
+									onClick={() => history.push(`/notebook/${item.id}`)}
+									style={{ ["--card-accent"]: accent }}
+								>
+									<div className="card-top">
+										<div className="card-icon" style={{ background: accent + "22" }}>{item.icon || "🗒️"}</div>
+										{isNew && <div className="badge-new">Mới</div>}
+									</div>
+									<h3>{item.name}</h3>
+									<div className="card-meta-inline text-xs text-gray-400">
+										<span>({total} từ)</span>
+										<span>{item.createdAt ? `Ngày tạo: ${formatDate(item.createdAt)}` : item.owner?.username || "Ẩn danh"}</span>
+									</div>
+									<div className="card-progress">
+										<div className="progress-bar">
+											<div className="progress-fill" style={{ width: `${Math.round((reviewed / Math.max(total, 1)) * 100)}%` }} />
+										</div>
+										<div className="progress-label">Đã ôn {reviewed}/{total} từ</div>
+									</div>
+								</button>
+							);
+						})}
 
 					{!loading && myNotebooks.length === 0 && (
 						<div className="empty-card bento-tile">Bạn chưa có sổ tay nào.</div>
@@ -210,21 +249,39 @@ const NotebookPage = () => {
 					<button type="button" className="view-more-btn" onClick={() => history.push("/notebook/explore")}>Xem thêm</button>
 				</div>
 				<div className="cards-grid discover-grid">
-					{discoverNotebooks.map((item) => (
-						<button
-							type="button"
-							key={item.id}
-							className="discover-item-card bento-tile"
-							onClick={() => history.push(`/notebook/${item.id}`, { fromExplore: true })}
-						>
-							<h3>{item.name}</h3>
-							<p>({item.itemsCount || 0} từ)</p>
-							<div className="card-meta-row">
-								<span>{item.owner?.username || "Ẩn danh"}</span>
-								{/* <span className="views"><Eye size={14} /> {pseudoViews(item.id)}</span> */}
-							</div>
-						</button>
-					))}
+					{discoverNotebooks.map((item, idx) => {
+						const colorPalette = ["#c0392b", "#2b8fd6", "#27ae60", "#f0c040", "#8e44ad", "#f39c12"];
+						const accent = colorPalette[idx % colorPalette.length];
+						const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+						const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
+						const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((item.itemsCount || 0) * 0.15));
+						const total = item.itemsCount || 20;
+						return (
+							<button
+								type="button"
+								key={item.id}
+								className="discover-item-card bento-tile"
+								onClick={() => history.push(`/notebook/${item.id}`, { fromExplore: true })}
+								style={{ ["--card-accent"]: accent }}
+							>
+								<div className="card-top">
+									<div className="card-icon" style={{ background: accent + "22" }}>{item.icon || "🌸"}</div>
+									{isNew && <div className="badge-new">Mới</div>}
+								</div>
+								<h3>{item.name}</h3>
+								<div className="card-meta-inline text-xs text-gray-400">
+									<span>({total} từ)</span>
+									<span>{item.createdAt ? `Ngày tạo: ${formatDate(item.createdAt)}` : item.owner?.username || "Ẩn danh"}</span>
+								</div>
+								<div className="card-progress">
+									<div className="progress-bar">
+										<div className="progress-fill" style={{ width: `${Math.round((reviewed / Math.max(total, 1)) * 100)}%` }} />
+									</div>
+									<div className="progress-label">Đã ôn {reviewed}/{total} từ</div>
+								</div>
+							</button>
+						);
+					})}
 
 					{!loading && discoverNotebooks.length === 0 && (
 						<div className="empty-card bento-tile">Chưa có sổ tay khám phá.</div>
@@ -246,21 +303,42 @@ const NotebookPage = () => {
 					)}
 				</div>
 				<div className="cards-grid premium-grid">
-					{curatedPreview.map((item) => (
-						<button
-							type="button"
-							key={item.id}
-							className="premium-item-card bento-tile"
-							onClick={() => history.push(`/notebook/${item.id}`)}
-						>
-							<h3>{item.name}</h3>
-							<p>({item.meta})</p>
-							<div className="card-meta-row">
-								<span>{item.owner}</span>
-								<span className="views"><Eye size={14} /> {item.views}</span>
-							</div>
-						</button>
-					))}
+					{curatedPreview.map((item, idx) => {
+						const colorPalette = ["#8e44ad", "#c0392b", "#2b8fd6", "#f0c040", "#27ae60", "#f39c12"];
+						const accent = colorPalette[idx % colorPalette.length];
+						const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+						const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
+						const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((item.itemsCount || 0) * 0.3));
+						const total = item.itemsCount || 30;
+						return (
+							<button
+								type="button"
+								key={item.id}
+								className="premium-item-card bento-tile"
+								onClick={() => history.push(`/notebook/${item.id}`)}
+								style={{ ["--card-accent"]: accent }}
+							>
+								<div className="card-top">
+									<div className="card-icon" style={{ background: accent + "22" }}>{item.icon || "🗂️"}</div>
+									{isNew && <div className="badge-new">Mới</div>}
+								</div>
+								<h3>{item.name}</h3>
+								<div className="card-meta-inline">
+									<span>{item.meta}</span>
+								</div>
+								<div className="card-meta-row compact">
+									<span>{item.owner}</span>
+									<span className="views"><Eye size={14} /> {item.views}</span>
+								</div>
+								<div className="card-progress">
+									<div className="progress-bar">
+										<div className="progress-fill" style={{ width: `${Math.round((reviewed / Math.max(total, 1)) * 100)}%` }} />
+									</div>
+									<div className="progress-label">Đã ôn {reviewed}/{total} từ</div>
+								</div>
+							</button>
+						);
+					})}
 
 					{!loading && curatedNotebooks.length === 0 && (
 						<div className="empty-card bento-tile curated-empty-state">
@@ -276,6 +354,7 @@ const NotebookPage = () => {
 					)}
 				</div>
 			</section>
+			<button type="button" className="fab-create" onClick={() => setIsCreateModalOpen(true)} aria-label="Tạo sổ tay mới">+</button>
 		</div>
 	);
 };

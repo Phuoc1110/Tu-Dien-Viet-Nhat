@@ -144,6 +144,48 @@ const formatNotebook = async (notebook, itemLimit = null, userId = null) => {
 	const selectedItems = typeof itemLimit === "number" ? items.slice(0, itemLimit) : items;
 	const previewItems = await loadItemPreviews(selectedItems, userId);
 
+	// compute remembered count for all items (real data) when userId is provided
+	let rememberedCount = 0;
+	if (userId && items.length) {
+		const reviewWhere = {
+			userId,
+			[Op.or]: items.map((it) => ({ itemType: it.itemType, itemId: it.itemId })),
+		};
+
+		let allReviews = [];
+		if (db.UserFlashcardStatus) {
+			try {
+				allReviews = await db.UserFlashcardStatus.findAll({
+					where: reviewWhere,
+					attributes: ["itemType", "itemId", "isRemembered", "srs_stage"],
+				});
+			} catch (error) {
+				try {
+					allReviews = await db.UserFlashcardStatus.findAll({
+						where: reviewWhere,
+						attributes: ["itemType", "itemId", "srs_stage"],
+					});
+				} catch (err2) {
+					try {
+						allReviews = await db.UserFlashcardStatus.findAll({
+							where: reviewWhere,
+							attributes: ["itemType", "itemId", "isRemembered"],
+						});
+					} catch (err3) {
+						console.warn("Skip full flashcard status lookup in formatNotebook:", err3?.message || err2?.message || error?.message);
+						allReviews = [];
+					}
+				}
+			}
+		}
+
+		for (const r of allReviews) {
+			const p = r.get ? r.get({ plain: true }) : r;
+			const isRem = typeof p?.isRemembered === "boolean" ? p.isRemembered : Number(p?.srs_stage || 0) > 0;
+			if (isRem) rememberedCount += 1;
+		}
+	}
+
 	return {
 		id: plainNotebook.id,
 		userId: plainNotebook.userId,
@@ -159,6 +201,7 @@ const formatNotebook = async (notebook, itemLimit = null, userId = null) => {
 			}
 			: null,
 		itemsCount: items.length,
+		rememberedCount,
 		items: previewItems,
 	};
 };
@@ -196,15 +239,10 @@ const getNotebookOverview = async (userId, limit = 6) => {
 
 	const shuffledDiscover = [...discoverRaw].sort(() => Math.random() - 0.5).slice(0, normalizedLimit);
 
-	const myNotebooks = [];
-	for (const notebook of mineRaw) {
-		myNotebooks.push(await formatNotebook(notebook, 3));
-	}
-
-	const discoverNotebooks = [];
-	for (const notebook of shuffledDiscover) {
-		discoverNotebooks.push(await formatNotebook(notebook, 3));
-	}
+	const [myNotebooks, discoverNotebooks] = await Promise.all([
+		Promise.all(mineRaw.map((notebook) => formatNotebook(notebook, 3, userId))),
+		Promise.all(shuffledDiscover.map((notebook) => formatNotebook(notebook, 3, userId))),
+	]);
 
 	return {
 		myNotebooks,
@@ -212,7 +250,7 @@ const getNotebookOverview = async (userId, limit = 6) => {
 	};
 };
 
-const getCuratedNotebookCollections = async (limit = 12) => {
+const getCuratedNotebookCollections = async (userId = null, limit = 12) => {
 	const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 40);
 	const rows = await db.Notebook.findAll({
 		include: [
@@ -232,16 +270,29 @@ const getCuratedNotebookCollections = async (limit = 12) => {
 		limit: safeLimit,
 	});
 
-	return rows.map((item) => {
-		const plain = item.get({ plain: true });
-		return {
-			id: plain.id,
-			name: plain.name,
-			meta: plain.description || "",
-			owner: plain.user?.username || "Ban quan tri",
-			views: Array.isArray(plain.items) ? plain.items.length : 0,
-		};
-	});
+	return Promise.all(rows.map(async (item) => {
+		try {
+			const formatted = await formatNotebook(item, 3, userId);
+			return {
+				id: formatted.id,
+				name: formatted.name,
+				meta: formatted.description || "",
+				owner: formatted.owner?.username || (formatted.owner && formatted.owner.username) || "Ban quan tri",
+				views: Array.isArray(item.items) ? item.items.length : 0,
+				itemsCount: formatted.itemsCount,
+				rememberedCount: formatted.rememberedCount,
+			};
+		} catch (e) {
+			const plain = item.get({ plain: true });
+			return {
+				id: plain.id,
+				name: plain.name,
+				meta: plain.description || "",
+				owner: plain.user?.username || "Ban quan tri",
+				views: Array.isArray(plain.items) ? plain.items.length : 0,
+			};
+		}
+	}));
 };
 
 const getNotebookDetail = async (notebookId, userId = null) => {

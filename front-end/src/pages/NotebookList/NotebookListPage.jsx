@@ -218,13 +218,37 @@ const NotebookListPage = () => {
 							<span>Tạo sổ tay mới</span>
 						</button>
 
-						{pagedNotebooks.map((item) => (
-							<button type="button" key={item.id} className="notebook-item-card" onClick={() => history.push(`/notebook/${item.id}`)}>
-								<h3>{item.name}</h3>
-								<p>({item.itemsCount || 0} từ)</p>
-								<div className="card-meta-date">Ngày tạo: {formatDate(item.createdAt)}</div>
-							</button>
-						))}
+						{pagedNotebooks.map((item, idx) => {
+							const colorPalette = ["#c0392b", "#2b8fd6", "#27ae60", "#f0c040", "#8e44ad", "#f39c12"];
+							const accent = colorPalette[idx % colorPalette.length];
+							const total = item.itemsCount || 0;
+							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((total || 0) * 0.2));
+							const progress = total > 0 ? Math.min(100, Math.round((reviewed / total) * 100)) : 0;
+							return (
+								<button
+									type="button"
+									key={item.id}
+									className="notebook-item-card bento-tile"
+									onClick={() => history.push(`/notebook/${item.id}`)}
+									style={{ ["--card-accent"]: accent }}
+								>
+									<div className="card-top">
+										<div className="card-icon" style={{ background: accent + "22" }}>{item.icon || "🗒️"}</div>
+									</div>
+									<h3>{item.name}</h3>
+									<div className="card-meta-inline">
+										<span>({total} từ)</span>
+										<span>Ngày tạo: {formatDate(item.createdAt)}</span>
+									</div>
+									<div className="card-progress">
+										<div className="progress-bar">
+											<div className="progress-fill" style={{ width: `${progress}%` }} />
+										</div>
+										<div className="progress-label">Đã ôn {reviewed}/{total} từ</div>
+									</div>
+								</button>
+							);
+						})}
 
 						{!loading && myNotebooks.length === 0 && (
 							<div className="empty-card">Bạn chưa có sổ tay nào.</div>

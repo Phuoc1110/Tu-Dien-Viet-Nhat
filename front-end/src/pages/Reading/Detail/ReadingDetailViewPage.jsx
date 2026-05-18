@@ -3,7 +3,6 @@ import { useHistory, useParams } from "react-router-dom";
 import { ArrowLeft, PencilLine } from "lucide-react";
 import { UserContext } from "../../../Context/UserProvider";
 import { getPassageAnalysis, getReadingPassageDetail } from "../../../services/readingService";
-import AnnotatedText from "../../../components/AnnotatedText/AnnotatedText";
 import "./ReadingDetailViewPage.css";
 
 function ReadingDetailViewPage() {
@@ -15,12 +14,15 @@ function ReadingDetailViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
-  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const actorId = user?.account?.id ?? admin?.account?.id;
   const canEditPassage = Boolean(
     passage?.author?.id && (admin?.isAuthenticated || Number(passage.author.id) === Number(actorId))
   );
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   useEffect(() => {
     let mounted = true;
@@ -123,28 +125,16 @@ function ReadingDetailViewPage() {
               <span>{new Date(passage.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
-
-          <div className="rd-hero-right">
-            <button className="rd-toggle-analysis" onClick={() => setShowAnalysis((v) => !v)}>
-              {showAnalysis ? "Ẩn phân tích" : "Hiện phân tích"}
-            </button>
-          </div>
         </section>
 
         <main className="rd-main">
           <article className="rd-article">
             <div className="rd-content">
-              <h3>Văn bản</h3>
-              <div className="rd-text">{passage.content}</div>
-
-              <h3>Dịch</h3>
-              <div className="rd-translation">{passage.translation || "Chưa có bản dịch."}</div>
-
-              {showAnalysis && (
-                <section className="rd-analysis">
-                  {analysis ? <AnnotatedText analysis={analysis} /> : <div className="analysis-loading">Đang phân tích...</div>}
-                </section>
-              )}
+              <h3>Văn bản &amp; Dịch</h3>
+              <div className="rd-text-card">
+                <div className="rd-text">{passage.content}</div>
+                <div className="rd-translation-inline">{passage.translation || "Chưa có bản dịch."}</div>
+              </div>
 
               <h3>Từ vựng</h3>
               {vocabulary.length === 0 ? (
