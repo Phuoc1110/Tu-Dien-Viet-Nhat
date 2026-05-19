@@ -269,9 +269,59 @@ const getNotebookItemsCountMap = async (notebookIds) => {
 	return countMap;
 };
 
-const buildNotebookOverviewItem = (notebook, itemsCountMap) => {
+const getNotebookProgressMap = async (userId, notebookIds) => {
+	const ids = (notebookIds || [])
+		.map((id) => Number(id))
+		.filter((id) => Number.isFinite(id));
+	if (!ids.length) {
+		return new Map();
+	}
+
+	if (!userId || !db.UserFlashcardStatus) {
+		const itemsCountMap = await getNotebookItemsCountMap(ids);
+		const progressMap = new Map();
+		itemsCountMap.forEach((count, notebookId) => {
+			progressMap.set(notebookId, { itemsCount: count, rememberedCount: null });
+		});
+		return progressMap;
+	}
+
+	const rows = await db.sequelize.query(
+		`
+			SELECT
+				ni.notebookId AS notebookId,
+				COUNT(ni.id) AS itemsCount,
+				SUM(CASE WHEN ufs.isRemembered = 1 THEN 1 ELSE 0 END) AS rememberedCount
+			FROM NotebookItems ni
+			LEFT JOIN UserFlashcardStatuses ufs
+				ON ufs.userId = :userId
+				AND ufs.itemType = ni.itemType
+				AND ufs.itemId = ni.itemId
+			WHERE ni.notebookId IN (:ids)
+			GROUP BY ni.notebookId
+		`,
+		{
+			replacements: { userId, ids },
+			type: db.Sequelize.QueryTypes.SELECT,
+		}
+	);
+
+	const progressMap = new Map();
+	for (const row of rows) {
+		const notebookId = Number(row.notebookId);
+		progressMap.set(notebookId, {
+			itemsCount: Number(row.itemsCount) || 0,
+			rememberedCount: Number(row.rememberedCount) || 0,
+		});
+	}
+
+	return progressMap;
+};
+
+const buildNotebookOverviewItem = (notebook, progressMap) => {
 	const plain = notebook.get({ plain: true });
 	const notebookId = Number(plain.id);
+	const progress = progressMap.get(notebookId) || { itemsCount: 0, rememberedCount: null };
 	return {
 		id: plain.id,
 		userId: plain.userId,
@@ -286,8 +336,9 @@ const buildNotebookOverviewItem = (notebook, itemsCountMap) => {
 				avatarUrl: plain.user.avatarUrl || null,
 			}
 			: null,
-		itemsCount: itemsCountMap.get(notebookId) || 0,
-		rememberedCount: null,
+		itemsCount: progress.itemsCount || 0,
+		rememberedCount:
+			typeof progress.rememberedCount === "number" ? progress.rememberedCount : null,
 		items: [],
 	};
 };
@@ -326,11 +377,11 @@ const getNotebookOverview = async (userId, limit = 6) => {
 		...mineRaw.map((item) => item.id),
 		...shuffledDiscover.map((item) => item.id),
 	];
-	const itemsCountMap = await getNotebookItemsCountMap(overviewIds);
+	const progressMap = await getNotebookProgressMap(userId, overviewIds);
 
-	const myNotebooks = mineRaw.map((notebook) => buildNotebookOverviewItem(notebook, itemsCountMap));
+	const myNotebooks = mineRaw.map((notebook) => buildNotebookOverviewItem(notebook, progressMap));
 	const discoverNotebooks = shuffledDiscover.map((notebook) =>
-		buildNotebookOverviewItem(notebook, itemsCountMap)
+		buildNotebookOverviewItem(notebook, progressMap)
 	);
 
 	return {
@@ -358,11 +409,12 @@ const getCuratedNotebookCollections = async (userId = null, limit = 12) => {
 		limit: safeLimit,
 	});
 	const curatedIds = rows.map((item) => item.id);
-	const itemsCountMap = await getNotebookItemsCountMap(curatedIds);
+	const progressMap = await getNotebookProgressMap(userId, curatedIds);
 
 	return rows.map((item) => {
 		const plain = item.get({ plain: true });
-		const itemsCount = itemsCountMap.get(plain.id) || 0;
+		const progress = progressMap.get(Number(plain.id)) || { itemsCount: 0, rememberedCount: null };
+		const itemsCount = progress.itemsCount || 0;
 		return {
 			id: plain.id,
 			name: plain.name,
@@ -370,7 +422,8 @@ const getCuratedNotebookCollections = async (userId = null, limit = 12) => {
 			owner: plain.user?.username || "Ban quan tri",
 			views: itemsCount,
 			itemsCount,
-			rememberedCount: null,
+			rememberedCount:
+				typeof progress.rememberedCount === "number" ? progress.rememberedCount : null,
 		};
 	});
 };
