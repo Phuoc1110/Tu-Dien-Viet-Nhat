@@ -1,5 +1,5 @@
 const db = require("../models/index");
-const { Op } = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 
 const buildWordPreview = (word) => ({
 	id: word.id,
@@ -28,18 +28,59 @@ const buildGrammarPreview = (grammar) => ({
 	jlptLevel: grammar.jlptLevel || null,
 });
 
-const loadItemPreviews = async (items, userId = null) => {
-	const groupedIds = {
-		word: [],
-		kanji: [],
-		grammar: [],
+const groupItemIds = (items) => {
+	const grouped = {
+		word: new Set(),
+		kanji: new Set(),
+		grammar: new Set(),
 	};
 
 	for (const item of items || []) {
-		if (groupedIds[item.itemType]) {
-			groupedIds[item.itemType].push(item.itemId);
+		const type = item?.itemType;
+		if (!grouped[type]) {
+			continue;
+		}
+		const id = Number(item.itemId);
+		if (Number.isFinite(id) && id > 0) {
+			grouped[type].add(id);
 		}
 	}
+
+	return {
+		word: Array.from(grouped.word),
+		kanji: Array.from(grouped.kanji),
+		grammar: Array.from(grouped.grammar),
+	};
+};
+
+const buildReviewWhere = (userId, groupedIds) => {
+	if (!userId) {
+		return null;
+	}
+
+	const conditions = [];
+	if (groupedIds.word?.length) {
+		conditions.push({ itemType: "word", itemId: { [Op.in]: groupedIds.word } });
+	}
+	if (groupedIds.kanji?.length) {
+		conditions.push({ itemType: "kanji", itemId: { [Op.in]: groupedIds.kanji } });
+	}
+	if (groupedIds.grammar?.length) {
+		conditions.push({ itemType: "grammar", itemId: { [Op.in]: groupedIds.grammar } });
+	}
+
+	if (!conditions.length) {
+		return null;
+	}
+
+	return {
+		userId,
+		[Op.or]: conditions,
+	};
+};
+
+const loadItemPreviews = async (items, userId = null) => {
+	const groupedIds = groupItemIds(items);
 
 	const [words, kanjis, grammars] = await Promise.all([
 		groupedIds.word.length
@@ -67,15 +108,8 @@ const loadItemPreviews = async (items, userId = null) => {
 	);
 	const reviewMap = new Map();
 
-	if (userId && (items || []).length) {
-		const reviewWhere = {
-			userId,
-			[Op.or]: (items || []).map((item) => ({
-				itemType: item.itemType,
-				itemId: item.itemId,
-			})),
-		};
-
+	const reviewWhere = buildReviewWhere(userId, groupedIds);
+	if (reviewWhere && (items || []).length) {
 		let reviews = [];
 		if (db.UserFlashcardStatus) {
 			try {
@@ -138,51 +172,58 @@ const loadItemPreviews = async (items, userId = null) => {
 	});
 };
 
-const formatNotebook = async (notebook, itemLimit = null, userId = null) => {
+const formatNotebook = async (notebook, itemLimit = null, userId = null, options = {}) => {
 	const plainNotebook = notebook.get({ plain: true });
 	const items = Array.isArray(plainNotebook.items) ? plainNotebook.items : [];
 	const selectedItems = typeof itemLimit === "number" ? items.slice(0, itemLimit) : items;
 	const previewItems = await loadItemPreviews(selectedItems, userId);
+	const includeRememberedCount = options?.includeRememberedCount !== false;
 
 	// compute remembered count for all items (real data) when userId is provided
-	let rememberedCount = 0;
-	if (userId && items.length) {
-		const reviewWhere = {
-			userId,
-			[Op.or]: items.map((it) => ({ itemType: it.itemType, itemId: it.itemId })),
-		};
-
-		let allReviews = [];
-		if (db.UserFlashcardStatus) {
-			try {
-				allReviews = await db.UserFlashcardStatus.findAll({
-					where: reviewWhere,
-					attributes: ["itemType", "itemId", "isRemembered", "srs_stage"],
-				});
-			} catch (error) {
+	let rememberedCount = null;
+	if (userId && includeRememberedCount && items.length) {
+		if (selectedItems.length === items.length) {
+			rememberedCount = previewItems.reduce(
+				(total, item) => total + (item?.isRemembered ? 1 : 0),
+				0
+			);
+		} else {
+			const groupedIds = groupItemIds(items);
+			const reviewWhere = buildReviewWhere(userId, groupedIds);
+			let allReviews = [];
+			if (reviewWhere && db.UserFlashcardStatus) {
 				try {
 					allReviews = await db.UserFlashcardStatus.findAll({
 						where: reviewWhere,
-						attributes: ["itemType", "itemId", "srs_stage"],
+						attributes: ["itemType", "itemId", "isRemembered", "srs_stage"],
 					});
-				} catch (err2) {
+				} catch (error) {
 					try {
 						allReviews = await db.UserFlashcardStatus.findAll({
 							where: reviewWhere,
-							attributes: ["itemType", "itemId", "isRemembered"],
+							attributes: ["itemType", "itemId", "srs_stage"],
 						});
-					} catch (err3) {
-						console.warn("Skip full flashcard status lookup in formatNotebook:", err3?.message || err2?.message || error?.message);
-						allReviews = [];
+					} catch (err2) {
+						try {
+							allReviews = await db.UserFlashcardStatus.findAll({
+								where: reviewWhere,
+								attributes: ["itemType", "itemId", "isRemembered"],
+							});
+						} catch (err3) {
+							console.warn("Skip full flashcard status lookup in formatNotebook:", err3?.message || err2?.message || error?.message);
+							allReviews = [];
+						}
 					}
 				}
 			}
-		}
 
-		for (const r of allReviews) {
-			const p = r.get ? r.get({ plain: true }) : r;
-			const isRem = typeof p?.isRemembered === "boolean" ? p.isRemembered : Number(p?.srs_stage || 0) > 0;
-			if (isRem) rememberedCount += 1;
+			let counted = 0;
+			for (const r of allReviews) {
+				const p = r.get ? r.get({ plain: true }) : r;
+				const isRem = typeof p?.isRemembered === "boolean" ? p.isRemembered : Number(p?.srs_stage || 0) > 0;
+				if (isRem) counted += 1;
+			}
+			rememberedCount = counted;
 		}
 	}
 
@@ -206,6 +247,51 @@ const formatNotebook = async (notebook, itemLimit = null, userId = null) => {
 	};
 };
 
+const getNotebookItemsCountMap = async (notebookIds) => {
+	const ids = (notebookIds || [])
+		.map((id) => Number(id))
+		.filter((id) => Number.isFinite(id));
+	if (!ids.length) {
+		return new Map();
+	}
+
+	const rows = await db.NotebookItem.findAll({
+		where: { notebookId: { [Op.in]: ids } },
+		attributes: ["notebookId", [fn("COUNT", col("id")), "count"]],
+		group: ["notebookId"],
+	});
+
+	const countMap = new Map();
+	for (const row of rows) {
+		const plain = row.get({ plain: true });
+		countMap.set(Number(plain.notebookId), Number(plain.count) || 0);
+	}
+	return countMap;
+};
+
+const buildNotebookOverviewItem = (notebook, itemsCountMap) => {
+	const plain = notebook.get({ plain: true });
+	const notebookId = Number(plain.id);
+	return {
+		id: plain.id,
+		userId: plain.userId,
+		name: plain.name,
+		description: plain.description || "",
+		createdAt: plain.createdAt,
+		updatedAt: plain.updatedAt,
+		owner: plain.user
+			? {
+				id: plain.user.id,
+				username: plain.user.username,
+				avatarUrl: plain.user.avatarUrl || null,
+			}
+			: null,
+		itemsCount: itemsCountMap.get(notebookId) || 0,
+		rememberedCount: null,
+		items: [],
+	};
+};
+
 const getNotebookOverview = async (userId, limit = 6) => {
 	const normalizedLimit = Math.min(Math.max(Number(limit) || 6, 1), 200);
 
@@ -215,7 +301,6 @@ const getNotebookOverview = async (userId, limit = 6) => {
 			order: [["createdAt", "DESC"]],
 			include: [
 				{ model: db.User, as: "user", attributes: ["id", "username", "avatarUrl"] },
-				{ model: db.NotebookItem, as: "items", order: [["addedAt", "DESC"]] },
 			],
 		}),
 		db.Notebook.findAll({
@@ -232,17 +317,21 @@ const getNotebookOverview = async (userId, limit = 6) => {
 						status: "active",
 					},
 				},
-				{ model: db.NotebookItem, as: "items", order: [["addedAt", "DESC"]] },
 			],
 		}),
 	]);
 
 	const shuffledDiscover = [...discoverRaw].sort(() => Math.random() - 0.5).slice(0, normalizedLimit);
+	const overviewIds = [
+		...mineRaw.map((item) => item.id),
+		...shuffledDiscover.map((item) => item.id),
+	];
+	const itemsCountMap = await getNotebookItemsCountMap(overviewIds);
 
-	const [myNotebooks, discoverNotebooks] = await Promise.all([
-		Promise.all(mineRaw.map((notebook) => formatNotebook(notebook, 3, userId))),
-		Promise.all(shuffledDiscover.map((notebook) => formatNotebook(notebook, 3, userId))),
-	]);
+	const myNotebooks = mineRaw.map((notebook) => buildNotebookOverviewItem(notebook, itemsCountMap));
+	const discoverNotebooks = shuffledDiscover.map((notebook) =>
+		buildNotebookOverviewItem(notebook, itemsCountMap)
+	);
 
 	return {
 		myNotebooks,
@@ -264,35 +353,26 @@ const getCuratedNotebookCollections = async (userId = null, limit = 12) => {
 					status: "active",
 				},
 			},
-			{ model: db.NotebookItem, as: "items", required: false },
 		],
 		order: [["updatedAt", "DESC"], ["createdAt", "DESC"], ["id", "DESC"]],
 		limit: safeLimit,
 	});
+	const curatedIds = rows.map((item) => item.id);
+	const itemsCountMap = await getNotebookItemsCountMap(curatedIds);
 
-	return Promise.all(rows.map(async (item) => {
-		try {
-			const formatted = await formatNotebook(item, 3, userId);
-			return {
-				id: formatted.id,
-				name: formatted.name,
-				meta: formatted.description || "",
-				owner: formatted.owner?.username || (formatted.owner && formatted.owner.username) || "Ban quan tri",
-				views: Array.isArray(item.items) ? item.items.length : 0,
-				itemsCount: formatted.itemsCount,
-				rememberedCount: formatted.rememberedCount,
-			};
-		} catch (e) {
-			const plain = item.get({ plain: true });
-			return {
-				id: plain.id,
-				name: plain.name,
-				meta: plain.description || "",
-				owner: plain.user?.username || "Ban quan tri",
-				views: Array.isArray(plain.items) ? plain.items.length : 0,
-			};
-		}
-	}));
+	return rows.map((item) => {
+		const plain = item.get({ plain: true });
+		const itemsCount = itemsCountMap.get(plain.id) || 0;
+		return {
+			id: plain.id,
+			name: plain.name,
+			meta: plain.description || "",
+			owner: plain.user?.username || "Ban quan tri",
+			views: itemsCount,
+			itemsCount,
+			rememberedCount: null,
+		};
+	});
 };
 
 const getNotebookDetail = async (notebookId, userId = null) => {
