@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
-import { Filter, Search } from "lucide-react";
+import { Eye, Filter, Search } from "lucide-react";
 import { getCuratedNotebookCollections } from "../../services/notebookService";
 import "./CuratedNotebookPage.css";
 
@@ -131,21 +131,65 @@ const CuratedNotebookPage = () => {
 					{!loading && filteredNotebooks.length > 0 && (
 						<>
 							<div className="curated-grid">
-								{pagedNotebooks.map((notebook) => (
-									<button
-										type="button"
-										key={notebook.id}
-										className="curated-card"
-										onClick={() => history.push(`/notebook/${notebook.id}`, { fromCurated: true })}
-									>
-										<h3>{notebook.name}</h3>
-										<p className="card-count">({notebook.views || 0} từ)</p>
-										<p className="card-meta-text">{notebook.meta || "Chưa có mô tả"}</p>
-										<div className="card-meta">
-											<span className="owner">{notebook.owner || "Ban quan tri"}</span>
-										</div>
-									</button>
-								))}
+								{pagedNotebooks.map((notebook, idx) => {
+									const colorPalette = [
+										"#8e44ad",
+										"#c0392b",
+										"#2b8fd6",
+										"#f0c040",
+										"#27ae60",
+										"#f39c12",
+									];
+									const accent = colorPalette[idx % colorPalette.length];
+									const createdAt = notebook.createdAt ? new Date(notebook.createdAt) : null;
+									const isNew = createdAt
+										? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7
+										: false;
+									const reviewed = Number(
+										notebook.rememberedCount ??
+											notebook.reviewedCount ??
+											Math.floor((notebook.itemsCount || 0) * 0.3)
+									);
+									const total = notebook.itemsCount || 30;
+									const views = Number(notebook.views ?? total);
+									return (
+										<button
+											type="button"
+											key={notebook.id}
+											className="premium-item-card bento-tile"
+											onClick={() => history.push(`/notebook/${notebook.id}`, { fromCurated: true })}
+											style={{ ["--card-accent"]: accent }}
+										>
+											<div className="card-top">
+												<div className="card-icon" style={{ background: accent + "22" }}>
+													{notebook.icon || "🗂️"}
+												</div>
+												{isNew && <div className="badge-new">Mới</div>}
+											</div>
+											<h3>{notebook.name}</h3>
+											<div className="card-meta-inline">
+												<span>{notebook.meta || "Chưa có mô tả"}</span>
+											</div>
+											<div className="card-meta-row compact">
+												<span>{notebook.owner || "Ban quan tri"}</span>
+												<span className="views">
+													<Eye size={14} /> {views}
+												</span>
+											</div>
+											<div className="card-progress">
+												<div className="progress-bar">
+													<div
+														className="progress-fill"
+														style={{
+															width: `${Math.round((reviewed / Math.max(total, 1)) * 100)}%`,
+														}}
+													/>
+												</div>
+												<div className="progress-label">Đã ôn {reviewed}/{total} từ</div>
+											</div>
+										</button>
+									);
+								})}
 							</div>
 
 							{totalPages > 1 && (
