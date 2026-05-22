@@ -31,19 +31,6 @@ const preview = (text, maxLength = 150) => {
 	return `${value.slice(0, maxLength).trim()}...`;
 };
 
-const getStatusLabel = (status) => {
-	switch (status) {
-		case "completed":
-			return "Đã đọc";
-		case "in_progress":
-			return "Đang đọc";
-		case "not_started":
-			return "Chưa đọc";
-		default:
-			return null;
-	}
-};
-
 const ReadingListPage = () => {
 	const history = useHistory();
 	const [query, setQuery] = useState("");
@@ -207,8 +194,6 @@ const ReadingListPage = () => {
 					{!loading && !error && items.length > 0 && (
 						<div className="reading-card-grid">
 							{items.map((item) => {
-								const statusLabel = getStatusLabel(item?.myProgress?.status);
-
 								return (
 									<button
 										type="button"
@@ -222,7 +207,6 @@ const ReadingListPage = () => {
 											</div>
 											<div className="reading-card-badges">
 												<span className="reading-level-chip">{item.level || "mixed"}</span>
-												{statusLabel && <span className="reading-progress-chip">{statusLabel}</span>}
 											</div>
 										</div>
 

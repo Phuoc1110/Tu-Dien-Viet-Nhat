@@ -53,7 +53,6 @@ const normalizeStatus = (status) => {
 
 const mapPassage = (item, currentUserId = null) => {
 	const plain = item.get ? item.get({ plain: true }) : item;
-	const progress = Array.isArray(plain.progresses) && plain.progresses.length ? plain.progresses[0] : null;
 
 	return {
 		id: plain.id,
@@ -73,14 +72,6 @@ const mapPassage = (item, currentUserId = null) => {
 				username: plain.createdByAdmin.username,
 			}
 			: null,
-		myProgress:
-			currentUserId && progress
-				? {
-					status: progress.status,
-					lastReadAt: progress.lastReadAt || null,
-					completedAt: progress.completedAt || null,
-				}
-				: null,
 	};
 };
 
@@ -115,13 +106,6 @@ const getReadingPassages = async ({ userId, query = "", level = "", topic = "", 
 				attributes: ["id", "username"],
 				required: false,
 			},
-			{
-				model: db.UserReadingProgress,
-				as: "progresses",
-				where: userId ? { userId } : undefined,
-				required: false,
-				attributes: ["status", "lastReadAt", "completedAt"],
-			},
 		],
 		order: [["createdAt", "DESC"]],
 		limit: safeLimit,
@@ -149,13 +133,6 @@ const getReadingPassageDetail = async ({ id, userId }) => {
 				as: "createdByAdmin",
 				attributes: ["id", "username"],
 				required: false,
-			},
-			{
-				model: db.UserReadingProgress,
-				as: "progresses",
-				where: userId ? { userId } : undefined,
-				required: false,
-				attributes: ["status", "lastReadAt", "completedAt"],
 			},
 		],
 	});
@@ -223,97 +200,6 @@ const updateReadingPassage = async ({ actorId, isAdmin, id, payload }) => {
 	});
 
 	return { errCode: 0, passage: passage.get({ plain: true }) };
-};
-
-const upsertReadingProgress = async ({ userId, passageId, status, lastReadAt, completedAt }) => {
-	const passage = await db.ReadingPassage.findOne({ where: { id: passageId, isActive: true } });
-	if (!passage) {
-		return { errCode: 2, errMessage: "Reading passage not found" };
-	}
-
-	const nextStatus = normalizeStatus(status);
-	const now = new Date();
-	const parsedLastReadAt = lastReadAt ? new Date(lastReadAt) : null;
-	const parsedCompletedAt = completedAt ? new Date(completedAt) : null;
-
-	const nextLastReadAt =
-		nextStatus === "not_started"
-			? null
-			: Number.isNaN(parsedLastReadAt?.getTime?.())
-				? now
-				: parsedLastReadAt;
-
-	let nextCompletedAt = null;
-	if (nextStatus === "completed") {
-		nextCompletedAt = Number.isNaN(parsedCompletedAt?.getTime?.()) ? now : parsedCompletedAt;
-	}
-
-	const [progress, created] = await db.UserReadingProgress.findOrCreate({
-		where: { userId, passageId },
-		defaults: {
-			status: nextStatus,
-			lastReadAt: nextLastReadAt,
-			completedAt: nextCompletedAt,
-		},
-	});
-
-	if (!created) {
-		await progress.update({
-			status: nextStatus,
-			lastReadAt: nextLastReadAt,
-			completedAt: nextCompletedAt,
-		});
-	}
-
-	return {
-		errCode: 0,
-		progress: {
-			userId,
-			passageId,
-			status: progress.status,
-			lastReadAt: progress.lastReadAt,
-			completedAt: progress.completedAt,
-		},
-	};
-};
-
-const getMyReadingProgresses = async ({ userId, limit = 30, offset = 0 }) => {
-	const safeLimit = parseLimit(limit, 30, 100);
-	const safeOffset = parseOffset(offset, 0, 100000);
-
-	const { rows, count } = await db.UserReadingProgress.findAndCountAll({
-		where: { userId },
-		include: [
-			{
-				model: db.ReadingPassage,
-				as: "passage",
-				attributes: ["id", "title", "summary", "level", "topic", "estimatedMinutes", "isActive"],
-				required: false,
-			},
-		],
-		order: [["updatedAt", "DESC"]],
-		limit: safeLimit,
-		offset: safeOffset,
-	});
-
-	return {
-		items: rows.map((item) => {
-			const plain = item.get({ plain: true });
-			return {
-				id: plain.id,
-				status: plain.status,
-				lastReadAt: plain.lastReadAt,
-				completedAt: plain.completedAt,
-				passage: plain.passage || null,
-			};
-		}),
-		total: count,
-		pagination: {
-			limit: safeLimit,
-			offset: safeOffset,
-			hasMore: safeOffset + rows.length < count,
-		},
-	};
 };
 
 // Initialize kuromoji tokenizer with caching
@@ -653,8 +539,6 @@ module.exports = {
 	getReadingPassageDetail,
 	createReadingPassage,
 	updateReadingPassage,
-	upsertReadingProgress,
-	getMyReadingProgresses,
 	analyzePassageContent,
 	getPassageAnalysis,
 };

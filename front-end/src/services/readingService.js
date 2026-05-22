@@ -40,29 +40,6 @@ const updateReadingPassage = (id, data = {}) => {
 		});
 };
 
-const upsertReadingProgress = (id, status, lastReadAt, completedAt) => {
-	return axios
-		.post(`/api/reading/passages/${id}/progress`, {
-			status,
-			lastReadAt,
-			completedAt,
-		})
-		.then((response) => response)
-		.catch((error) => {
-			console.error(error);
-			return { errCode: 1, errMessage: "Khong cap nhat duoc tien do doc." };
-		});
-};
-
-const getMyReadingProgresses = (params = {}) => {
-	return axios
-		.get("/api/reading/my-progresses", { params })
-		.then((response) => response)
-		.catch((error) => {
-			console.error(error);
-			return { errCode: 1, errMessage: "Khong tai duoc tien do doc cua ban", items: [] };
-		});
-};
 
 const getPassageAnalysis = (id) => {
 	return axios
@@ -79,7 +56,5 @@ export {
 	getReadingPassageDetail,
 	createReadingPassage,
 	updateReadingPassage,
-	upsertReadingProgress,
-	getMyReadingProgresses,
 	getPassageAnalysis,
 };

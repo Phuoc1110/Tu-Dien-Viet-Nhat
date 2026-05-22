@@ -621,66 +621,6 @@ const getAdminNotebooks = async ({ adminId, query = "", jlptLevel = "", limit = 
         .filter((item) => (!hasJlptFilter ? true : item.itemsCount > 0));
 };
 
-const getAdminNotebookDetail = async ({ adminId, notebookId, itemType = "", page = 1, limit = 20 }) => {
-    const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
-    const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 20;
-    const offset = (safePage - 1) * safeLimit;
-
-    const notebook = await db.Notebook.findOne({
-        where: { id: notebookId, userId: adminId },
-        attributes: ["id", "name", "description", "createdAt", "updatedAt"],
-        raw: true,
-    });
-
-    if (!notebook) {
-        throw new Error("Notebook not found");
-    }
-
-    const normalizedType = String(itemType || "").trim().toLowerCase();
-    const where = { notebookId };
-    if (normalizedType) {
-        if (!["word", "kanji", "grammar"].includes(normalizedType)) {
-            throw new Error("Item type must be one of: word, kanji, grammar");
-        }
-        where.itemType = normalizedType;
-    }
-
-    const { rows, count } = await db.NotebookItem.findAndCountAll({
-        where,
-        order: [["createdAt", "DESC"], ["id", "DESC"]],
-        limit: safeLimit,
-        offset,
-        raw: true,
-    });
-
-    const grouped = await db.NotebookItem.findAll({
-        where: { notebookId },
-        attributes: ["itemType", [fn("COUNT", col("id")), "count"]],
-        group: ["itemType"],
-        raw: true,
-    });
-
-    const itemCounts = grouped.reduce(
-        (acc, item) => ({
-            ...acc,
-            [item.itemType]: Number(item.count) || 0,
-        }),
-        { word: 0, kanji: 0, grammar: 0 }
-    );
-
-    return {
-        notebook,
-        items: rows,
-        itemCounts,
-        pagination: {
-            page: safePage,
-            limit: safeLimit,
-            totalItems: count,
-            totalPages: Math.max(1, Math.ceil(count / safeLimit)),
-        },
-    };
-};
-
 const getAdminUserNotebooks = async ({ query = "", ownerQuery = "", ownerStatus = "", page = 1, limit = 20 }) => {
     const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
     const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 20;
@@ -746,88 +686,6 @@ const getAdminUserNotebooks = async ({ query = "", ownerQuery = "", ownerStatus 
                 },
             };
         }),
-        pagination: {
-            page: safePage,
-            limit: safeLimit,
-            totalItems: count,
-            totalPages: Math.max(1, Math.ceil(count / safeLimit)),
-        },
-    };
-};
-
-const getAdminUserNotebookDetail = async ({ notebookId, itemType = "", page = 1, limit = 20 }) => {
-    const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
-    const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 20;
-    const offset = (safePage - 1) * safeLimit;
-
-    const notebook = await db.Notebook.findOne({
-        where: { id: notebookId },
-        include: [
-            {
-                model: db.User,
-                as: "user",
-                attributes: ["id", "username", "email", "status"],
-                required: true,
-                where: { role: "user" },
-            },
-        ],
-        attributes: ["id", "name", "description", "createdAt", "updatedAt", "userId"],
-    });
-
-    if (!notebook) {
-        throw new Error("User notebook not found");
-    }
-
-    const normalizedType = String(itemType || "").trim().toLowerCase();
-    const where = { notebookId };
-    if (normalizedType) {
-        if (!["word", "kanji", "grammar"].includes(normalizedType)) {
-            throw new Error("Item type must be one of: word, kanji, grammar");
-        }
-        where.itemType = normalizedType;
-    }
-
-    const { rows, count } = await db.NotebookItem.findAndCountAll({
-        where,
-        order: [["createdAt", "DESC"], ["id", "DESC"]],
-        limit: safeLimit,
-        offset,
-        raw: true,
-    });
-
-    const grouped = await db.NotebookItem.findAll({
-        where: { notebookId },
-        attributes: ["itemType", [fn("COUNT", col("id")), "count"]],
-        group: ["itemType"],
-        raw: true,
-    });
-
-    const itemCounts = grouped.reduce(
-        (acc, item) => ({
-            ...acc,
-            [item.itemType]: Number(item.count) || 0,
-        }),
-        { word: 0, kanji: 0, grammar: 0 }
-    );
-
-    const plainNotebook = notebook.get({ plain: true });
-    return {
-        notebook: {
-            id: plainNotebook.id,
-            userId: plainNotebook.userId,
-            name: plainNotebook.name,
-            description: plainNotebook.description || "",
-            createdAt: plainNotebook.createdAt,
-            updatedAt: plainNotebook.updatedAt,
-            owner: {
-                id: plainNotebook.user?.id,
-                username: plainNotebook.user?.username,
-                email: plainNotebook.user?.email,
-                status: plainNotebook.user?.status,
-            },
-        },
-        items: rows,
-        itemCounts,
         pagination: {
             page: safePage,
             limit: safeLimit,
@@ -1175,9 +1033,7 @@ module.exports = {
     updateNotebookCollection,
     deleteNotebookCollection,
     getAdminNotebooks,
-    getAdminNotebookDetail,
     getAdminUserNotebooks,
-    getAdminUserNotebookDetail,
     updateAdminUserNotebook,
     deleteAdminUserNotebook,
     createAdminNotebook,

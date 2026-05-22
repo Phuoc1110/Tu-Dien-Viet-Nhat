@@ -456,12 +456,11 @@ const normalizeStrokes = (strokes) => {
 		return [];
 	}
 
-	const cx = (minX + maxX) / 2;
-	const cy = (minY + maxY) / 2;
-	const size = Math.max(maxX - minX, maxY - minY, 1);
+	const w = Math.max(maxX - minX, 1e-4);
+	const h = Math.max(maxY - minY, 1e-4);
 
 	return strokes
-		.map((stroke) => stroke.map((p) => ({ x: (p.x - cx) / size + 0.5, y: (p.y - cy) / size + 0.5 })))
+		.map((stroke) => stroke.map((p) => ({ x: (p.x - minX) / w, y: (p.y - minY) / h })))
 		.filter((stroke) => stroke.length >= 2);
 };
 
@@ -508,19 +507,23 @@ const resampleStroke = (stroke, count = 20) => {
 };
 
 const scoreStrokePair = (leftStroke, rightStroke) => {
-	const left = resampleStroke(leftStroke, 20);
-	const right = resampleStroke(rightStroke, 20);
+	const left = resampleStroke(leftStroke, 12);
+	const right = resampleStroke(rightStroke, 12);
 	if (!left.length || !right.length) {
 		return 0;
 	}
 
-	let total = 0;
-	for (let i = 0; i < left.length; i += 1) {
-		total += distance(left[i], right[i]);
+	let totalForward = 0;
+	let totalBackward = 0;
+	const len = left.length;
+	for (let i = 0; i < len; i += 1) {
+		totalForward += distance(left[i], right[i]);
+		totalBackward += distance(left[i], right[len - 1 - i]);
 	}
 
-	const mean = total / left.length;
-	return clamp01(1 - mean / 0.55);
+	const minTotal = Math.min(totalForward, totalBackward);
+	const mean = minTotal / len;
+	return clamp01(1 - mean / 0.45);
 };
 
 const greedyScore = (userStrokes, refStrokes) => {
@@ -529,9 +532,16 @@ const greedyScore = (userStrokes, refStrokes) => {
 	}
 
 	const pairs = [];
-	for (let i = 0; i < userStrokes.length; i += 1) {
-		for (let j = 0; j < refStrokes.length; j += 1) {
-			pairs.push({ i, j, score: scoreStrokePair(userStrokes[i], refStrokes[j]) });
+	const lenU = userStrokes.length;
+	const lenR = refStrokes.length;
+	const maxLen = Math.max(lenU, lenR, 1);
+
+	for (let i = 0; i < lenU; i += 1) {
+		for (let j = 0; j < lenR; j += 1) {
+			const shapeScore = scoreStrokePair(userStrokes[i], refStrokes[j]);
+			const orderPenalty = Math.abs(i - j) / maxLen;
+			const score = shapeScore * (1 - orderPenalty * 0.4);
+			pairs.push({ i, j, score });
 		}
 	}
 
@@ -549,7 +559,7 @@ const greedyScore = (userStrokes, refStrokes) => {
 		usedRight.add(pair.j);
 		sum += pair.score;
 		matched += 1;
-		if (matched === Math.min(userStrokes.length, refStrokes.length)) {
+		if (matched === Math.min(lenU, lenR)) {
 			break;
 		}
 	}
@@ -558,61 +568,8 @@ const greedyScore = (userStrokes, refStrokes) => {
 		return 0;
 	}
 
-	const coveragePenalty =
-		Math.abs(userStrokes.length - refStrokes.length) /
-		Math.max(userStrokes.length, refStrokes.length, 1);
-
-	return clamp01((sum / matched) * (1 - coveragePenalty * 0.35));
-};
-
-const buildPointCloud = (strokes, perStroke = 10, maxPoints = 220) => {
-	if (!Array.isArray(strokes) || !strokes.length) {
-		return [];
-	}
-
-	const cloud = [];
-	for (const stroke of strokes) {
-		const samples = resampleStroke(stroke, perStroke);
-		for (const point of samples) {
-			cloud.push(point);
-			if (cloud.length >= maxPoints) {
-				return cloud;
-			}
-		}
-	}
-
-	return cloud;
-};
-
-const oneWayNearestAverage = (fromPoints, toPoints) => {
-	if (!fromPoints.length || !toPoints.length) {
-		return Infinity;
-	}
-
-	let total = 0;
-	for (const point of fromPoints) {
-		let best = Infinity;
-		for (const target of toPoints) {
-			const d = distance(point, target);
-			if (d < best) {
-				best = d;
-			}
-		}
-		total += best;
-	}
-
-	return total / fromPoints.length;
-};
-
-const cloudSimilarity = (leftCloud, rightCloud) => {
-	if (!leftCloud.length || !rightCloud.length) {
-		return 0;
-	}
-
-	const forward = oneWayNearestAverage(leftCloud, rightCloud);
-	const backward = oneWayNearestAverage(rightCloud, leftCloud);
-	const chamfer = (forward + backward) / 2;
-	return clamp01(1 - chamfer / 0.26);
+	const coveragePenalty = Math.abs(lenU - lenR) / maxLen;
+	return clamp01((sum / matched) * (1 - coveragePenalty * 0.4));
 };
 
 const getKanjiReference = (record) => {
@@ -638,7 +595,6 @@ const getKanjiReference = (record) => {
 		kanji: String(record?.characterKanji || "").trim(),
 		strokeCount: Number(record?.strokeCount) || strokes.length,
 		strokes,
-		cloud: buildPointCloud(strokes, 10, 220),
 	};
 
 	kanjiStrokeCache.set(cacheKey, reference);
@@ -1434,7 +1390,6 @@ let recognizeKanjiFromInk = async ({ ink, width = 280, height = 280, numResults 
 	if (!userStrokes.length) {
 		return [];
 	}
-	const userCloud = buildPointCloud(userStrokes, 10, 220);
 	const userStrokeCount = userStrokes.length;
 	const primaryStrokeGap = 3;
 	const secondaryStrokeGap = 6;
@@ -1494,11 +1449,10 @@ let recognizeKanjiFromInk = async ({ ink, width = 280, height = 280, numResults 
 		}
 
 		const shapeScore = greedyScore(userStrokes, ref.strokes);
-		const cloudScore = cloudSimilarity(userCloud, ref.cloud || []);
 		const countScore = clamp01(
 			1 - Math.abs(userStrokes.length - ref.strokeCount) / Math.max(userStrokes.length, ref.strokeCount, 1)
 		);
-		const finalScore = cloudScore * 0.62 + shapeScore * 0.18 + countScore * 0.20;
+		const finalScore = shapeScore * 0.70 + countScore * 0.30;
 
 		if (!Number.isFinite(finalScore)) {
 			continue;

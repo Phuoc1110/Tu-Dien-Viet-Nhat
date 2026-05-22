@@ -8,10 +8,6 @@ module.exports = (sequelize, DataTypes) => {
 				foreignKey: "createdByAdminId",
 				as: "createdByAdmin",
 			});
-			ReadingPassage.hasMany(models.UserReadingProgress, {
-				foreignKey: "passageId",
-				as: "progresses",
-			});
 		}
 	}
 

@@ -86,11 +86,7 @@ const Admin = () => {
 	const [jlptBulkCustomLimit, setJlptBulkCustomLimit] = useState("300");
 	const [bulkSummary, setBulkSummary] = useState(null);
 	const [bulkSummaryLoading, setBulkSummaryLoading] = useState(false);
-	const [selectedAdminNotebookId, setSelectedAdminNotebookId] = useState("");
-	const [adminNotebookDetail, setAdminNotebookDetail] = useState(null);
-	const [adminNotebookDetailType, setAdminNotebookDetailType] = useState("");
-	const [adminNotebookDetailPage, setAdminNotebookDetailPage] = useState(1);
-	const [adminNotebookDetailLoading, setAdminNotebookDetailLoading] = useState(false);
+
 	const [userNotebooks, setUserNotebooks] = useState([]);
 	const [userNotebookQuery, setUserNotebookQuery] = useState("");
 	const [userNotebookOwnerQuery, setUserNotebookOwnerQuery] = useState("");
@@ -101,11 +97,7 @@ const Admin = () => {
 		totalItems: 0,
 		totalPages: 1,
 	});
-	const [selectedUserNotebookId, setSelectedUserNotebookId] = useState("");
-	const [userNotebookDetailType, setUserNotebookDetailType] = useState("");
-	const [userNotebookDetailPage, setUserNotebookDetailPage] = useState(1);
-	const [userNotebookDetail, setUserNotebookDetail] = useState(null);
-	const [userNotebookDetailLoading, setUserNotebookDetailLoading] = useState(false);
+
 	const [editingUserNotebookId, setEditingUserNotebookId] = useState(null);
 	const [userNotebookForm, setUserNotebookForm] = useState(defaultNotebookForm);
 
@@ -161,9 +153,6 @@ const Admin = () => {
 			if (!jlptTargetNotebookId && items.length) {
 				setJlptTargetNotebookId(String(items[0].id));
 			}
-			if (!selectedAdminNotebookId && items.length) {
-				setSelectedAdminNotebookId(String(items[0].id));
-			}
 		}
 	};
 
@@ -179,29 +168,6 @@ const Admin = () => {
 			return;
 		}
 		toast.error(res?.errMessage || "Không thể tải danh sách notebook admin");
-	};
-
-	const loadAdminNotebookDetail = async (notebookId = selectedAdminNotebookId) => {
-		if (!notebookId) {
-			setAdminNotebookDetail(null);
-			return;
-		}
-
-		setAdminNotebookDetailLoading(true);
-		const res = await getAdminNotebookDetail(notebookId, {
-			itemType: adminNotebookDetailType,
-			page: adminNotebookDetailPage,
-			limit: NOTEBOOK_DETAIL_PAGE_SIZE,
-		});
-
-		if (res?.errCode === 0) {
-			setAdminNotebookDetail(res.data || null);
-		} else {
-			setAdminNotebookDetail(null);
-			toast.error(res?.errMessage || "Không thể tải chi tiết notebook");
-		}
-
-		setAdminNotebookDetailLoading(false);
 	};
 
 	const loadAuditLogs = async (page = auditPage) => {
@@ -242,36 +208,10 @@ const Admin = () => {
 				}
 			);
 
-			if (!selectedUserNotebookId && items.length) {
-				setSelectedUserNotebookId(String(items[0].id));
-			}
 			return;
 		}
 
 		toast.error(res?.errMessage || "Không thể tải notebook người dùng");
-	};
-
-	const loadUserNotebookDetail = async (notebookId = selectedUserNotebookId) => {
-		if (!notebookId) {
-			setUserNotebookDetail(null);
-			return;
-		}
-
-		setUserNotebookDetailLoading(true);
-		const res = await getAdminUserNotebookDetail(notebookId, {
-			itemType: userNotebookDetailType,
-			page: userNotebookDetailPage,
-			limit: NOTEBOOK_DETAIL_PAGE_SIZE,
-		});
-
-		if (res?.errCode === 0) {
-			setUserNotebookDetail(res.data || null);
-		} else {
-			setUserNotebookDetail(null);
-			toast.error(res?.errMessage || "Không thể tải chi tiết notebook người dùng");
-		}
-
-		setUserNotebookDetailLoading(false);
 	};
 
 	const reloadCurrentTab = async () => {
@@ -425,14 +365,9 @@ const Admin = () => {
 
 		if (res?.errCode === 0) {
 			toast.success(editingAdminNotebookId ? "Đã cập nhật notebook admin" : "Đã tạo notebook admin");
-			const updatedNotebookId = editingAdminNotebookId || res?.data?.id;
-			if (updatedNotebookId) {
-				setSelectedAdminNotebookId(String(updatedNotebookId));
-			}
 			setAdminNotebookForm(defaultNotebookForm);
 			setEditingAdminNotebookId(null);
 			await loadAdminNotebooks();
-			await loadAdminNotebookDetail(updatedNotebookId ? String(updatedNotebookId) : selectedAdminNotebookId);
 			await loadAuditLogs();
 			return;
 		}
@@ -442,7 +377,6 @@ const Admin = () => {
 
 	const handleEditAdminNotebook = (item) => {
 		setEditingAdminNotebookId(item.id);
-		setSelectedAdminNotebookId(String(item.id));
 		setAdminNotebookForm({
 			name: item.name || "",
 			description: item.description || "",
@@ -463,10 +397,6 @@ const Admin = () => {
 			}
 			if (String(jlptTargetNotebookId) === String(id)) {
 				setJlptTargetNotebookId("");
-			}
-			if (String(selectedAdminNotebookId) === String(id)) {
-				setSelectedAdminNotebookId("");
-				setAdminNotebookDetail(null);
 			}
 			await loadAdminNotebooks();
 			await loadAuditLogs();
@@ -510,7 +440,6 @@ const Admin = () => {
 
 	const handleEditUserNotebook = (item) => {
 		setEditingUserNotebookId(item.id);
-		setSelectedUserNotebookId(String(item.id));
 		setUserNotebookForm({
 			name: item.name || "",
 			description: item.description || "",
@@ -535,7 +464,6 @@ const Admin = () => {
 		if (res?.errCode === 0) {
 			toast.success("Đã cập nhật notebook người dùng");
 			await loadUserNotebooks(userNotebookPagination.page);
-			await loadUserNotebookDetail(String(editingUserNotebookId));
 			await loadAuditLogs();
 			return;
 		}
@@ -554,10 +482,6 @@ const Admin = () => {
 			if (String(editingUserNotebookId) === String(id)) {
 				setEditingUserNotebookId(null);
 				setUserNotebookForm(defaultNotebookForm);
-			}
-			if (String(selectedUserNotebookId) === String(id)) {
-				setSelectedUserNotebookId("");
-				setUserNotebookDetail(null);
 			}
 			await loadUserNotebooks(userNotebookPagination.page);
 			await loadAuditLogs();
@@ -602,21 +526,6 @@ const Admin = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [tab, jlptTargetNotebookId, jlptBulkItemType, jlptBulkLevel, jlptBulkLimitMode, jlptBulkCustomLimit]);
 
-	useEffect(() => {
-		if (tab !== "admin_notebooks") {
-			return;
-		}
-		loadAdminNotebookDetail();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [tab, selectedAdminNotebookId, adminNotebookDetailType, adminNotebookDetailPage]);
-
-	useEffect(() => {
-		if (tab !== "user_notebooks") {
-			return;
-		}
-		loadUserNotebookDetail();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [tab, selectedUserNotebookId, userNotebookDetailType, userNotebookDetailPage]);
 
 	const handleUpdateRole = async (id, role) => {
 		const res = await updateAdminUserRole(id, role);
@@ -996,102 +905,6 @@ const Admin = () => {
 						</div>
 					</div>
 
-					<div className="admin2-panel">
-						<h3>Chi tiết notebook</h3>
-						<div className="admin2-filters">
-							<select
-								value={selectedAdminNotebookId}
-								onChange={(e) => {
-									setSelectedAdminNotebookId(e.target.value);
-									setAdminNotebookDetailPage(1);
-								}}
-							>
-								<option value="">Chọn notebook</option>
-								{adminNotebookOptions.map((item) => (
-									<option key={item.id} value={item.id}>
-										{item.name}
-									</option>
-								))}
-							</select>
-							<select
-								value={adminNotebookDetailType}
-								onChange={(e) => {
-									setAdminNotebookDetailType(e.target.value);
-									setAdminNotebookDetailPage(1);
-								}}
-							>
-								<option value="">Tất cả loại</option>
-								<option value="word">Từ vựng</option>
-								<option value="kanji">Kanji</option>
-								<option value="grammar">Ngữ pháp</option>
-							</select>
-						</div>
-
-						{adminNotebookDetailLoading ? (
-							<div className="admin2-loading">Đang tải chi tiết notebook...</div>
-						) : adminNotebookDetail ? (
-							<>
-								<div className="admin2-inline-stats">
-									<p><strong>{adminNotebookDetail?.notebook?.name || "-"}</strong></p>
-									<p>Word: {adminNotebookDetail?.itemCounts?.word || 0}</p>
-									<p>Kanji: {adminNotebookDetail?.itemCounts?.kanji || 0}</p>
-									<p>Grammar: {adminNotebookDetail?.itemCounts?.grammar || 0}</p>
-								</div>
-								<div className="admin2-table-wrap">
-									<table className="admin2-table">
-										<thead>
-											<tr>
-												<th>ID</th>
-												<th>Loại</th>
-												<th>Item ID</th>
-												<th>Ngày thêm</th>
-											</tr>
-										</thead>
-										<tbody>
-											{(adminNotebookDetail?.items || []).map((item) => (
-												<tr key={item.id}>
-													<td>{item.id}</td>
-													<td>{item.itemType}</td>
-													<td>{item.itemId}</td>
-													<td>{new Date(item.createdAt).toLocaleString("vi-VN")}</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-								<div className="admin2-pagination">
-									<button
-										type="button"
-										disabled={(adminNotebookDetail?.pagination?.page || 1) <= 1}
-										onClick={() =>
-											setAdminNotebookDetailPage((prev) => Math.max(1, prev - 1))
-										}
-									>
-										Trước
-									</button>
-									<span>
-										Trang {adminNotebookDetail?.pagination?.page || 1}/
-										{adminNotebookDetail?.pagination?.totalPages || 1} •
-										 {adminNotebookDetail?.pagination?.totalItems || 0} mục
-									</span>
-									<button
-										type="button"
-										disabled={
-											(adminNotebookDetail?.pagination?.page || 1) >=
-											(adminNotebookDetail?.pagination?.totalPages || 1)
-										}
-										onClick={() =>
-											setAdminNotebookDetailPage((prev) => prev + 1)
-										}
-									>
-										Sau
-									</button>
-								</div>
-							</>
-						) : (
-							<p>Chọn notebook để xem chi tiết.</p>
-						)}
-					</div>
 
 					<div className="admin2-panel">
 						<h3>Danh sách notebook admin</h3>
@@ -1133,15 +946,7 @@ const Admin = () => {
 											<td>{new Date(item.updatedAt).toLocaleString("vi-VN")}</td>
 											<td>
 												<div className="row-actions">
-													<button
-														type="button"
-														onClick={() => {
-															setSelectedAdminNotebookId(String(item.id));
-															setAdminNotebookDetailPage(1);
-														}}
-													>
-														Xem
-													</button>
+
 													<button type="button" onClick={() => handleEditAdminNotebook(item)}>
 														Sửa
 													</button>
@@ -1198,84 +1003,6 @@ const Admin = () => {
 						</div>
 					</div>
 
-					<div className="admin2-panel">
-						<h3>Chi tiết notebook người dùng</h3>
-						<div className="admin2-filters">
-							<select
-								value={userNotebookDetailType}
-								onChange={(e) => {
-									setUserNotebookDetailType(e.target.value);
-									setUserNotebookDetailPage(1);
-								}}
-							>
-								<option value="">Tất cả loại</option>
-								<option value="word">Từ vựng</option>
-								<option value="kanji">Kanji</option>
-								<option value="grammar">Ngữ pháp</option>
-							</select>
-						</div>
-						{userNotebookDetailLoading ? (
-							<div className="admin2-loading">Đang tải chi tiết notebook người dùng...</div>
-						) : userNotebookDetail ? (
-							<>
-								<div className="admin2-inline-stats">
-									<p><strong>{userNotebookDetail?.notebook?.name || "-"}</strong></p>
-									<p>Chủ sở hữu: {userNotebookDetail?.notebook?.owner?.username || "Unknown"}</p>
-									<p>Word: {userNotebookDetail?.itemCounts?.word || 0}</p>
-									<p>Kanji: {userNotebookDetail?.itemCounts?.kanji || 0}</p>
-									<p>Grammar: {userNotebookDetail?.itemCounts?.grammar || 0}</p>
-								</div>
-								<div className="admin2-table-wrap">
-									<table className="admin2-table">
-										<thead>
-											<tr>
-												<th>ID</th>
-												<th>Loại</th>
-												<th>Item ID</th>
-												<th>Ngày thêm</th>
-											</tr>
-										</thead>
-										<tbody>
-											{(userNotebookDetail?.items || []).map((item) => (
-												<tr key={item.id}>
-													<td>{item.id}</td>
-													<td>{item.itemType}</td>
-													<td>{item.itemId}</td>
-													<td>{new Date(item.createdAt).toLocaleString("vi-VN")}</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-								<div className="admin2-pagination">
-									<button
-										type="button"
-										disabled={(userNotebookDetail?.pagination?.page || 1) <= 1}
-										onClick={() => setUserNotebookDetailPage((prev) => Math.max(1, prev - 1))}
-									>
-										Trước
-									</button>
-									<span>
-										Trang {userNotebookDetail?.pagination?.page || 1}/
-										{userNotebookDetail?.pagination?.totalPages || 1} •
-										 {userNotebookDetail?.pagination?.totalItems || 0} mục
-									</span>
-									<button
-										type="button"
-										disabled={
-											(userNotebookDetail?.pagination?.page || 1) >=
-											(userNotebookDetail?.pagination?.totalPages || 1)
-										}
-										onClick={() => setUserNotebookDetailPage((prev) => prev + 1)}
-									>
-										Sau
-									</button>
-								</div>
-							</>
-						) : (
-							<p>Chọn notebook user để xem chi tiết.</p>
-						)}
-					</div>
 
 					<div className="admin2-panel">
 						<h3>Danh sách notebook người dùng</h3>
@@ -1323,15 +1050,7 @@ const Admin = () => {
 											<td>{new Date(item.updatedAt).toLocaleString("vi-VN")}</td>
 											<td>
 												<div className="row-actions">
-													<button
-														type="button"
-														onClick={() => {
-															setSelectedUserNotebookId(String(item.id));
-															setUserNotebookDetailPage(1);
-														}}
-													>
-														Xem
-													</button>
+
 													<button type="button" onClick={() => handleEditUserNotebook(item)}>Sửa</button>
 													<button
 														type="button"

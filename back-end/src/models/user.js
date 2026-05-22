@@ -15,14 +15,6 @@ module.exports = (sequelize, DataTypes) => {
 			// Comments
 			User.hasMany(models.Comment, { foreignKey: "userId", as: "comments" });
 
-			// Reports (as reporter)
-			User.hasMany(models.Report, { foreignKey: "reporterId", as: "reports" });
-			User.hasMany(models.Report, { foreignKey: "resolvedBy", as: "resolvedReports" });
-
-			// Contributions
-			User.hasMany(models.UserContribution, { foreignKey: "userId", as: "contributions" });
-			User.hasMany(models.UserContribution, { foreignKey: "reviewedBy", as: "reviewedContributions" });
-
 			// Flashcard status
 			User.hasMany(models.UserFlashcardStatus, { foreignKey: "userId", as: "flashcardStatuses" });
 
@@ -30,10 +22,6 @@ module.exports = (sequelize, DataTypes) => {
 			User.hasMany(models.ReadingPassage, {
 				foreignKey: "createdByAdminId",
 				as: "createdReadingPassages",
-			});
-			User.hasMany(models.UserReadingProgress, {
-				foreignKey: "userId",
-				as: "readingProgresses",
 			});
 		}
 	}

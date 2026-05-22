@@ -98,18 +98,7 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/history",
 		dictionaryController.HandleClearSearchHistory
 	);
-	router.get(
-		"/api/dictionary/contributions",
-		dictionaryController.HandleGetWordContributions
-	);
-	router.post(
-		"/api/dictionary/contributions",
-		dictionaryController.HandleAddWordContribution
-	);
-	router.get(
-		"/api/dictionary/contributions/latest",
-		dictionaryController.HandleGetLatestWordContributions
-	);
+
 	router.get("/api/notebooks/overview", notebookController.HandleGetNotebookOverview);
 	router.get("/api/notebooks/curated", notebookController.HandleGetCuratedNotebookCollections);
 	router.get("/api/notebooks/:id", notebookController.HandleGetNotebookDetail);
@@ -122,8 +111,7 @@ let initWebRoutes = (app) => {
 	router.get("/api/reading/passages/:id/analysis", readingController.HandleGetPassageAnalysis);
 	router.post("/api/reading/passages", readingController.HandleCreateReadingPassage);
 	router.put("/api/reading/passages/:id", readingController.HandleUpdateReadingPassage);
-	router.post("/api/reading/passages/:id/progress", readingController.HandleUpsertReadingProgress);
-	router.get("/api/reading/progress", readingController.HandleGetMyReadingProgresses);
+
 
 	// Quiz & SRS
 	router.post("/api/quiz/generate", quizController.HandleGenerateQuiz);
@@ -159,14 +147,12 @@ let initWebRoutes = (app) => {
 	router.put("/api/admin/notebook-collections/:id", adminController.updateNotebookCollection);
 	router.delete("/api/admin/notebook-collections/:id", adminController.deleteNotebookCollection);
 	router.get("/api/admin/notebooks", adminController.getAdminNotebooks);
-	router.get("/api/admin/notebooks/:id", adminController.getAdminNotebookDetail);
 	router.post("/api/admin/notebooks", adminController.createAdminNotebook);
 	router.put("/api/admin/notebooks/:id", adminController.updateAdminNotebook);
 	router.delete("/api/admin/notebooks/:id", adminController.deleteAdminNotebook);
 	router.get("/api/admin/notebooks/:id/add-by-jlpt/summary", adminController.getAdminNotebookBulkSummary);
 	router.post("/api/admin/notebooks/:id/add-by-jlpt", adminController.addAdminNotebookItemsByJlpt);
 	router.get("/api/admin/user-notebooks", adminController.getAdminUserNotebooks);
-	router.get("/api/admin/user-notebooks/:id", adminController.getAdminUserNotebookDetail);
 	router.put("/api/admin/user-notebooks/:id", adminController.updateAdminUserNotebook);
 	router.delete("/api/admin/user-notebooks/:id", adminController.deleteAdminUserNotebook);
 

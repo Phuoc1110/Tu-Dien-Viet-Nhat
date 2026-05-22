@@ -37,8 +37,8 @@ const ReadingCreatePage = () => {
 	const [pageError, setPageError] = useState("");
 
 	const exitRoute = useMemo(() => (isEditing ? `/reading/${id}` : "/reading"), [id, isEditing]);
-	const pageTitle = isEditing ? "Sua bai doc" : "Tao bai doc";
-	const submitLabel = isEditing ? "Luu thay doi" : "Tao bai doc";
+	const pageTitle = isEditing ? "Sua bai doc" : "Tạo bài đọc";
+	const submitLabel = isEditing ? "Luu thay doi" : "Tạo bài đọc";
 
 	const preview = useMemo(() => {
 		return {

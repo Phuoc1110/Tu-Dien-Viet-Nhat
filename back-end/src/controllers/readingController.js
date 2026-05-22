@@ -101,52 +101,6 @@ const HandleUpdateReadingPassage = async (req, res) => {
 	}
 };
 
-const HandleUpsertReadingProgress = async (req, res) => {
-	try {
-		const actor = resolveActor(req);
-		if (!actor.id) {
-			return res.status(401).json({ errCode: -2, errMessage: "Not Authenticated the user" });
-		}
-
-		const result = await readingService.upsertReadingProgress({
-			userId: actor.id,
-			passageId: Number(req.params.id),
-			status: req.body?.status,
-			lastReadAt: req.body?.lastReadAt,
-			completedAt: req.body?.completedAt,
-		});
-
-		if (result.errCode !== 0) {
-			return res.status(400).json(result);
-		}
-
-		return res.status(200).json({ errCode: 0, errMessage: "Progress updated", progress: result.progress });
-	} catch (error) {
-		console.error("HandleUpsertReadingProgress error:", error);
-		return res.status(500).json({ errCode: -1, errMessage: "Internal server error" });
-	}
-};
-
-const HandleGetMyReadingProgresses = async (req, res) => {
-	try {
-		const actor = resolveActor(req);
-		if (!actor.id) {
-			return res.status(401).json({ errCode: -2, errMessage: "Not Authenticated the user", items: [] });
-		}
-
-		const data = await readingService.getMyReadingProgresses({
-			userId: actor.id,
-			limit: req.query.limit || 30,
-			offset: req.query.offset || 0,
-		});
-
-		return res.status(200).json({ errCode: 0, errMessage: "OK", ...data });
-	} catch (error) {
-		console.error("HandleGetMyReadingProgresses error:", error);
-		return res.status(500).json({ errCode: -1, errMessage: "Internal server error", items: [] });
-	}
-};
-
 const HandleGetPassageAnalysis = async (req, res) => {
 	try {
 		const actor = resolveActor(req);
@@ -173,7 +127,5 @@ module.exports = {
 	HandleGetReadingPassageDetail,
 	HandleCreateReadingPassage,
 	HandleUpdateReadingPassage,
-	HandleUpsertReadingProgress,
-	HandleGetMyReadingProgresses,
 	HandleGetPassageAnalysis,
 };
