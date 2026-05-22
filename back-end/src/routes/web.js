@@ -98,6 +98,18 @@ let initWebRoutes = (app) => {
 		"/api/dictionary/history",
 		dictionaryController.HandleClearSearchHistory
 	);
+	router.get(
+		"/api/dictionary/contributions",
+		dictionaryController.HandleGetWordContributions
+	);
+	router.post(
+		"/api/dictionary/contributions",
+		dictionaryController.HandleAddWordContribution
+	);
+	router.get(
+		"/api/dictionary/contributions/latest",
+		dictionaryController.HandleGetLatestWordContributions
+	);
 
 	router.get("/api/notebooks/overview", notebookController.HandleGetNotebookOverview);
 	router.get("/api/notebooks/curated", notebookController.HandleGetCuratedNotebookCollections);

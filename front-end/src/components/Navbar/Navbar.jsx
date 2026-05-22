@@ -45,6 +45,7 @@ const Navbar = () => {
 	};
 
 	const handleLogout = async () => {
+		setShowUserMenu(false);
 		let data = await LogOutUser();
 		logoutContext();
 		if (data && data.errCode === 0) {
