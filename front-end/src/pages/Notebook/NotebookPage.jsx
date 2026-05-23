@@ -170,14 +170,22 @@ const NotebookPage = () => {
 							<div className="stat-label">Tổng từ đã lưu</div>
 						</div>
 						<div className="stat">
-							<div className="stat-ico">🔥</div>
-							<div className="stat-value">{overview.wordsToday || 0}</div>
-							<div className="stat-label">Ôn hôm nay</div>
+							<div className="stat-ico">🎯</div>
+							<div className="stat-value">
+								{overview.myNotebooks.reduce((s, n) => s + (n.rememberedCount || 0), 0)}
+							</div>
+							<div className="stat-label">Từ đã thuộc</div>
 						</div>
 						<div className="stat">
 							<div className="stat-ico">📈</div>
-							<div className="stat-value">{overview.streak || 0}</div>
-							<div className="stat-label">Streak</div>
+							<div className="stat-value">
+								{(() => {
+									const total = overview.myNotebooks.reduce((s, n) => s + (n.itemsCount || 0), 0);
+									const rem = overview.myNotebooks.reduce((s, n) => s + (n.rememberedCount || 0), 0);
+									return total > 0 ? Math.round((rem / total) * 100) : 0;
+								})()}%
+							</div>
+							<div className="stat-label">Tiến độ</div>
 						</div>
 					</div>
 				</div>

@@ -76,7 +76,16 @@ const SelectionLookup = ({ containerSelector = "body" }) => {
       const top = rect.top - 40;
       const left = rect.left + rect.width / 2;
 
-      setPos({ top: Math.max(top + window.scrollY, 8), left: left + window.scrollX });
+      // Ensure the popup doesn't get cut off at the edges of the screen
+      // The popup is max 360px wide and translated -50%, so we need ~180px padding from edges
+      const halfWidth = 180;
+      const margin = 16;
+      const minLeft = halfWidth + margin;
+      const maxLeft = window.innerWidth - halfWidth - margin;
+      
+      const clampedLeft = Math.max(minLeft, Math.min(left, maxLeft));
+
+      setPos({ top: Math.max(top + window.scrollY, 8), left: clampedLeft + window.scrollX });
       setSelectedText(text);
       setVisible(true);
       setIsPopoverOpen(false);
