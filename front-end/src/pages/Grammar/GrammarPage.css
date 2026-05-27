@@ -34,7 +34,7 @@
 }
 
 .grammar-page .search-leading {
-  width: 112px;
+  /* width: 112px; */
   height: 36px;
   display: grid;
   place-items: center;

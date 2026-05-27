@@ -3,39 +3,45 @@
 @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
 
 :root {
-  --da-bg: #0F0E0D;
-  --da-surface: #1A1917;
-  --da-surface-hover: #22201D;
-  --da-card: #1E1C1A;
-  --da-text: #F5EDD6;
-  --da-text-muted: #888888;
-  --da-text-dark: #666666;
-  --da-accent-red: #E8472A; /* Vermillion */
-  --da-accent-red-hover: #FF5A3B;
-  --da-accent-gold: #C9A84C;
-  --da-accent-gold-hover: #E3BE56;
-  --da-border: #333333;
-  --da-border-light: rgba(201, 168, 76, 0.2);
-  --da-glow-red: rgba(232, 71, 42, 0.15);
-  --da-glow-gold: rgba(201, 168, 76, 0.1);
+  --da-bg: #FAF9F6; /* Washi Paper */
+  --da-surface: #FFFFFF;
+  --da-surface-hover: #F3F1EC;
+  --da-card: #FFFFFF;
+  --da-text: #2D2422; /* Deep Charcoal/Brown */
+  --da-text-muted: #6B5E5B;
+  --da-text-dark: #A39692;
+  --da-accent-red: #8B0000; /* Deep Crimson */
+  --da-accent-red-hover: #A52A2A;
+  --da-accent-gold: #8DA399; /* Matcha Green */
+  --da-accent-gold-hover: #758A80;
+  --da-accent-blue: #4A6B5D; /* Pine Green */
+  --da-border: #E8E4D9;
+  --da-border-light: rgba(141, 163, 153, 0.3);
+  --da-glow-red: rgba(139, 0, 0, 0.1);
+  --da-glow-gold: rgba(141, 163, 153, 0.15);
+  --da-shadow-sm: 0 1px 3px rgba(45, 36, 34, 0.04);
+  --da-shadow: 0 4px 12px rgba(45, 36, 34, 0.06);
+  --da-shadow-lg: 0 10px 24px rgba(45, 36, 34, 0.08);
+  --da-shadow-xl: 0 20px 40px rgba(45, 36, 34, 0.1);
   --font-heading: "Shippori Mincho", "Noto Serif JP", serif;
   --font-mono: "DM Mono", "IBM Plex Mono", monospace;
-  --font-body: "Be Vietnam Pro", "Noto Sans JP", sans-serif;
+  --font-body: "Be Vietnam Pro", "Noto Sans JP", -apple-system, sans-serif;
 }
 
 .da-noise-bg {
   background-color: var(--da-bg);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
 }
+
 @import "bootstrap/dist/css/bootstrap.min.css";
 
 body {
-	margin: 0;
+  margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-		"Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-		sans-serif;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-y: auto;
   overflow-x: hidden;
   background-color: var(--da-bg);
@@ -43,6 +49,6 @@ body {
 }
 
 code {
-	font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-		monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
 }

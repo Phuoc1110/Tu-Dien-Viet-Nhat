@@ -516,13 +516,13 @@ const HomePage = () => {
 
 	return (
 		<div className="home-page">
-			<div className="home-shell">
-				<header className="home-search-wrap bento-surface" ref={searchWrapRef}>
-					<div className="home-search-head">
-						<p className="home-search-kicker">Japanese Toolbox</p>
-						<h1>Tra cứu từ vựng theo cách nhanh và trực quan hơn</h1>
-					</div>
-					<div className="home-search-input-zone">
+			{/* HERO SECTION */}
+			<section className="home-hero">
+				<div className="home-hero-content">
+					<p className="home-hero-kicker">Japanese Toolbox</p>
+					<h1 className="home-hero-title">Tra cứu từ vựng theo cách nhanh và trực quan hơn</h1>
+					
+					<div className="home-search-wrap" ref={searchWrapRef}>
 						<form className="home-search-bar" onSubmit={handleSearch}>
 							<span className="search-leading" aria-hidden="true">辞</span>
 							<input
@@ -535,27 +535,20 @@ const HomePage = () => {
 								aria-label="Tìm kiếm từ"
 							/>
 							<div className="search-actions">
-								<button type="button" onClick={openImagePicker} title="Chụp ảnh để tra cứu" disabled={isImageUploading} aria-label="Chọn ảnh để tra cứu">
-									<Camera size={15} />
+								<button type="button" className="action-btn" onClick={openImagePicker} title="Chụp ảnh để tra cứu" disabled={isImageUploading} aria-label="Chọn ảnh để tra cứu">
+									<Camera size={16} />
 									<span>{isImageUploading ? "Đang đọc" : "Ảnh"}</span>
 								</button>
-								<button type="button" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay" aria-label="Mở trình viết tay">
-									<PenTool size={15} />
-									<span>Write</span>
+								<button type="button" className="action-btn" onClick={() => setIsKanjiDrawOpen(true)} title="Nhập chữ viết tay" aria-label="Mở trình viết tay">
+									<PenTool size={16} />
+									<span>Viết tay</span>
 								</button>
-								{/* <button type="button" title="Tìm kiếm giọng nói">
-									<Mic size={15} />
-									<span>Voice</span>
-								</button> */}
-								<button type="button" onClick={openHistoryPopup} aria-label="Mở lịch sử tra cứu">
-									<RefreshCcw size={15} />
-									His
+								<button type="submit" className="action-btn primary" aria-label="Tra cứu">
+									Tra cứu
 								</button>
 							</div>
-							<button className="lang-switch" type="submit" aria-label="Chuyển ngôn ngữ">
-								Nhật - Việt ▾
-							</button>
 						</form>
+						
 						<input
 							ref={imageInputRef}
 							type="file"
@@ -564,244 +557,149 @@ const HomePage = () => {
 							onChange={handleImagePick}
 							style={{ display: "none" }}
 						/>
+						
 						{isDropdownOpen && searchInput.trim() && (
 							<div className="home-dropdown">{renderDropdownBody()}</div>
 						)}
 					</div>
 
-						<nav className="home-mode-tabs" role="tablist" aria-label="Chế độ tra cứu">
-							<button className="tab-active" type="button" aria-pressed="true" aria-label="Chế độ Từ vựng">
-								Từ vựng
-							</button>
-							<button
-								type="button"
-								onClick={() => history.push(`/kanji?q=${searchInput.trim()}`)}
-								aria-pressed="false"
-								aria-label="Chế độ Hán tự"
-							>
-								Hán tự
-							</button>
-							<button
-								type="button"
-								onClick={() => history.push(`/sentence?q=${searchInput.trim()}`)}
-								aria-pressed="false"
-								aria-label="Chế độ Mẫu câu"
-							>
-								Mẫu câu
-							</button>
-							<button
-								type="button"
-								onClick={() => history.push(`/grammar?q=${searchInput.trim()}`)}
-								aria-pressed="false"
-								aria-label="Chế độ Ngữ pháp"
-							>
-								Ngữ pháp
-							</button>
-							<button
-								type="button"
-								onClick={() => {
-									if (searchInput.trim()) {
-										history.push(`/analysis?text=${searchInput.trim()}`);
-									} else {
-										history.push(`/analysis`);
-									}
-								}}
-								aria-pressed="false"
-								aria-label="Chế độ Phân tích"
-							>
-								Phân tích
-							</button>
-						</nav>
+					<nav className="home-mode-tabs" role="tablist" aria-label="Chế độ tra cứu">
+						<button className="tab-active" type="button" aria-pressed="true" aria-label="Chế độ Từ vựng">
+							Từ vựng
+						</button>
+						<button type="button" onClick={() => history.push(`/kanji?q=${searchInput.trim()}`)} aria-pressed="false" aria-label="Chế độ Hán tự">
+							Hán tự
+						</button>
+						<button type="button" onClick={() => history.push(`/sentence?q=${searchInput.trim()}`)} aria-pressed="false" aria-label="Chế độ Mẫu câu">
+							Mẫu câu
+						</button>
+						<button type="button" onClick={() => history.push(`/grammar?q=${searchInput.trim()}`)} aria-pressed="false" aria-label="Chế độ Ngữ pháp">
+							Ngữ pháp
+						</button>
+						<button type="button" onClick={() => history.push(searchInput.trim() ? `/analysis?text=${searchInput.trim()}` : '/analysis')} aria-pressed="false" aria-label="Chế độ Phân tích">
+							Phân tích đoạn văn
+						</button>
+					</nav>
+				</div>
+			</section>
 
-				</header>
+			{/* MAIN CONTENT AREA */}
+			<main className="home-main-content">
+				<div className="home-left-col">
+					<section className="home-section">
+						<h2 className="home-section-title">Khám phá & Tiện ích</h2>
+						<div className="card-grid">
+							<div className="modern-card">
+								<h3>
+									<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Zap size={18} color="var(--da-accent-gold)"/> Mẹo tra cứu nhanh</span>
+								</h3>
+								<ul className="tips-list">
+									<li><Sparkles size={14} /> Gõ kana, romaji hoặc kanji đều được hệ thống gợi ý tức thì.</li>
+									<li><Sparkles size={14} /> Đăng nhập để lưu lịch sử và tiếp tục học trên thiết bị khác.</li>
+									<li><Sparkles size={14} /> Dùng từ ngắn trước, sau đó mở rộng bằng từ khóa liên quan.</li>
+								</ul>
+							</div>
 
-				<section className="home-hero-grid">
-					<article className="home-hero-main bento-surface">
-						<p className="hero-kicker">Dashboard Spotlight</p>
-						<h2>Kết hợp tra từ, lịch sử học và góp ý cộng đồng trên cùng một dashboard.</h2>
-						<p>
-							Bắt đầu từ một từ khóa, sau đó mở rộng sang câu, ngữ pháp và kanji chỉ bằng vài cú nhấp.
-						</p>
-						<div className="hero-actions">
-							<button type="button" onClick={() => applyHintAndSearch("景気")}>
-								<Wand2 size={14} />
-								Thử từ 景気
-							</button>
-							<button type="button" onClick={() => applyHintAndSearch("健康")}>
-								<Zap size={14} />
-								Thử từ 健康
-							</button>
-						</div>
-					</article>
-
-					<div className="home-hero-stats">
-						<div className="hero-stat-card bento-tile">
-							<span>Tài khoản</span>
-							<strong>{isLoggedIn ? "Đã đăng nhập" : "Chưa đăng nhập"}</strong>
-						</div>
-						<div className="hero-stat-card bento-tile">
-							<span>Lịch sử gần đây</span>
-							<strong>{historyTotal}</strong>
-						</div>
-						<div className="hero-stat-card bento-tile">
-							<span>Từ khóa hot</span>
-							<strong>{hotKeywords.length}</strong>
-						</div>
-						<div className="hero-stat-card bento-tile">
-							<span>Góp ý cộng đồng</span>
-							<strong>{communityTotal}</strong>
-						</div>
-					</div>
-				</section>
-
-				<KanjiDrawModal
-					open={isKanjiDrawOpen}
-					onClose={() => setIsKanjiDrawOpen(false)}
-					anchorRef={searchWrapRef}
-					onPick={(value) => {
-						setSearchInput((prev) => `${prev || ""}${value}`);
-						setIsDropdownOpen(true);
-					}}
-				/>
-
-				{isHistoryOpen && (
-					<div className="history-modal-overlay" onClick={() => setIsHistoryOpen(false)}>
-						<div
-							className="history-modal"
-							onClick={(event) => event.stopPropagation()}
-						>
-							<div className="history-modal-head">
-								<h3>Lịch sử</h3>
-								<div className="history-modal-actions">
-									<button type="button" onClick={handleClearHistory}>Xóa</button>
-									<button type="button" onClick={() => setIsHistoryOpen(false)}>
-										✕
-									</button>
+							<div className="modern-card">
+								<h3>
+									<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={18} color="var(--da-accent-blue)"/> Lịch sử tra cứu ({isLoggedIn ? historyTotal : 0})</span>
+									<button type="button" onClick={openHistoryPopup}>Xem tất cả</button>
+								</h3>
+								<div className="chip-cloud">
+									{!isLoggedIn && <span className="empty-state" style={{padding: 0}}>Đăng nhập để xem lịch sử tra cứu</span>}
+									{isLoggedIn && historyPreviewItems.length === 0 && <span className="empty-state" style={{padding: 0}}>Chưa có lịch sử tra cứu</span>}
+									{historyPreviewItems.map((item, index) => (
+										<button key={`${item.word}-${index}`} type="button" className="chip-modern" onClick={() => handleSelectHistoryItem(item)}>
+											{item.word}
+										</button>
+									))}
 								</div>
 							</div>
-							<div className="history-modal-list" ref={historyListRef} onScroll={handleHistoryListScroll}>
-								{historyItems.length === 0 && (
-									<p className="history-empty">Chưa có từ nào trong lịch sử.</p>
-								)}
-								{historyItems.map((item, index) => (
-									<button
-										type="button"
-										key={`${item.word}-${item.searchedAt}-${index}`}
-										className="history-modal-item"
-										onClick={() => handleSelectHistoryItem(item)}
-									>
-										<div className="history-item-main">
-											<strong>{item.word}</strong>
-											<small>
-												{new Date(item.searchedAt).toLocaleString("vi-VN")}
-											</small>
-										</div>
-										{item.meaning && <p>{item.meaning}</p>}
-									</button>
-								))}
-								{historyLoadingMore && <p className="history-loading-more">Đang tải thêm...</p>}
-								{!historyHasMore && historyItems.length > 0 && (
-									<p className="history-loading-more">Đã tải hết lịch sử.</p>
-								)}
-							</div>
 						</div>
-					</div>
-				)}
+					</section>
 
-				<main className="home-content-grid">
-					<section className="home-main-column">
-						<article className="surface-panel tips-panel bento-surface">
-							<h3>Mẹo tra cứu nhanh</h3>
-							<ul>
-								<li><Sparkles size={14} /> Gõ kana, romaji hoặc kanji đều được hệ thống gợi ý tức thì.</li>
-								<li><Sparkles size={14} /> Đăng nhập để lưu lịch sử và tiếp tục học trên thiết bị khác.</li>
-								<li><Sparkles size={14} /> Dùng từ ngắn trước, sau đó mở rộng bằng từ khóa liên quan.</li>
-							</ul>
-						</article>
-
-						<article className="surface-panel bento-surface">
-							<div className="panel-head">
-								<h3>Từ khóa hot hôm nay</h3>
-								{/* <button type="button" onClick={() => setSearchInput("")}>
-									<RefreshCcw size={13} />
-									Làm mới
-								</button> */}
-							</div>
-							<div className="chip-list">
+					<section className="home-section">
+						<div className="modern-card">
+							<h3>
+								<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Zap size={18} color="var(--da-accent-red)"/> Từ khóa hot hôm nay</span>
+							</h3>
+							<div className="chip-cloud">
 								{hotKeywords.map((word) => (
-									<button key={word} type="button" onClick={() => openDictionaryForWord(word)}>
+									<button key={word} type="button" className="chip-modern" onClick={() => openDictionaryForWord(word)}>
 										{word}
 									</button>
 								))}
 							</div>
-						</article>
-
-						<article className="surface-panel bento-surface">
-							<div className="panel-head">
-								<h3>Lịch sử tra cứu</h3>
-								<button type="button" onClick={openHistoryPopup}>
-									Xem tất cả
-								</button>
-							</div>
-							<div className="chip-list">
-								{/* {isLoggedIn && historyTotal > 0 && (
-									<p className="history-preview-empty">Tổng: {historyTotal}</p>
-								)} */}
-								{!isLoggedIn && (
-									<p className="history-preview-empty">Đăng nhập để xem lịch sử tra cứu</p>
-								)}
-								{historyPreviewItems.map((item, index) => (
-									<button
-										key={`${item.word}-${index}`}
-										type="button"
-										onClick={() => handleSelectHistoryItem(item)}
-									>
-										{item.word}
-									</button>
-								))}
-								{isLoggedIn && historyPreviewItems.length === 0 && (
-									<p className="history-preview-empty">Chưa có lịch sử tra cứu</p>
-								)}
-							</div>
-						</article>
-
-						{/* <article className="surface-panel jlpt-panel">
-							<h3>JLPT Quick Start</h3>
-							<div className="jlpt-list">
-								<button type="button" onClick={() => applyHintAndSearch("経済")}>N1</button>
-								<button type="button" onClick={() => applyHintAndSearch("期待")}>N2</button>
-								<button type="button" onClick={() => applyHintAndSearch("仕事")}>N3</button>
-								<button type="button" onClick={() => applyHintAndSearch("便利")}>N4</button>
-								<button type="button" onClick={() => applyHintAndSearch("学校")}>N5</button>
-							</div>
-						</article> */}
+						</div>
 					</section>
+				</div>
 
-					<aside className="home-side-column">
-						<article className="surface-panel community-panel bento-surface">
-							<h3>Góp ý cộng đồng </h3>
+				<aside className="home-right-col">
+					<section className="home-section">
+						<h2 className="home-section-title">Góp ý cộng đồng ({communityTotal})</h2>
+						<div className="modern-card" style={{ padding: '16px' }}>
 							<div className="feedback-list" ref={communityListRef} onScroll={handleCommunityListScroll}>
+								{communityPosts.length === 0 && (
+									<p className="empty-state">Chưa có bình luận nào.</p>
+								)}
 								{communityPosts.map((item) => (
-									<div key={`${item.id}-${item.createdAt}`} className="feedback-item">
+									<div key={`${item.id}-${item.createdAt}`} className="feedback-card">
 										<strong>{item.word}</strong>
 										<p>{item.meaning || item.content}</p>
-										<small className="feedback-meta">
-											{item.author || "Bạn"} • {new Date(item.createdAt).toLocaleString("vi-VN")}
-										</small>
+										<small>{item.author || "Bạn"} • {new Date(item.createdAt).toLocaleString("vi-VN")}</small>
 									</div>
 								))}
-								{communityPosts.length === 0 && (
-									<p className="feedback-empty">Chưa có bình luận nào.</p>
-								)}
-								{communityLoadingMore && <p className="feedback-empty">Đang tải thêm...</p>}
+								{communityLoadingMore && <p className="empty-state">Đang tải thêm...</p>}
 								{!communityHasMore && communityPosts.length > 0 && (
-									<p className="feedback-empty">Đã tải hết góp ý.</p>
+									<p className="empty-state" style={{ fontSize: '0.8rem', padding: '10px' }}>Đã tải hết góp ý.</p>
 								)}
 							</div>
-						</article>
-					</aside>
-				</main>
-			</div>
+						</div>
+					</section>
+				</aside>
+			</main>
+
+			<KanjiDrawModal
+				open={isKanjiDrawOpen}
+				onClose={() => setIsKanjiDrawOpen(false)}
+				anchorRef={searchWrapRef}
+				onPick={(value) => {
+					setSearchInput((prev) => `${prev || ""}${value}`);
+					setIsDropdownOpen(true);
+				}}
+			/>
+
+			{isHistoryOpen && (
+				<div className="history-modal-overlay" onClick={() => setIsHistoryOpen(false)}>
+					<div className="history-modal" onClick={(event) => event.stopPropagation()}>
+						<div className="history-modal-head">
+							<h3>Lịch sử của bạn</h3>
+							<div className="history-modal-actions">
+								<button type="button" onClick={handleClearHistory}>Xóa tất cả</button>
+								<button type="button" onClick={() => setIsHistoryOpen(false)}>Đóng</button>
+							</div>
+						</div>
+						<div className="history-modal-list" ref={historyListRef} onScroll={handleHistoryListScroll}>
+							{historyItems.length === 0 && (
+								<p className="empty-state">Chưa có từ nào trong lịch sử.</p>
+							)}
+							{historyItems.map((item, index) => (
+								<button type="button" key={`${item.word}-${item.searchedAt}-${index}`} className="history-modal-item" onClick={() => handleSelectHistoryItem(item)}>
+									<div className="history-item-main">
+										<strong>{item.word}</strong>
+										<small>{new Date(item.searchedAt).toLocaleString("vi-VN")}</small>
+									</div>
+									{item.meaning && <p>{item.meaning}</p>}
+								</button>
+							))}
+							{historyLoadingMore && <p className="empty-state">Đang tải thêm...</p>}
+							{!historyHasMore && historyItems.length > 0 && (
+								<p className="empty-state">Đã tải hết lịch sử.</p>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

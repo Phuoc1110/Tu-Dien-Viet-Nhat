@@ -222,7 +222,7 @@
 
 .dictionary-page .mazii-content-grid.detail-mode {
   display: grid;
-  grid-template-columns: minmax(220px, 20%) minmax(0, 55%) minmax(260px, 25%);
+  grid-template-columns: minmax(220px, 20%) minmax(0, 52%) minmax(280px, 28%);
   gap: 22px;
   align-items: start;
 }
@@ -527,7 +527,7 @@
 .dictionary-page .kanji-accordion-item {
   border: 1px solid var(--da-border);
   border-radius: 4px;
-  background: #121212;
+  background: var(--da-surface);
   overflow: hidden;
   transition: border-color 0.16s ease;
 }
@@ -552,7 +552,7 @@
 }
 
 .dictionary-page .kanji-accordion-toggle:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--da-surface-hover);
 }
 
 .dictionary-page .kanji-toggle-main {
@@ -573,20 +573,26 @@
 .dictionary-page .kanji-head-reading {
   font-size: 0.76rem;
   font-weight: 600;
-  color: rgba(229, 231, 235, 0.72);
+  color: var(--da-text-muted);
   font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dictionary-page .kanji-meaning {
   margin: 0;
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgba(229, 231, 235, 0.88);
+  color: var(--da-text-dark);
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dictionary-page .kanji-chevron {
-  color: rgba(229, 231, 235, 0.72);
+  color: var(--da-text-muted);
   transition: transform 0.16s ease;
 }
 
@@ -598,7 +604,7 @@
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  background: #1E1E1E;
+  background: var(--da-surface-hover);
   transition: max-height 0.2s ease, opacity 0.16s ease;
 }
 
@@ -618,9 +624,9 @@
 .dictionary-page .kanji-stroke-box {
   width: 100px;
   height: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--da-border);
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--da-surface);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -633,8 +639,8 @@
 }
 
 .dictionary-page .kanji-stroke-box:hover {
-  border-color: rgba(253, 224, 71, 0.5);
-  background: rgba(253, 224, 71, 0.06);
+  border-color: var(--da-accent-gold);
+  background: var(--da-glow-gold);
 }
 
 .dictionary-page .kanji-stroke-guide-svg {
@@ -642,7 +648,7 @@
   height: 94px;
   display: block;
   border-radius: 2px;
-  background: #1E1E1E;
+  background: var(--da-surface);
 }
 
 .dictionary-page .kanji-stroke-loading {
@@ -685,14 +691,14 @@
   margin: 0;
   font-size: 0.76rem;
   line-height: 1.25;
-  color: rgba(245, 245, 245, 0.92);
+  color: var(--da-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .dictionary-page .kanji-meta-grid p span {
-  color: rgba(156, 163, 175, 0.9);
+  color: var(--da-text-muted);
   font-weight: 600;
 }
 
