@@ -1,4 +1,5 @@
 const readingService = require("../service/readingService");
+const textlintService = require("../service/textlintService");
 
 const resolveActor = (req) => {
 	return {
@@ -110,7 +111,7 @@ const HandleGetPassageAnalysis = async (req, res) => {
 
 		const passageId = Number(req.params.id);
 		const analysis = await readingService.getPassageAnalysis(passageId);
-		
+
 		if (!analysis) {
 			return res.status(404).json({ errCode: 1, errMessage: "Reading passage not found", analysis: null });
 		}
@@ -122,10 +123,26 @@ const HandleGetPassageAnalysis = async (req, res) => {
 	}
 };
 
+const HandleCheckGrammar = async (req, res) => {
+	try {
+		const text = req.body.text;
+		if (!text) {
+			return res.status(400).json({ errCode: 1, errMessage: "Missing text payload", data: [] });
+		}
+		
+		const data = await textlintService.checkTextGrammar(text);
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (error) {
+		console.error("HandleCheckGrammar error:", error);
+		return res.status(500).json({ errCode: -1, errMessage: "Internal server error", data: [] });
+	}
+};
+
 module.exports = {
 	HandleGetReadingPassages,
 	HandleGetReadingPassageDetail,
 	HandleCreateReadingPassage,
 	HandleUpdateReadingPassage,
 	HandleGetPassageAnalysis,
+	HandleCheckGrammar,
 };

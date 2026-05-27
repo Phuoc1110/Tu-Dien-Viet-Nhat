@@ -123,6 +123,8 @@ let initWebRoutes = (app) => {
 	router.get("/api/reading/passages/:id/analysis", readingController.HandleGetPassageAnalysis);
 	router.post("/api/reading/passages", readingController.HandleCreateReadingPassage);
 	router.put("/api/reading/passages/:id", readingController.HandleUpdateReadingPassage);
+	router.post("/api/reading/check-grammar", readingController.HandleCheckGrammar);
+	router.post("/api/test-grammar", readingController.HandleCheckGrammar);
 
 
 	// Quiz & SRS

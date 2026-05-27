@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
-import { ArrowLeft, PencilLine } from "lucide-react";
+import { ArrowLeft, PencilLine, CheckCircle } from "lucide-react";
 import { UserContext } from "../../../Context/UserProvider";
-import { getPassageAnalysis, getReadingPassageDetail } from "../../../services/readingService";
+import { getPassageAnalysis, getReadingPassageDetail, checkGrammar } from "../../../services/readingService";
 import "./ReadingDetailViewPage.css";
 
 function ReadingDetailViewPage() {
@@ -14,6 +14,8 @@ function ReadingDetailViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const [grammarCheckLoading, setGrammarCheckLoading] = useState(false);
+  const [grammarErrors, setGrammarErrors] = useState(null);
 
   const actorId = user?.account?.id ?? admin?.account?.id;
   const canEditPassage = Boolean(
@@ -61,6 +63,19 @@ function ReadingDetailViewPage() {
     });
     return Array.from(map.values());
   }, [analysis]);
+
+  const handleCheckGrammar = async () => {
+    if (!passage?.content) return;
+    setGrammarCheckLoading(true);
+    setGrammarErrors(null);
+    const res = await checkGrammar(passage.content);
+    if (res && res.errCode === 0) {
+      setGrammarErrors(res.data || []);
+    } else {
+      setGrammarErrors([]); // Handle API errors gracefully
+    }
+    setGrammarCheckLoading(false);
+  };
 
   const vocabulary = useMemo(() => {
     if (!analysis?.sentences) return [];
@@ -130,7 +145,36 @@ function ReadingDetailViewPage() {
         <main className="rd-main">
           <article className="rd-article">
             <div className="rd-content">
-              <h3>Văn bản &amp; Dịch</h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h3 style={{ margin: 0 }}>Văn bản &amp; Dịch</h3>
+                <button 
+                    className="rd-edit" 
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", fontSize: "0.85rem", padding: "4px 12px" }}
+                    onClick={handleCheckGrammar}
+                    disabled={grammarCheckLoading}
+                >
+                    <CheckCircle size={14} style={{ marginRight: "6px" }} />
+                    {grammarCheckLoading ? "Đang kiểm tra..." : "Kiểm tra ngữ pháp"}
+                </button>
+              </div>
+
+              {grammarErrors !== null && (
+                  <div className="grammar-feedback-container" style={{ marginBottom: "20px", padding: "16px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                      <h4 style={{ margin: "0 0 12px 0", fontSize: "1rem", color: grammarErrors.length > 0 ? "#ff9800" : "#4caf50" }}>
+                          {grammarErrors.length > 0 ? `Phát hiện ${grammarErrors.length} vấn đề ngữ pháp/văn phong:` : "Tuyệt vời! Không phát hiện lỗi ngữ pháp nào."}
+                      </h4>
+                      {grammarErrors.length > 0 && (
+                          <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: "1.6" }}>
+                              {grammarErrors.map((err, idx) => (
+                                  <li key={idx} style={{ marginBottom: "8px" }}>
+                                      <strong>Dòng {err.line}, cột {err.column}:</strong> {err.message}
+                                  </li>
+                              ))}
+                          </ul>
+                      )}
+                  </div>
+              )}
+
               <div className="rd-text-card">
                 <div className="rd-text">{passage.content}</div>
                 <div className="rd-translation-inline">{passage.translation || "Chưa có bản dịch."}</div>

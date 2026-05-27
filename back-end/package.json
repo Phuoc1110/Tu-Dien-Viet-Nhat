@@ -49,6 +49,9 @@
 		"sequelize": "^6.37.3",
 		"sequelize-cli": "^6.6.2",
 		"socket.io": "^4.8.1",
+		"textlint": "^15.7.1",
+		"textlint-rule-preset-ja-technical-writing": "^12.0.2",
+		"textlint-rule-preset-japanese": "^10.0.4",
 		"wanakana": "^5.3.1"
 	},
 	"devDependencies": {

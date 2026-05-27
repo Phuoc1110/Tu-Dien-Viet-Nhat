@@ -51,10 +51,21 @@ const getPassageAnalysis = (id) => {
 		});
 };
 
+const checkGrammar = (text) => {
+	return axios
+		.post("/api/reading/check-grammar", { text })
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+			return { errCode: 1, errMessage: "Loi kiem tra ngu phap", data: [] };
+		});
+};
+
 export {
 	getReadingPassages,
 	getReadingPassageDetail,
 	createReadingPassage,
 	updateReadingPassage,
 	getPassageAnalysis,
+	checkGrammar,
 };

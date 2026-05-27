@@ -21,6 +21,7 @@ const nonSecurePaths = [
 	"/api/dictionary/paragraph/analyze",
 	"/api/dictionary/translate",
 	"/api/dictionary/image-recognize",
+	"/api/test-grammar",
 ];
 
 const CreateJWT = (payload) => {
