@@ -15,16 +15,16 @@
 	align-items: center;
 	justify-content: center;
 	border-bottom: 1px solid var(--da-border);
-    z-index: 20;
+	z-index: 20;
 }
 
 .home-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(139, 0, 0, 0.03), transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 50% 50%, rgba(139, 0, 0, 0.03), transparent 70%);
+	pointer-events: none;
+	z-index: 0;
 }
 
 .home-hero-content {
@@ -68,7 +68,7 @@
 	box-shadow: var(--da-shadow-lg);
 	transition: all 0.3s ease;
 	position: relative;
-    z-index: 20;
+	z-index: 20;
 }
 
 .home-search-bar:focus-within {
@@ -220,29 +220,30 @@
 }
 
 .modern-card h3 button {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--da-accent-blue);
-    background: transparent;
-    border: 1px solid var(--da-accent-blue);
-    padding: 6px 14px;
-    border-radius: 100px;
-    cursor: pointer;
-    font-family: var(--font-body);
-    transition: all 0.2s ease;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--da-accent-blue);
+	background: transparent;
+	border: 1px solid var(--da-accent-blue);
+	padding: 6px 14px;
+	border-radius: 100px;
+	cursor: pointer;
+	font-family: var(--font-body);
+	transition: all 0.2s ease;
 }
 
 .modern-card h3 button:hover {
-    background: rgba(74, 107, 93, 0.1);
-    transform: translateY(-1px);
+	background: rgba(74, 107, 93, 0.1);
+	transform: translateY(-1px);
 }
 
 .chip-cloud {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
-    max-height: 92px; /* Approx 2 lines (41px per chip + 10px gap) */
-    overflow: hidden;
+	max-height: 92px;
+	/* Approx 2 lines (41px per chip + 10px gap) */
+	overflow: hidden;
 }
 
 .chip-modern {
@@ -291,14 +292,15 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-    max-height: 500px;
-    overflow-y: auto;
-    padding-right: 8px;
+	max-height: 500px;
+	overflow-y: auto;
+	padding-right: 8px;
 }
 
 .feedback-card {
 	background: var(--da-surface);
-	border-left: 3px solid var(--da-accent-gold); /* Matcha color border */
+	border-left: 3px solid var(--da-accent-gold);
+	/* Matcha color border */
 	border-radius: 8px;
 	padding: 16px;
 	box-shadow: var(--da-shadow-sm);
@@ -312,7 +314,7 @@
 	color: var(--da-text);
 	display: block;
 	margin-bottom: 6px;
-    font-family: var(--font-heading);
+	font-family: var(--font-heading);
 }
 
 .feedback-card p {
@@ -355,7 +357,8 @@
 	flex-direction: column;
 }
 
-.dropdown-item:hover, .dropdown-item.active {
+.dropdown-item:hover,
+.dropdown-item.active {
 	background: var(--da-surface-hover);
 }
 
@@ -368,7 +371,7 @@
 .dropdown-item-main strong {
 	font-size: 1.15rem;
 	color: var(--da-text);
-    font-family: var(--font-heading);
+	font-family: var(--font-heading);
 }
 
 .dropdown-item-main span {
@@ -383,13 +386,13 @@
 }
 
 .dropdown-status {
-    padding: 16px;
-    color: var(--da-text-muted);
-    text-align: center;
+	padding: 16px;
+	color: var(--da-text-muted);
+	text-align: center;
 }
 
 .dropdown-status.error {
-    color: var(--da-accent-red);
+	color: var(--da-accent-red);
 }
 
 /* Modals */
@@ -402,7 +405,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-    padding: 20px;
+	padding: 20px;
 }
 
 .history-modal {
@@ -423,24 +426,24 @@
 }
 
 .history-modal-head h3 {
-    margin: 0;
-    font-family: var(--font-heading);
-    font-size: 1.3rem;
+	margin: 0;
+	font-family: var(--font-heading);
+	font-size: 1.3rem;
 }
 
 .history-modal-actions button {
-    background: transparent;
-    border: 1px solid var(--da-border);
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    margin-left: 8px;
-    color: var(--da-text-muted);
+	background: transparent;
+	border: 1px solid var(--da-border);
+	padding: 6px 12px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	margin-left: 8px;
+	color: var(--da-text-muted);
 }
 
 .history-modal-actions button:hover {
-    background: var(--da-surface-hover);
+	background: var(--da-surface-hover);
 }
 
 .history-modal-list {
@@ -450,51 +453,51 @@
 }
 
 .history-modal-item {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    background: transparent;
-    border-bottom: 1px solid var(--da-border-light);
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.2s;
-    border-radius: 8px;
+	width: 100%;
+	padding: 16px;
+	border: none;
+	background: transparent;
+	border-bottom: 1px solid var(--da-border-light);
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.2s;
+	border-radius: 8px;
 }
 
 .history-modal-item:last-child {
-    border-bottom: none;
+	border-bottom: none;
 }
 
 .history-modal-item:hover {
-    background: var(--da-surface-hover);
+	background: var(--da-surface-hover);
 }
 
 .history-item-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
 }
 
 .history-item-main strong {
-    font-size: 1.15rem;
-    color: var(--da-text);
-    font-family: var(--font-heading);
+	font-size: 1.15rem;
+	color: var(--da-text);
+	font-family: var(--font-heading);
 }
 
 .history-item-main small {
-    color: var(--da-text-muted);
+	color: var(--da-text-muted);
 }
 
 .history-modal-item p {
-    margin: 8px 0 0;
-    color: var(--da-text-muted);
-    font-size: 0.95rem;
+	margin: 8px 0 0;
+	color: var(--da-text-muted);
+	font-size: 0.95rem;
 }
 
 .empty-state {
-    color: var(--da-text-dark);
-    text-align: center;
-    padding: 20px;
+	color: var(--da-text-dark);
+	text-align: center;
+	padding: 20px;
 }
 
 @media (max-width: 900px) {
@@ -509,7 +512,7 @@
 		border-radius: 16px;
 		padding: 16px;
 	}
-	
+
 	.search-leading {
 		border-right: none;
 		border-bottom: 1px solid var(--da-border);
@@ -518,21 +521,21 @@
 		width: 100%;
 		text-align: center;
 	}
-	
+
 	.home-search-bar input {
 		width: 100%;
 		padding: 12px 0;
 		text-align: center;
 	}
-	
+
 	.search-actions {
 		width: 100%;
 		justify-content: center;
 		flex-wrap: wrap;
 		margin-top: 12px;
 	}
-    
-    .home-hero-title {
-        font-size: 1.8rem;
-    }
+
+	.home-hero-title {
+		font-size: 1.8rem;
+	}
 }

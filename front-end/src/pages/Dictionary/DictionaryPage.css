@@ -250,7 +250,7 @@
   box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   /* giảm độ dài phía trái */
-  
+
 }
 
 .dictionary-page .detail-card {
@@ -426,7 +426,7 @@
   color: var(--da-text-muted);
 }
 
-.dictionary-page .detail-section li + li {
+.dictionary-page .detail-section li+li {
   margin-top: 8px;
 }
 
@@ -712,7 +712,6 @@
   border-radius: 999px;
   font-size: 0.67rem;
   font-weight: 600;
-  color: rgba(253, 224, 71, 0.92);
   background: rgba(253, 224, 71, 0.08);
   border: 1px solid rgba(253, 224, 71, 0.35);
 }

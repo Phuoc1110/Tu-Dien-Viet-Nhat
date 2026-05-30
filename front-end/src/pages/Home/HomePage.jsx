@@ -80,7 +80,7 @@ const HomePage = () => {
 	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
 	const defaultHotKeywords = useMemo(
-		() => ["健康", "期待", "求める", "表", "開く", "仕事", "検討", "役割"],
+		() => ["健康", "期待", "求める", "表", "開く", "仕事", "検討", "役割", "方法", "解決", "時間", "関係", "問題", "社会", "文化", "表現"],
 		[]
 	);
 
@@ -228,12 +228,19 @@ const HomePage = () => {
 
 	useEffect(() => {
 		const loadTopKeywords = async () => {
-			const items = await getTopSearchKeywordsToday(8);
+			const items = await getTopSearchKeywordsToday(20);
+			let fetchedWords = [];
 			if (Array.isArray(items) && items.length > 0) {
-				setHotKeywords(items.map((item) => item.word).filter(Boolean));
-				return;
+				fetchedWords = items.map((item) => item.word).filter(Boolean);
 			}
-			setHotKeywords(defaultHotKeywords);
+			
+			// Pad with default keywords to ensure the lines are full
+			if (fetchedWords.length < 20) {
+				const defaultWordsToAdd = defaultHotKeywords.filter(w => !fetchedWords.includes(w));
+				fetchedWords = [...fetchedWords, ...defaultWordsToAdd].slice(0, 20);
+			}
+			
+			setHotKeywords(fetchedWords);
 		};
 
 		loadTopKeywords();
@@ -478,7 +485,7 @@ const HomePage = () => {
 		}
 	}, [history, location.search]);
 
-	const historyPreviewItems = historyItems.slice(0, 8);
+	const historyPreviewItems = historyItems.slice(0, 20);
 
 	const renderDropdownBody = () => {
 		if (loadingSearch) {
