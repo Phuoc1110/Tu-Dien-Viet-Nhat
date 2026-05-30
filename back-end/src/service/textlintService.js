@@ -23,6 +23,7 @@ const translateMessageToVietnamese = (message) => {
     viMsg = viMsg.replace(/(\d+)文字以上の文です。/g, 'Câu văn quá dài (trên $1 ký tự). Cân nhắc tách thành các câu ngắn hơn.');
     viMsg = viMsg.replace(/1文の長さが(\d+)文字を超えています。/g, 'Độ dài của một câu đã vượt quá $1 ký tự.');
     viMsg = viMsg.replace(/1文中に読点「、」が(\d+)個以上あります。/g, 'Một câu có quá nhiều dấu phẩy (từ $1 dấu trở lên).');
+    viMsg = viMsg.replace(/一つの文で"、"を(\d+)つ以上使用しています/g, 'Một câu sử dụng quá nhiều dấu phẩy (từ $1 dấu trở lên).');
 
     // Các từ khoá chung
     viMsg = viMsg.replace(/理由:/g, 'Lý do:');

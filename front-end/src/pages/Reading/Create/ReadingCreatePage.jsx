@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
-import { AlertCircle, BookText, Clock3, Languages, PencilLine, X } from "lucide-react";
-import { createReadingPassage, getReadingPassageDetail, updateReadingPassage } from "../../../services/readingService";
+import { AlertCircle, BookText, Clock3, Languages, PencilLine, X, CheckCircle } from "lucide-react";
+import { createReadingPassage, getReadingPassageDetail, updateReadingPassage, checkGrammar } from "../../../services/readingService";
 import "./ReadingCreatePage.css";
 
 const DEFAULT_FORM = {
@@ -35,6 +35,8 @@ const ReadingCreatePage = () => {
 	const [pageLoading, setPageLoading] = useState(isEditing);
 	const [error, setError] = useState("");
 	const [pageError, setPageError] = useState("");
+	const [grammarCheckLoading, setGrammarCheckLoading] = useState(false);
+	const [grammarErrors, setGrammarErrors] = useState(null);
 
 	const exitRoute = useMemo(() => (isEditing ? `/reading/${id}` : "/reading"), [id, isEditing]);
 	const pageTitle = isEditing ? "Sua bai doc" : "Tạo bài đọc";
@@ -102,6 +104,20 @@ const ReadingCreatePage = () => {
 	const handleReset = () => {
 		setForm(isEditing ? initialForm : DEFAULT_FORM);
 		setError("");
+		setGrammarErrors(null);
+	};
+
+	const handleCheckGrammar = async () => {
+		if (!form.content) return;
+		setGrammarCheckLoading(true);
+		setGrammarErrors(null);
+		const res = await checkGrammar(form.content);
+		if (res && res.errCode === 0) {
+			setGrammarErrors(res.data || []);
+		} else {
+			setGrammarErrors([]); // Handle API errors gracefully
+		}
+		setGrammarCheckLoading(false);
 	};
 
 	const handleSubmit = async () => {
@@ -229,15 +245,43 @@ const ReadingCreatePage = () => {
 								/>
 							</label>
 
-							<label className="reading-create-field reading-create-field-wide">
-								<span>Text gốc *</span>
+							<div className="reading-create-field reading-create-field-wide">
+								<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "8px" }}>
+									<span>Text gốc *</span>
+									<button 
+										type="button"
+										className="reading-create-secondary" 
+										style={{ fontSize: "0.8rem", padding: "4px 8px", display: "flex", alignItems: "center" }}
+										onClick={handleCheckGrammar}
+										disabled={grammarCheckLoading || !form.content}
+									>
+										<CheckCircle size={14} style={{ marginRight: "4px" }} />
+										{grammarCheckLoading ? "Đang kiểm tra..." : "Kiểm tra ngữ pháp"}
+									</button>
+								</div>
 								<textarea
 									rows={10}
 									placeholder="Nhập đoạn bài đọc tiếng Nhật"
 									value={form.content}
 									onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
 								/>
-							</label>
+								{grammarErrors !== null && (
+									<div className="grammar-feedback-container" style={{ marginTop: "12px", padding: "12px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "0.85rem" }}>
+										<h4 style={{ margin: "0 0 8px 0", color: grammarErrors.length > 0 ? "#ff9800" : "#4caf50" }}>
+											{grammarErrors.length > 0 ? `Phát hiện ${grammarErrors.length} vấn đề:` : "Tuyệt vời! Không phát hiện lỗi ngữ pháp."}
+										</h4>
+										{grammarErrors.length > 0 && (
+											<ul style={{ margin: 0, paddingLeft: "20px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+												{grammarErrors.map((err, idx) => (
+													<li key={idx} style={{ marginBottom: "4px" }}>
+														<strong>Dòng {err.line}, cột {err.column}:</strong> {err.message}
+													</li>
+												))}
+											</ul>
+										)}
+									</div>
+								)}
+							</div>
 
 							<label className="reading-create-field reading-create-field-wide">
 								<span>Bản dịch</span>
