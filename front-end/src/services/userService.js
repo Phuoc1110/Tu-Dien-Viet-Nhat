@@ -85,6 +85,15 @@ const verifyOTP = async (email, otp) => {
 	}
 };
 
+const createReport = (data) => {
+	return axios
+		.post("/api/reports", data)
+		.then((response) => response)
+		.catch((error) => {
+			console.error(error);
+		});
+};
+
 export {
 	LoginUser,
 	CreateNewUser,
@@ -99,4 +108,5 @@ export {
 	verifyOTP,
 	getRecentProfileComments,
 	changePasswordWithCurrent,
+	createReport,
 };

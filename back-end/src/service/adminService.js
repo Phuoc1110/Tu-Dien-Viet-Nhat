@@ -1015,6 +1015,159 @@ const addAdminNotebookItemsByJlpt = async ({ adminId, notebookId, jlptLevel, ite
     };
 };
 
+const getReports = async ({ page = 1, limit = 20, status = "" }) => {
+    const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
+    const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 20;
+    const offset = (safePage - 1) * safeLimit;
+
+    const where = {};
+    if (status) {
+        where.status = status;
+    }
+
+    const { rows, count } = await db.Report.findAndCountAll({
+        where,
+        include: [
+            {
+                model: db.User,
+                as: "reporter",
+                attributes: ["id", "username", "email"],
+            },
+            {
+                model: db.Admin,
+                as: "resolver",
+                attributes: ["id", "email"],
+            },
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: safeLimit,
+        offset,
+    });
+
+    return {
+        items: rows,
+        pagination: {
+            page: safePage,
+            limit: safeLimit,
+            totalItems: count,
+            totalPages: Math.max(1, Math.ceil(count / safeLimit)),
+        },
+    };
+};
+
+const updateReportStatus = async ({ adminId, reportId, status }) => {
+    const report = await db.Report.findByPk(reportId);
+    if (!report) {
+        throw new Error("Report not found");
+    }
+
+    if (!["pending", "resolved", "dismissed"].includes(status)) {
+        throw new Error("Invalid status");
+    }
+
+    await report.update({
+        status,
+        resolvedBy: adminId,
+        resolvedAt: new Date(),
+    });
+
+    if (status === "resolved") {
+        try {
+            // targetId is the comment ID in this context
+            const comment = await db.Comment.findByPk(report.targetId);
+            if (comment) {
+                await comment.update({ isHidden: true });
+            }
+        } catch (e) {
+            console.error("Error auto-hiding comment:", e);
+        }
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "UPDATE_REPORT_STATUS",
+        targetType: "Report",
+        targetId: Number(reportId),
+        details: { status },
+    });
+
+    return report;
+};
+
+const getComments = async ({ page = 1, limit = 20, targetType = "", isHidden }) => {
+    const safePage = Number.isFinite(+page) ? Math.max(1, +page) : 1;
+    const safeLimit = Number.isFinite(+limit) ? Math.min(200, Math.max(1, +limit)) : 20;
+    const offset = (safePage - 1) * safeLimit;
+
+    const where = {};
+    if (targetType) {
+        where.targetType = targetType;
+    }
+    if (isHidden !== undefined && isHidden !== "") {
+        where.isHidden = String(isHidden) === "true";
+    }
+
+    const { rows, count } = await db.Comment.findAndCountAll({
+        where,
+        include: [
+            {
+                model: db.User,
+                as: "user",
+                attributes: ["id", "username", "email"],
+            },
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: safeLimit,
+        offset,
+    });
+
+    return {
+        items: rows,
+        pagination: {
+            page: safePage,
+            limit: safeLimit,
+            totalItems: count,
+            totalPages: Math.max(1, Math.ceil(count / safeLimit)),
+        },
+    };
+};
+
+const hideComment = async ({ adminId, commentId, isHidden }) => {
+    const comment = await db.Comment.findByPk(commentId);
+    if (!comment) {
+        throw new Error("Comment not found");
+    }
+
+    await comment.update({ isHidden: Boolean(isHidden) });
+
+    await writeAuditLog({
+        adminId,
+        actionType: "HIDE_COMMENT",
+        targetType: "Comment",
+        targetId: Number(commentId),
+        details: { isHidden },
+    });
+
+    return comment;
+};
+
+const deleteComment = async ({ adminId, commentId }) => {
+    const deleted = await db.Comment.destroy({ where: { id: commentId } });
+    if (!deleted) {
+        throw new Error("Comment not found");
+    }
+
+    await writeAuditLog({
+        adminId,
+        actionType: "DELETE_COMMENT",
+        targetType: "Comment",
+        targetId: Number(commentId),
+        details: null,
+    });
+
+    return true;
+};
+
 module.exports = {
     HandleAdminLogin,
     getAdminDashboard,
@@ -1041,4 +1194,9 @@ module.exports = {
     deleteAdminNotebook,
     getAdminNotebookBulkSummary,
     addAdminNotebookItemsByJlpt,
+    getReports,
+    updateReportStatus,
+    getComments,
+    hideComment,
+    deleteComment,
 };

@@ -47,6 +47,7 @@ let initWebRoutes = (app) => {
 		userController.HandleChangePassword
 	);
 	router.delete("/api/delete-user", userController.HandleDeleteUser);
+	router.post("/api/reports", userController.HandleCreateReport);
 
 	// Reset password via OTP
 	router.post("/api/reset-otp/send", sendResetOTP);
@@ -169,6 +170,13 @@ let initWebRoutes = (app) => {
 	router.get("/api/admin/user-notebooks", adminController.getAdminUserNotebooks);
 	router.put("/api/admin/user-notebooks/:id", adminController.updateAdminUserNotebook);
 	router.delete("/api/admin/user-notebooks/:id", adminController.deleteAdminUserNotebook);
+
+	// Admin - Comments & Reports
+	router.get("/api/admin/reports", adminController.getReports);
+	router.put("/api/admin/reports/:id/status", adminController.updateReportStatus);
+	router.get("/api/admin/comments", adminController.getComments);
+	router.put("/api/admin/comments/:id/hide", adminController.hideComment);
+	router.delete("/api/admin/comments/:id", adminController.deleteComment);
 
 	return app.use("/", router);
 };

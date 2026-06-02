@@ -17,7 +17,9 @@ import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
-import { Search, PenTool, SearchX, ChevronDown } from "lucide-react";
+import { Search, PenTool, SearchX, ChevronDown, AlertTriangle } from "lucide-react";
+import { toast } from "react-toastify";
+import { createReport } from "../../services/userService";
 import "./DictionaryPage.css"; // Using the new CSS file
 
 const splitVariants = (raw) =>
@@ -1053,6 +1055,27 @@ const DictionaryPage = () => {
 		);
 	};
 
+	const handleReportContribution = async (commentId) => {
+		if (!isLoggedIn) {
+			toast.error("Vui lòng đăng nhập để báo cáo.");
+			return;
+		}
+		const reason = window.prompt("Lý do báo cáo bình luận này?");
+		if (!reason) return;
+
+		const res = await createReport({
+			targetType: "word",
+			targetId: commentId,
+			reason: reason.trim(),
+		});
+
+		if (res?.errCode === 0) {
+			toast.success("Báo cáo đã được gửi cho quản trị viên.");
+		} else {
+			toast.error(res?.errMessage || "Không thể gửi báo cáo.");
+		}
+	};
+
 	return (
 		<div className="mazii-home dictionary-page">
 			<div className="mazii-shell">
@@ -1246,7 +1269,17 @@ const DictionaryPage = () => {
 										<div className="contribution-list">
 											{contributions.map((item) => (
 												<div className="contribution-item" key={item.id}>
-													<p>{item.content}</p>
+													<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+														<p>{item.content}</p>
+														<button
+															type="button"
+															onClick={() => handleReportContribution(item.id)}
+															title="Báo cáo bình luận"
+															style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}
+														>
+															<AlertTriangle size={14} />
+														</button>
+													</div>
 													<div className="contribution-meta">
 														<small>{item.author}</small>
 														<small>{new Date(item.createdAt).toLocaleString("vi-VN")}</small>

@@ -42,8 +42,17 @@
 
 .admin2-tabs {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
+	overflow-x: auto;
 	gap: 8px;
+	padding-bottom: 4px;
+}
+.admin2-tabs::-webkit-scrollbar {
+	height: 4px;
+}
+.admin2-tabs::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 4px;
 }
 
 .admin2-tabs button {
@@ -196,11 +205,31 @@
 .admin2-filters input,
 .admin2-filters select,
 .admin2-table input,
-.admin2-table select {
+.admin2-table select,
+.admin2-controls input,
+.admin2-controls select,
+.admin2-input {
 	border: 1px solid #cbd5e1;
-	/* border-radius: 8px; */
-	padding: 8px 10px;
+	border-radius: 8px;
+	padding: 8px 12px;
 	font-size: 0.93rem;
+	background-color: #fff;
+	transition: border-color 0.2s, box-shadow 0.2s;
+	outline: none;
+}
+
+.admin2-form-grid input:focus,
+.admin2-form-grid select:focus,
+.admin2-form-grid textarea:focus,
+.admin2-filters input:focus,
+.admin2-filters select:focus,
+.admin2-table input:focus,
+.admin2-table select:focus,
+.admin2-controls input:focus,
+.admin2-controls select:focus,
+.admin2-input:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .inline-check {
@@ -258,7 +287,8 @@
 	cursor: pointer;
 }
 
-.admin2-actions button:first-child {
+.admin2-actions button:first-child,
+.admin2-btn.primary {
 	background: #1d4ed8;
 	color: #fff;
 	border-color: #1d4ed8;
@@ -273,9 +303,18 @@
 	gap: 6px;
 }
 
-.row-actions .danger {
+.row-actions .danger,
+.admin2-btn.danger {
 	background: #fee2e2;
-	border-color: #fecaca;
+	border-color: #fca5a5;
+	color: #dc2626;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.row-actions .danger:hover,
+.admin2-btn.danger:hover {
+	background: #fecaca;
 	color: #b91c1c;
 }
 

@@ -231,6 +231,31 @@ let HandleChangePassword = async (req, res) => {
 	}
 };
 
+let HandleCreateReport = async (req, res) => {
+	try {
+		if (!req.user?.id) {
+			return res.status(401).json({
+				errCode: -2,
+				errMessage: "Not Authenticated the user",
+			});
+		}
+
+		const data = {
+			...req.body,
+			reporterId: req.user.id
+		};
+
+		const message = await userService.createReport(data);
+		return res.status(200).json(message);
+	} catch (error) {
+		console.error("Error in HandleCreateReport:", error);
+		return res.status(500).json({
+			errCode: -1,
+			errMessage: "Internal server error",
+		});
+	}
+};
+
 module.exports = {
 	HandleLogin: HandleLogin,
 	HandleGetAllUser: HandleGetAllUser,
@@ -240,6 +265,7 @@ module.exports = {
 	HandleDeleteUser: HandleDeleteUser,
 	HandleGetRecentComments: HandleGetRecentComments,
 	HandleChangePassword: HandleChangePassword,
+	HandleCreateReport: HandleCreateReport,
 	getUserAccount,
 	HandleLogOut: HandleLogOut,
 };

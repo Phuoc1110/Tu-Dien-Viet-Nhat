@@ -403,6 +403,72 @@ const getAdminNotebookBulkSummary = async (req, res) => {
 	}
 };
 
+const getReports = async (req, res) => {
+	try {
+		if (!ensureAdmin(req, res)) return;
+		const data = await adminService.getReports(req.query || {});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getReports error:", e);
+		return res.status(500).json({ errCode: -1, errMessage: e.message || "Internal server error" });
+	}
+};
+
+const updateReportStatus = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		await adminService.updateReportStatus({
+			adminId,
+			reportId: req.params.id,
+			status: req.body?.status,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Updated" });
+	} catch (e) {
+		console.error("updateReportStatus error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
+const getComments = async (req, res) => {
+	try {
+		if (!ensureAdmin(req, res)) return;
+		const data = await adminService.getComments(req.query || {});
+		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
+	} catch (e) {
+		console.error("getComments error:", e);
+		return res.status(500).json({ errCode: -1, errMessage: e.message || "Internal server error" });
+	}
+};
+
+const hideComment = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		await adminService.hideComment({
+			adminId,
+			commentId: req.params.id,
+			isHidden: req.body?.isHidden,
+		});
+		return res.status(200).json({ errCode: 0, errMessage: "Updated" });
+	} catch (e) {
+		console.error("hideComment error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Update failed" });
+	}
+};
+
+const deleteComment = async (req, res) => {
+	try {
+		const adminId = ensureAdmin(req, res);
+		if (!adminId) return;
+		await adminService.deleteComment({ adminId, commentId: req.params.id });
+		return res.status(200).json({ errCode: 0, errMessage: "Deleted" });
+	} catch (e) {
+		console.error("deleteComment error:", e);
+		return res.status(400).json({ errCode: -1, errMessage: e.message || "Delete failed" });
+	}
+};
+
 module.exports = {
 	HandleAdminLogin,
 	getAdminAccount,
@@ -431,4 +497,9 @@ module.exports = {
 	deleteAdminNotebook,
 	getAdminNotebookBulkSummary,
 	addAdminNotebookItemsByJlpt,
+	getReports,
+	updateReportStatus,
+	getComments,
+	hideComment,
+	deleteComment,
 };

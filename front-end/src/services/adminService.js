@@ -92,6 +92,21 @@ const updateAdminUserNotebook = (id, data) =>
 const deleteAdminUserNotebook = (id) =>
 	axios.delete(`/api/admin/user-notebooks/${id}`);
 
+const getAdminReports = (params = {}) =>
+	axios.get("/api/admin/reports", { params });
+
+const updateAdminReportStatus = (id, status) =>
+	axios.put(`/api/admin/reports/${id}/status`, { status });
+
+const getAdminComments = (params = {}) =>
+	axios.get("/api/admin/comments", { params });
+
+const updateAdminCommentHide = (id, isHidden) =>
+	axios.put(`/api/admin/comments/${id}/hide`, { isHidden });
+
+const deleteAdminComment = (id) =>
+	axios.delete(`/api/admin/comments/${id}`);
+
 export {
     HandleAdminLogin,
     getAdminAccount,
@@ -122,4 +137,9 @@ export {
 	getAdminUserNotebookDetail,
 	updateAdminUserNotebook,
 	deleteAdminUserNotebook,
+	getAdminReports,
+	updateAdminReportStatus,
+	getAdminComments,
+	updateAdminCommentHide,
+	deleteAdminComment,
 };

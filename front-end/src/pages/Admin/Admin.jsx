@@ -9,6 +9,8 @@ import {
 	UserCog,
 	Users,
 	Wrench,
+	MessageSquare,
+	AlertTriangle,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
@@ -37,6 +39,11 @@ import {
 	updateAdminUserStatus,
 	updateAdminVocabulary,
 	updateAdminVocabularyJlpt,
+	getAdminReports,
+	updateAdminReportStatus,
+	getAdminComments,
+	updateAdminCommentHide,
+	deleteAdminComment,
 } from "../../services/adminService";
 import "./Admin.css";
 
@@ -110,6 +117,25 @@ const Admin = () => {
 	const [auditPagination, setAuditPagination] = useState({
 		page: 1,
 		limit: AUDIT_PAGE_SIZE,
+		totalItems: 0,
+		totalPages: 1,
+	});
+
+	const [reports, setReports] = useState([]);
+	const [reportStatusFilter, setReportStatusFilter] = useState("");
+	const [reportPagination, setReportPagination] = useState({
+		page: 1,
+		limit: 20,
+		totalItems: 0,
+		totalPages: 1,
+	});
+
+	const [comments, setComments] = useState([]);
+	const [commentTargetType, setCommentTargetType] = useState("");
+	const [commentIsHidden, setCommentIsHidden] = useState("");
+	const [commentPagination, setCommentPagination] = useState({
+		page: 1,
+		limit: 20,
 		totalItems: 0,
 		totalPages: 1,
 	});
@@ -214,6 +240,35 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể tải notebook người dùng");
 	};
 
+	const loadReports = async (page = reportPagination.page) => {
+		const res = await getAdminReports({ page, limit: 20, status: reportStatusFilter });
+		if (res?.errCode === 0) {
+			setReports(res.data?.items || []);
+			setReportPagination(
+				res.data?.pagination || { page, limit: 20, totalItems: 0, totalPages: 1 }
+			);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải báo cáo");
+	};
+
+	const loadComments = async (page = commentPagination.page) => {
+		const res = await getAdminComments({
+			page,
+			limit: 20,
+			targetType: commentTargetType,
+			isHidden: commentIsHidden,
+		});
+		if (res?.errCode === 0) {
+			setComments(res.data?.items || []);
+			setCommentPagination(
+				res.data?.pagination || { page, limit: 20, totalItems: 0, totalPages: 1 }
+			);
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể tải bình luận");
+	};
+
 	const reloadCurrentTab = async () => {
 		setLoading(true);
 		try {
@@ -226,6 +281,8 @@ const Admin = () => {
 			if (tab === "user_notebooks") await loadUserNotebooks(1);
 			if (tab === "users") await loadUsers();
 			if (tab === "audit") await loadAuditLogs();
+			if (tab === "reports") await loadReports(1);
+			if (tab === "comments") await loadComments(1);
 		} finally {
 			setLoading(false);
 		}
@@ -271,6 +328,20 @@ const Admin = () => {
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [auditPage]);
+
+	useEffect(() => {
+		if (tab === "reports") {
+			loadReports(reportPagination.page);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [tab, reportStatusFilter, reportPagination.page]);
+
+	useEffect(() => {
+		if (tab === "comments") {
+			loadComments(commentPagination.page);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [tab, commentTargetType, commentIsHidden, commentPagination.page]);
 
 	const handleLogout = async () => {
 		const res = await LogOutAdmin();
@@ -566,6 +637,37 @@ const Admin = () => {
 		toast.error(res?.errMessage || "Không thể reset mật khẩu");
 	};
 
+	const handleUpdateReportStatus = async (id, status) => {
+		const res = await updateAdminReportStatus(id, status);
+		if (res?.errCode === 0) {
+			toast.success("Đã cập nhật trạng thái báo cáo");
+			await loadReports();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể cập nhật báo cáo");
+	};
+
+	const handleToggleCommentVisibility = async (comment) => {
+		const res = await updateAdminCommentHide(comment.id, !comment.isHidden);
+		if (res?.errCode === 0) {
+			toast.success("Đã cập nhật trạng thái bình luận");
+			await loadComments();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể cập nhật bình luận");
+	};
+
+	const handleDeleteComment = async (id) => {
+		if (!window.confirm("Bạn có chắc chắn muốn xóa bình luận này vĩnh viễn?")) return;
+		const res = await deleteAdminComment(id);
+		if (res?.errCode === 0) {
+			toast.success("Đã xóa bình luận");
+			await loadComments();
+			return;
+		}
+		toast.error(res?.errMessage || "Không thể xóa bình luận");
+	};
+
 	const formatAuditDetails = (details) => {
 		if (!details) {
 			return "-";
@@ -618,6 +720,12 @@ const Admin = () => {
 				</button>
 				<button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
 					<Shield size={16} /> Audit Logs
+				</button>
+				<button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")}>
+					<AlertTriangle size={16} /> Reports
+				</button>
+				<button className={tab === "comments" ? "active" : ""} onClick={() => setTab("comments")}>
+					<MessageSquare size={16} /> Comments
 				</button>
 			</div>
 
@@ -1216,6 +1324,209 @@ const Admin = () => {
 								disabled={auditPagination.page >= auditPagination.totalPages}
 								onClick={() =>
 									setAuditPage((prev) => Math.min(auditPagination.totalPages, prev + 1))
+								}
+							>
+								Sau
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{tab === "reports" && (
+				<div className="admin2-grid">
+					<div className="admin2-panel">
+						<h3>Quản lý báo cáo</h3>
+						<div className="admin2-controls">
+							<select
+								value={reportStatusFilter}
+								onChange={(e) => {
+									setReportStatusFilter(e.target.value);
+									setReportPagination((prev) => ({ ...prev, page: 1 }));
+								}}
+								className="admin2-input"
+							>
+								<option value="">Tất cả trạng thái</option>
+								<option value="pending">Chờ xử lý</option>
+								<option value="resolved">Đã giải quyết</option>
+								<option value="dismissed">Bỏ qua</option>
+							</select>
+							<button onClick={() => loadReports(1)} className="admin2-btn primary">
+								Tìm kiếm
+							</button>
+						</div>
+						<div className="admin2-table-wrap">
+							<table className="admin2-table">
+								<thead>
+									<tr>
+										<th>Ngày báo cáo</th>
+										<th>Người báo cáo</th>
+										<th>Loại</th>
+										<th>Target ID</th>
+										<th>Lý do</th>
+										<th>Trạng thái</th>
+										<th>Thao tác</th>
+									</tr>
+								</thead>
+								<tbody>
+									{reports.map((r) => (
+										<tr key={r.id}>
+											<td>{new Date(r.createdAt).toLocaleString("vi-VN")}</td>
+											<td>{r.reporter?.username || r.reporter?.email || "Unknown"}</td>
+											<td>{r.targetType}</td>
+											<td>{r.targetId}</td>
+											<td>{r.reason}</td>
+											<td>
+												<span className={`status-badge ${r.status}`}>{r.status}</span>
+											</td>
+											<td>
+												<div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+													<select
+														value={r.status}
+														onChange={(e) => handleUpdateReportStatus(r.id, e.target.value)}
+														className="admin2-input"
+													>
+														<option value="pending">Pending</option>
+														<option value="resolved">Resolved</option>
+														<option value="dismissed">Dismissed</option>
+													</select>
+													{r.status === 'pending' && (
+														<button 
+															type="button"
+															className="admin2-btn primary"
+															onClick={() => handleUpdateReportStatus(r.id, 'resolved')}
+														>
+															Xử lý
+														</button>
+													)}
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+						<div className="admin2-pagination">
+							<button
+								type="button"
+								disabled={reportPagination.page <= 1}
+								onClick={() => setReportPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+							>
+								Trước
+							</button>
+							<span>
+								Trang {reportPagination.page}/{reportPagination.totalPages} • {reportPagination.totalItems} bản ghi
+							</span>
+							<button
+								type="button"
+								disabled={reportPagination.page >= reportPagination.totalPages}
+								onClick={() =>
+									setReportPagination((prev) => ({ ...prev, page: Math.min(reportPagination.totalPages, prev.page + 1) }))
+								}
+							>
+								Sau
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{tab === "comments" && (
+				<div className="admin2-grid">
+					<div className="admin2-panel">
+						<h3>Quản lý bình luận</h3>
+						<div className="admin2-controls">
+							<select
+								value={commentTargetType}
+								onChange={(e) => {
+									setCommentTargetType(e.target.value);
+									setCommentPagination((prev) => ({ ...prev, page: 1 }));
+								}}
+								className="admin2-input"
+							>
+								<option value="">Tất cả loại mục tiêu</option>
+								<option value="word">Từ vựng</option>
+								<option value="kanji">Kanji</option>
+								<option value="grammar">Ngữ pháp</option>
+							</select>
+							<select
+								value={commentIsHidden}
+								onChange={(e) => {
+									setCommentIsHidden(e.target.value);
+									setCommentPagination((prev) => ({ ...prev, page: 1 }));
+								}}
+								className="admin2-input"
+							>
+								<option value="">Tất cả trạng thái ẩn/hiện</option>
+								<option value="false">Đang hiện</option>
+								<option value="true">Đã ẩn</option>
+							</select>
+							<button onClick={() => loadComments(1)} className="admin2-btn primary">
+								Tìm kiếm
+							</button>
+						</div>
+						<div className="admin2-table-wrap">
+							<table className="admin2-table">
+								<thead>
+									<tr>
+										<th>Ngày tạo</th>
+										<th>Người dùng</th>
+										<th>Loại mục tiêu</th>
+										<th>Target ID</th>
+										<th>Nội dung</th>
+										<th>Ẩn/Hiện</th>
+										<th>Thao tác</th>
+									</tr>
+								</thead>
+								<tbody>
+									{comments.map((c) => (
+										<tr key={c.id} className={c.isHidden ? "text-muted" : ""}>
+											<td>{new Date(c.createdAt).toLocaleString("vi-VN")}</td>
+											<td>{c.user?.username || c.user?.email || "Unknown"}</td>
+											<td>{c.targetType}</td>
+											<td>{c.targetId}</td>
+											<td style={{ maxWidth: "300px", wordBreak: "break-word" }}>{c.content}</td>
+											<td>
+												<span className={`status-badge ${c.isHidden ? "suspended" : "active"}`}>
+													{c.isHidden ? "Hidden" : "Visible"}
+												</span>
+											</td>
+											<td>
+												<button
+													className="admin2-btn secondary"
+													onClick={() => handleToggleCommentVisibility(c)}
+													style={{ marginRight: "8px" }}
+												>
+													{c.isHidden ? "Hiện" : "Ẩn"}
+												</button>
+												<button
+													className="admin2-btn danger"
+													onClick={() => handleDeleteComment(c.id)}
+												>
+													Xóa
+												</button>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+						<div className="admin2-pagination">
+							<button
+								type="button"
+								disabled={commentPagination.page <= 1}
+								onClick={() => setCommentPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+							>
+								Trước
+							</button>
+							<span>
+								Trang {commentPagination.page}/{commentPagination.totalPages} • {commentPagination.totalItems} bản ghi
+							</span>
+							<button
+								type="button"
+								disabled={commentPagination.page >= commentPagination.totalPages}
+								onClick={() =>
+									setCommentPagination((prev) => ({ ...prev, page: Math.min(commentPagination.totalPages, prev.page + 1) }))
 								}
 							>
 								Sau

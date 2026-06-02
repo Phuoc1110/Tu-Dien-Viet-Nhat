@@ -617,7 +617,7 @@ const KanjiPage = () => {
 													>
 														+
 													</button>
-													<button>SVG</button>
+													{/* <button>SVG</button> */}
 												</div>
 											</div>
 											<div className="detail-meta">

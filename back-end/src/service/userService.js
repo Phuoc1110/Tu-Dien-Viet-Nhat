@@ -555,6 +555,42 @@ let changePasswordWithCurrent = (userId, currentPassword, newPassword) => {
 	});
 };
 
+let createReport = (data) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			if (!data.reporterId || !data.targetType || !data.targetId || !data.reason) {
+				resolve({
+					errCode: 1,
+					errMessage: "Missing required parameters",
+				});
+				return;
+			}
+
+			// verify if comment exists if targetType is comment, word, kanji, etc.
+			// Actually targetType relates to the type of comment (word, kanji, grammar) which are all in Comments table
+			// Or if they report the "Comment" itself, targetType might be 'comment' in the Report table, but the Comment table has id=targetId.
+			// The migration 14 says targetType: ENUM("comment", "word", "kanji")
+			// We can just use "comment" as targetType for all comments to simplify, or map it. Let's assume targetType is "comment" for all comments, and targetId is Comment.id
+
+			let newReport = await db.Report.create({
+				reporterId: data.reporterId,
+				targetType: data.targetType,
+				targetId: data.targetId,
+				reason: data.reason,
+				status: "pending",
+			});
+
+			resolve({
+				errCode: 0,
+				message: "Report submitted successfully",
+				report: newReport,
+			});
+		} catch (e) {
+			reject(e);
+		}
+	});
+};
+
 module.exports = {
 	HandleUserLogin: HandleUserLogin,
 	getAllUser: getAllUser,
@@ -566,4 +602,5 @@ module.exports = {
 	getRecentCommentsByUser: getRecentCommentsByUser,
 	changePasswordWithCurrent: changePasswordWithCurrent,
 	CheckUserEmail: CheckUserEmail,
+	createReport: createReport,
 };
