@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { AlertCircle, BookText, Clock3, Languages, PencilLine, X, CheckCircle } from "lucide-react";
 import { createReadingPassage, getReadingPassageDetail, updateReadingPassage, checkGrammar } from "../../../services/readingService";
+import { translateText } from "../../../services/dictionaryService";
 import "./ReadingCreatePage.css";
 
 const DEFAULT_FORM = {
@@ -37,6 +38,7 @@ const ReadingCreatePage = () => {
 	const [pageError, setPageError] = useState("");
 	const [grammarCheckLoading, setGrammarCheckLoading] = useState(false);
 	const [grammarErrors, setGrammarErrors] = useState(null);
+	const [translateLoading, setTranslateLoading] = useState(false);
 
 	const exitRoute = useMemo(() => (isEditing ? `/reading/${id}` : "/reading"), [id, isEditing]);
 	const pageTitle = isEditing ? "Sua bai doc" : "Tạo bài đọc";
@@ -118,6 +120,16 @@ const ReadingCreatePage = () => {
 			setGrammarErrors([]); // Handle API errors gracefully
 		}
 		setGrammarCheckLoading(false);
+	};
+
+	const handleAutoTranslate = async () => {
+		if (!form.content) return;
+		setTranslateLoading(true);
+		const res = await translateText(form.content, "ja", "vi");
+		if (res && res.errCode === 0 && res.translation) {
+			setForm((prev) => ({ ...prev, translation: res.translation }));
+		}
+		setTranslateLoading(false);
 	};
 
 	const handleSubmit = async () => {
@@ -248,9 +260,9 @@ const ReadingCreatePage = () => {
 							<div className="reading-create-field reading-create-field-wide">
 								<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "8px" }}>
 									<span>Text gốc *</span>
-									<button 
+									<button
 										type="button"
-										className="reading-create-secondary" 
+										className="reading-create-secondary"
 										style={{ fontSize: "0.8rem", padding: "4px 8px", display: "flex", alignItems: "center" }}
 										onClick={handleCheckGrammar}
 										disabled={grammarCheckLoading || !form.content}
@@ -274,7 +286,7 @@ const ReadingCreatePage = () => {
 											<ul style={{ margin: 0, paddingLeft: "20px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
 												{grammarErrors.map((err, idx) => (
 													<li key={idx} style={{ marginBottom: "4px" }}>
-														<strong>Dòng {err.line}, cột {err.column}:</strong> {err.message}
+														<strong>Dòng {err.line}, chữ thứ {err.column}:</strong> {err.message}
 													</li>
 												))}
 											</ul>
@@ -283,15 +295,27 @@ const ReadingCreatePage = () => {
 								)}
 							</div>
 
-							<label className="reading-create-field reading-create-field-wide">
-								<span>Bản dịch</span>
+							<div className="reading-create-field reading-create-field-wide">
+								<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "8px" }}>
+									<span>Bản dịch</span>
+									<button
+										type="button"
+										className="reading-create-secondary"
+										style={{ fontSize: "0.8rem", padding: "4px 8px", display: "flex", alignItems: "center" }}
+										onClick={handleAutoTranslate}
+										disabled={translateLoading || !form.content}
+									>
+										<Languages size={14} style={{ marginRight: "4px" }} />
+										{translateLoading ? "Đang dịch..." : "Dịch tự động"}
+									</button>
+								</div>
 								<textarea
 									rows={7}
 									placeholder="Nhập bản dịch tiếng Việt"
 									value={form.translation}
 									onChange={(event) => setForm((prev) => ({ ...prev, translation: event.target.value }))}
 								/>
-							</label>
+							</div>
 
 							<label className="reading-create-field">
 								<span>Trình độ</span>
