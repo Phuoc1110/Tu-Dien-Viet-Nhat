@@ -70,7 +70,7 @@
 .dictionary-page .detail-actions button,
 .dictionary-page .related-list button,
 .dictionary-page .kanji-accordion-toggle,
-.dictionary-page .contribution-form button,
+.contribution-form button,
 .dictionary-page .lang-switch {
   font: inherit;
 }
@@ -98,8 +98,8 @@
   color: var(--da-accent-gold);
 }
 
-.dictionary-page .lang-switch,
-.dictionary-page .contribution-form button {
+.lang-switch,
+.contribution-form button {
   height: 38px;
   padding: 0 14px;
   border: 1px solid var(--da-accent-red);
@@ -111,8 +111,8 @@
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.dictionary-page .lang-switch:hover,
-.dictionary-page .contribution-form button:hover {
+.lang-switch:hover,
+.contribution-form button:hover {
   background: var(--da-accent-red);
   color: #fff;
 }
@@ -434,12 +434,12 @@
   margin: 4px 0 0;
 }
 
-.dictionary-page .contribution-list {
+.contribution-list {
   display: grid;
   gap: 10px;
 }
 
-.dictionary-page .contribution-item {
+.contribution-item {
   padding: 10px 12px;
   border-radius: 4px;
   border: 1px solid var(--da-border);
@@ -448,18 +448,18 @@
   transition: border-left-color 0.2s ease, background 0.2s ease;
 }
 
-.dictionary-page .contribution-item:hover {
+.contribution-item:hover {
   border-left-color: var(--da-accent-gold);
   background: var(--da-surface-hover);
 }
 
-.dictionary-page .contribution-item p {
+.contribution-item p {
   margin: 0;
   line-height: 1.53;
   color: var(--da-text);
 }
 
-.dictionary-page .contribution-meta {
+.contribution-meta {
   margin-top: 7px;
   display: flex;
   justify-content: space-between;
@@ -468,13 +468,13 @@
   color: var(--da-text-dark);
 }
 
-.dictionary-page .contribution-empty {
+.contribution-empty {
   margin: 0;
   font-size: 0.9rem;
   color: var(--da-text-dark);
 }
 
-.dictionary-page .contribution-form {
+.contribution-form {
   margin-top: 12px;
   display: grid;
   gap: 8px;
@@ -482,7 +482,7 @@
   align-items: stretch;
 }
 
-.dictionary-page .contribution-form textarea {
+.contribution-form textarea {
   min-height: 86px;
   max-height: 220px;
   resize: vertical;
@@ -495,11 +495,11 @@
   padding: 11px 12px;
 }
 
-.dictionary-page .contribution-form textarea:focus {
+.contribution-form textarea:focus {
   border-color: var(--da-accent-gold);
 }
 
-.dictionary-page .contribution-form button {
+.contribution-form button {
   height: 100%;
   min-height: 86px;
   align-self: stretch;
@@ -895,11 +895,11 @@
     justify-self: center;
   }
 
-  .dictionary-page .contribution-form {
+  .contribution-form {
     grid-template-columns: 1fr;
   }
 
-  .dictionary-page .contribution-form button {
+  .contribution-form button {
     height: 38px;
     min-height: 38px;
   }

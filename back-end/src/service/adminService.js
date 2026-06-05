@@ -471,9 +471,16 @@ const getNotebookCollections = async ({ query = "", includeInactive = false } = 
 
     return db.AdminNotebookCollection.findAll({
         where,
+        include: [
+            {
+                model: db.User,
+                as: "creator",
+                attributes: ["id", "username", "email"],
+                required: false,
+            },
+        ],
         order: [["sortOrder", "ASC"], ["createdAt", "DESC"]],
-        raw: true,
-    });
+    }).then(rows => rows.map(r => r.get({ plain: true })));
 };
 
 const createNotebookCollection = async ({ adminId, payload }) => {
@@ -1034,9 +1041,9 @@ const getReports = async ({ page = 1, limit = 20, status = "" }) => {
                 attributes: ["id", "username", "email"],
             },
             {
-                model: db.Admin,
+                model: db.User,
                 as: "resolver",
-                attributes: ["id", "email"],
+                attributes: ["id", "username", "email"],
             },
         ],
         order: [["createdAt", "DESC"]],

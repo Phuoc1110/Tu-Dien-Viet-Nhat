@@ -519,6 +519,7 @@ let HandleGetWordContributions = async (req, res) => {
 	try {
 		const word = req.query.word || req.query.q || "";
 		const wordId = req.query.wordId || req.query.targetId || "";
+		const targetType = req.query.targetType || "word";
 		const limit = req.query.limit || 100;
 
 		if (!String(word || "").trim() && !Number(wordId)) {
@@ -529,7 +530,7 @@ let HandleGetWordContributions = async (req, res) => {
 			});
 		}
 
-		const contributions = await dictionaryService.getWordContributions({ word, wordId }, limit);
+		const contributions = await dictionaryService.getWordContributions({ word, wordId, targetType }, limit);
 
 		return res.status(200).json({
 			errCode: 0,
@@ -558,6 +559,8 @@ let HandleAddWordContribution = async (req, res) => {
 		const word = req.body?.word || "";
 		const wordId = req.body?.wordId || req.body?.targetId || "";
 		const content = req.body?.content || "";
+		const targetType = req.body?.targetType || "word";
+		const parentId = req.body?.parentId || null;
 
 		if ((!String(word || "").trim() && !Number(wordId)) || !String(content || "").trim()) {
 			return res.status(200).json({
@@ -570,6 +573,8 @@ let HandleAddWordContribution = async (req, res) => {
 			word,
 			wordId,
 			content,
+			targetType,
+			parentId,
 		});
 
 		if (!created) {

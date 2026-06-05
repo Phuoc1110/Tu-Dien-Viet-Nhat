@@ -1,14 +1,18 @@
 import axios from "../setup/axios";
 
-const getWordContributions = async ({ word, wordId }, limit = 100) => {
+const getWordContributions = async ({ word, wordId, targetType = "word" }, limit = 100) => {
 	const keyword = String(word || "").trim();
 	const normalizedWordId = Number(wordId);
 	if (!keyword && !normalizedWordId) {
 		return [];
 	}
-	const query = normalizedWordId
+	let query = normalizedWordId
 		? `wordId=${normalizedWordId}`
 		: `word=${encodeURIComponent(keyword)}`;
+	
+	if (targetType) {
+		query += `&targetType=${encodeURIComponent(targetType)}`;
+	}
 
 	return axios
 		.get(
@@ -59,7 +63,7 @@ const getLatestWordContributionsPage = async (limit = 6, offset = 0) => {
 		});
 };
 
-const addWordContribution = async ({ word, wordId, content }) => {
+const addWordContribution = async ({ word, wordId, content, targetType = "word", parentId = null }) => {
 	const keyword = String(word || "").trim();
 	const normalizedWordId = Number(wordId);
 	const text = String(content || "").trim();
@@ -73,6 +77,8 @@ const addWordContribution = async ({ word, wordId, content }) => {
 			word: keyword,
 			wordId: normalizedWordId || undefined,
 			content: text,
+			targetType,
+			parentId,
 		})
 		.then((res) => {
 			if (res && res.errCode === 0) {

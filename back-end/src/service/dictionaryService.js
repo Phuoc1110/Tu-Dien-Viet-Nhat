@@ -1239,24 +1239,43 @@ let getTopSearchKeywordsToday = async (limit = 8) => {
 let addWordContribution = async (userId, payload = {}) => {
 	const normalizedUserId = Number(userId);
 	const text = String(payload.content || "").trim();
+	const targetType = payload.targetType || "word";
 
 	if (!normalizedUserId || !text) {
 		return null;
 	}
 
-	const resolvedWord = await resolveWordTarget({
-		wordId: payload.wordId,
-		word: payload.word,
-	});
-	if (!resolvedWord) {
+	let targetId = payload.wordId;
+	let targetLabel = payload.word;
+
+	if (targetType === "word") {
+		const resolvedWord = await resolveWordTarget({
+			wordId: payload.wordId,
+			word: payload.word,
+		});
+		if (!resolvedWord) return null;
+		targetId = resolvedWord.id;
+		targetLabel = resolvedWord.word;
+	} else if (targetType === "kanji") {
+		const kanji = await db.Kanji.findOne({ where: { id: payload.wordId }, attributes: ["id", "characterKanji"], raw: true });
+		if (!kanji) return null;
+		targetId = kanji.id;
+		targetLabel = kanji.characterKanji;
+	} else if (targetType === "grammar") {
+		const grammar = await db.Grammar.findOne({ where: { id: payload.wordId }, attributes: ["id", "title"], raw: true });
+		if (!grammar) return null;
+		targetId = grammar.id;
+		targetLabel = grammar.title;
+	} else {
 		return null;
 	}
 
 	const created = await db.Comment.create({
 		userId: normalizedUserId,
-		targetType: "word",
-		targetId: resolvedWord.id,
+		targetType: targetType,
+		targetId: targetId,
 		content: text,
+		parentId: payload.parentId || null,
 	});
 
 	const createdRow = await db.Comment.findOne({
@@ -1275,7 +1294,7 @@ let addWordContribution = async (userId, payload = {}) => {
 
 	return {
 		id: createdRow.id,
-		word: resolvedWord.word,
+		word: targetLabel,
 		content: createdRow.content,
 		author: createdRow["user.username"] || "Bạn",
 		createdAt: createdRow.createdAt,
@@ -1283,18 +1302,36 @@ let addWordContribution = async (userId, payload = {}) => {
 	};
 };
 
-let getWordContributions = async ({ word, wordId } = {}, limit = 100) => {
-	const resolvedWord = await resolveWordTarget({ wordId, word });
-	if (!resolvedWord) {
+let getWordContributions = async ({ word, wordId, targetType = "word" } = {}, limit = 100) => {
+	let targetId = wordId;
+	let targetLabel = word;
+
+	if (targetType === "word") {
+		const resolvedWord = await resolveWordTarget({ wordId, word });
+		if (!resolvedWord) return [];
+		targetId = resolvedWord.id;
+		targetLabel = resolvedWord.word;
+	} else if (targetType === "kanji") {
+		const kanji = await db.Kanji.findOne({ where: { id: wordId }, attributes: ["id", "characterKanji"], raw: true });
+		if (!kanji) return [];
+		targetId = kanji.id;
+		targetLabel = kanji.characterKanji;
+	} else if (targetType === "grammar") {
+		const grammar = await db.Grammar.findOne({ where: { id: wordId }, attributes: ["id", "title"], raw: true });
+		if (!grammar) return [];
+		targetId = grammar.id;
+		targetLabel = grammar.title;
+	} else {
 		return [];
 	}
 
 	const safeLimit = parseLimit(limit, 100, 200);
 	const rows = await db.Comment.findAll({
 		where: {
-			targetType: "word",
-			targetId: resolvedWord.id,
+			targetType: targetType,
+			targetId: targetId,
 			isHidden: false,
+			parentId: null, // Only fetch top-level comments
 		},
 		attributes: ["id", "content", "upvotes", "createdAt"],
 		include: [
@@ -1304,20 +1341,50 @@ let getWordContributions = async ({ word, wordId } = {}, limit = 100) => {
 				attributes: ["id", "username"],
 				required: false,
 			},
+			{
+				model: db.Comment,
+				as: "replies",
+				required: false,
+				where: { isHidden: false },
+				attributes: ["id", "content", "upvotes", "createdAt", "parentId"],
+				include: [
+					{
+						model: db.User,
+						as: "user",
+						attributes: ["id", "username"],
+						required: false,
+					},
+				],
+			},
 		],
-		order: [["createdAt", "DESC"], ["id", "DESC"]],
+		order: [
+			["createdAt", "DESC"],
+			["id", "DESC"],
+			[{ model: db.Comment, as: "replies" }, "createdAt", "ASC"],
+		],
 		limit: safeLimit,
-		raw: true,
+		// Removing raw: true so Sequelize constructs the nested arrays
 	});
 
-	return rows.map((item) => ({
-		id: item.id,
-		word: resolvedWord.word,
-		content: item.content,
-		author: item["user.username"] || "Bạn",
-		createdAt: item.createdAt,
-		upvotes: item.upvotes || 0,
-	}));
+	return rows.map((item) => {
+		const plainItem = item.get({ plain: true });
+		return {
+			id: plainItem.id,
+			word: targetLabel,
+			content: plainItem.content,
+			author: plainItem.user?.username || "Bạn",
+			createdAt: plainItem.createdAt,
+			upvotes: plainItem.upvotes || 0,
+			replies: (plainItem.replies || []).map(r => ({
+				id: r.id,
+				parentId: r.parentId,
+				content: r.content,
+				author: r.user?.username || "Bạn",
+				createdAt: r.createdAt,
+				upvotes: r.upvotes || 0,
+			}))
+		};
+	});
 };
 
 let getLatestWordContributions = async (limit = 6, offset = 0) => {

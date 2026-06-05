@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
 	class Report extends Model {
 		static associate(models) {
 			Report.belongsTo(models.User, { foreignKey: "reporterId", as: "reporter" });
-			Report.belongsTo(models.Admin, { foreignKey: "resolvedBy", as: "resolver" });
+			Report.belongsTo(models.User, { foreignKey: "resolvedBy", as: "resolver" });
 			// Target could be a comment. Since we don't have polymorphic associations set up easily in Sequelize without explicitly defining them, we'll just keep the foreign key relationship simple.
 			// We can associate to Comment if targetType === 'comment' in the query.
 		}
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
 				allowNull: false,
 			},
 			targetType: {
-				type: DataTypes.ENUM("comment", "word", "kanji"),
+				type: DataTypes.ENUM("comment", "word", "kanji", "grammar"),
 				allowNull: false,
 			},
 			targetId: {

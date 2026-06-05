@@ -1,9 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useContext } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { searchGrammars } from "../../services/dictionaryService";
+import { getLatestWordContributions, getWordContributions, addWordContribution } from "../../services/wordContributionService";
+import { createReport } from "../../services/userService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
-import { Search, PenTool, SearchX } from "lucide-react";
+import { Search, PenTool, SearchX, AlertTriangle } from "lucide-react";
+import { UserContext } from "../../Context/UserProvider";
+import { toast } from "react-toastify";
 import "./GrammarPage.css";
 
 const GrammarPage = () => {
@@ -24,6 +28,16 @@ const GrammarPage = () => {
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
 	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
+	const [contributions, setContributions] = useState([]);
+	const [newContribution, setNewContribution] = useState("");
+	const [submittingContribution, setSubmittingContribution] = useState(false);
+	const [contributionError, setContributionError] = useState("");
+	const [replyingTo, setReplyingTo] = useState(null);
+	const [replyContent, setReplyContent] = useState("");
+	const [expandedReplies, setExpandedReplies] = useState({});
+	
+	const { user } = useContext(UserContext);
+	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
@@ -103,6 +117,21 @@ const GrammarPage = () => {
 			setActiveGrammar(defaultGrammars[0]);
 		}
 	}, [hasKeyword, defaultGrammars, activeGrammar]);
+
+	useEffect(() => {
+		const fetchContributions = async () => {
+			if (activeGrammar?.id) {
+				const res = await getWordContributions({
+					wordId: activeGrammar.id,
+					targetType: "grammar",
+				});
+				setContributions(Array.isArray(res) ? res : []);
+			} else {
+				setContributions([]);
+			}
+		};
+		fetchContributions();
+	}, [activeGrammar?.id]);
 
 	useEffect(() => {
 		if (!searchInput.trim()) {
@@ -206,6 +235,85 @@ const GrammarPage = () => {
 				setIsDropdownOpen(false);
 				setHighlightedDropdownIndex(-1);
 			}
+		}
+	};
+
+	const handleAddContribution = async (parentId = null, contentOverride = null) => {
+		const contentToSubmit = parentId ? contentOverride : newContribution;
+		if (!activeGrammar?.title || !contentToSubmit?.trim()) {
+			return;
+		}
+
+		if (!isLoggedIn) {
+			history.push("/login");
+			return;
+		}
+
+		setSubmittingContribution(true);
+		setContributionError("");
+
+		const created = await addWordContribution({
+			word: activeGrammar.title,
+			wordId: activeGrammar.id,
+			content: contentToSubmit,
+			targetType: "grammar",
+			parentId: parentId,
+		});
+
+		if (created) {
+			if (parentId) {
+				setContributions((prev) => prev.map(c => 
+					c.id === parentId ? { ...c, replies: [...(c.replies || []), created] } : c
+				));
+				setReplyingTo(null);
+				setReplyContent("");
+			} else {
+				setContributions((prev) => [created, ...prev].slice(0, 100));
+				setNewContribution("");
+			}
+		} else {
+			setContributionError("Không gửi được bình luận. Vui lòng thử lại.");
+		}
+
+		setSubmittingContribution(false);
+	};
+
+	const handleContributionKeyDown = (event) => {
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			if (!submittingContribution && newContribution.trim()) {
+				handleAddContribution(null, null);
+			}
+		}
+	};
+
+	const handleReplyKeyDown = (event, itemId) => {
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			if (!submittingContribution && replyContent.trim()) {
+				handleAddContribution(itemId, replyContent);
+			}
+		}
+	};
+
+	const handleReportContribution = async (commentId) => {
+		if (!isLoggedIn) {
+			toast.error("Vui lòng đăng nhập để báo cáo.");
+			return;
+		}
+		const reason = window.prompt("Lý do báo cáo bình luận này?");
+		if (!reason) return;
+
+		const res = await createReport({
+			targetType: "grammar",
+			targetId: commentId,
+			reason: reason.trim(),
+		});
+
+		if (res?.errCode === 0) {
+			toast.success("Báo cáo đã được gửi cho quản trị viên.");
+		} else {
+			toast.error(res?.errMessage || "Không thể gửi báo cáo.");
 		}
 	};
 
@@ -439,6 +547,133 @@ const GrammarPage = () => {
 											{!(activeGrammar.examples || []).length && (
 												<p>Chua co vi du</p>
 											)}
+										</div>
+									</div>
+
+									<div className="detail-section">
+										<h3>Có {contributions.length} ý kiến đóng góp</h3>
+										<div className="contribution-list">
+											{contributions.map((item) => (
+												<div className="contribution-item" key={item.id}>
+													<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+														<p>{item.content}</p>
+														<button
+															type="button"
+															onClick={() => handleReportContribution(item.id)}
+															title="Báo cáo bình luận"
+															style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}
+														>
+															<AlertTriangle size={14} />
+														</button>
+													</div>
+													<div className="contribution-meta">
+														<small>{item.author}</small>
+														<small>{new Date(item.createdAt).toLocaleString("vi-VN")}</small>
+														<button
+															className="reply-btn"
+															onClick={() => setReplyingTo(replyingTo === item.id ? null : item.id)}
+															style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", fontSize: "0.85em", marginLeft: "12px", textDecoration: "underline" }}
+														>
+															Trả lời
+														</button>
+													</div>
+													
+													{replyingTo === item.id && (
+														<div className="contribution-form" style={{ marginTop: "12px", borderLeft: "2px solid #e2e8f0", paddingLeft: "12px" }}>
+															<textarea
+																autoFocus
+																value={replyContent}
+																onChange={(e) => setReplyContent(e.target.value)}
+																onKeyDown={(e) => handleReplyKeyDown(e, item.id)}
+																placeholder="Viết trả lời..."
+																style={{ minHeight: "60px" }}
+															/>
+															<div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+																<button type="button" onClick={() => handleAddContribution(item.id, replyContent)} disabled={submittingContribution} style={{ padding: "6px 12px", fontSize: "0.9em" }}>
+																	{submittingContribution ? "Đang gửi..." : "Gửi"}
+																</button>
+																<button type="button" onClick={() => setReplyingTo(null)} style={{ background: "transparent", color: "#64748b", padding: "6px 12px", fontSize: "0.9em" }}>
+																	Hủy
+																</button>
+															</div>
+														</div>
+													)}
+
+													{item.replies && item.replies.length > 0 && (
+														<div className="replies-list" style={{ marginLeft: "20px", marginTop: "12px", borderLeft: "2px solid #e2e8f0", paddingLeft: "16px" }}>
+															{!expandedReplies[item.id] ? (
+																<button
+																	type="button"
+																	onClick={() => setExpandedReplies(prev => ({ ...prev, [item.id]: true }))}
+																	style={{ background: "transparent", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.9em", fontWeight: "bold" }}
+																>
+																	Xem {item.replies.length} câu trả lời
+																</button>
+															) : (
+																<>
+																	<button
+																		type="button"
+																		onClick={() => setExpandedReplies(prev => ({ ...prev, [item.id]: false }))}
+																		style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", fontSize: "0.9em", marginBottom: "8px" }}
+																	>
+																		Thu gọn
+																	</button>
+																	{item.replies.map(reply => (
+																		<div className="contribution-item reply-item" key={reply.id} style={{ borderBottom: "none", paddingBottom: "0", marginBottom: "12px" }}>
+																			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+																				<p style={{ fontSize: "0.95em", margin: 0 }}>{reply.content}</p>
+																				<button
+																					type="button"
+																					onClick={() => handleReportContribution(reply.id)}
+																					title="Báo cáo bình luận"
+																					style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}
+																				>
+																					<AlertTriangle size={14} />
+																				</button>
+																			</div>
+																			<div className="contribution-meta">
+																				<small>{reply.author}</small>
+																				<small>{new Date(reply.createdAt).toLocaleString("vi-VN")}</small>
+																				<button
+																					className="reply-btn"
+																					onClick={() => {
+																						setReplyingTo(item.id);
+																						setReplyContent(`@${reply.author} `);
+																					}}
+																					style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", fontSize: "0.85em", marginLeft: "12px", textDecoration: "underline" }}
+																				>
+																					Trả lời
+																				</button>
+																			</div>
+																		</div>
+																	))}
+																</>
+															)}
+														</div>
+													)}
+												</div>
+											))}
+											{contributions.length === 0 && (
+												<p className="contribution-empty">Chưa có đóng góp nào cho ngữ pháp này.</p>
+											)}
+										</div>
+										<div className="contribution-form">
+											<textarea
+												value={newContribution}
+												onChange={(e) => setNewContribution(e.target.value)}
+												onKeyDown={handleContributionKeyDown}
+												placeholder="Thêm ghi chú hoặc ví dụ. Ấn SHIFT + ENTER để xuống dòng"
+											/>
+											{contributionError && (
+												<p className="contribution-empty">{contributionError}</p>
+											)}
+											<button
+												type="button"
+												onClick={() => handleAddContribution(null, null)}
+												disabled={submittingContribution}
+											>
+												{submittingContribution ? "Đang gửi..." : "Gửi"}
+											</button>
 										</div>
 									</div>
 								</div>

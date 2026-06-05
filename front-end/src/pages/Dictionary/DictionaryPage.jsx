@@ -387,6 +387,9 @@ const DictionaryPage = () => {
 	const [newContribution, setNewContribution] = useState("");
 	const [submittingContribution, setSubmittingContribution] = useState(false);
 	const [contributionError, setContributionError] = useState("");
+	const [replyingTo, setReplyingTo] = useState(null);
+	const [replyContent, setReplyContent] = useState("");
+	const [expandedReplies, setExpandedReplies] = useState({});
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [kanjiDrawMode, setKanjiDrawMode] = useState("search");
@@ -895,8 +898,9 @@ const DictionaryPage = () => {
 		setHighlightedDropdownIndex(-1);
 	};
 
-	const handleAddContribution = async () => {
-		if (!wordDetail?.word || !newContribution.trim()) {
+	const handleAddContribution = async (parentId = null, contentOverride = null) => {
+		const contentToSubmit = parentId ? contentOverride : newContribution;
+		if (!wordDetail?.word || !contentToSubmit?.trim()) {
 			return;
 		}
 
@@ -911,12 +915,21 @@ const DictionaryPage = () => {
 		const created = await addWordContribution({
 			word: wordDetail.word,
 			wordId: wordDetail.id,
-			content: newContribution,
+			content: contentToSubmit,
+			parentId: parentId,
 		});
 
 		if (created) {
-			setContributions((prev) => [created, ...prev].slice(0, 100));
-			setNewContribution("");
+			if (parentId) {
+				setContributions((prev) => prev.map(c => 
+					c.id === parentId ? { ...c, replies: [...(c.replies || []), created] } : c
+				));
+				setReplyingTo(null);
+				setReplyContent("");
+			} else {
+				setContributions((prev) => [created, ...prev].slice(0, 100));
+				setNewContribution("");
+			}
 		} else {
 			setContributionError("Không gửi được bình luận. Vui lòng thử lại.");
 		}
@@ -928,7 +941,16 @@ const DictionaryPage = () => {
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
 			if (!submittingContribution && newContribution.trim()) {
-				handleAddContribution();
+				handleAddContribution(null, null);
+			}
+		}
+	};
+
+	const handleReplyKeyDown = (event, itemId) => {
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			if (!submittingContribution && replyContent.trim()) {
+				handleAddContribution(itemId, replyContent);
 			}
 		}
 	};
@@ -1047,6 +1069,7 @@ const DictionaryPage = () => {
 						<div className="dropdown-item-main">
 							<strong>{word.word}</strong>
 							<span>{word.reading || "-"}</span>
+							{word.romaji && <span style={{ marginLeft: '6px', fontStyle: 'italic', color: '#888' }}>{word.romaji}</span>}
 						</div>
 						<p>{word.meanings?.[0]?.definition || "Chưa có nghĩa"}</p>
 					</button>
@@ -1204,6 +1227,11 @@ const DictionaryPage = () => {
 											<div className="detail-reading">
 												{wordDetail.reading || "-"}
 											</div>
+											{wordDetail.romaji && (
+												<div className="detail-romaji" style={{ color: "#888", fontStyle: "italic", marginTop: "4px", fontSize: "16px" }}>
+													{wordDetail.romaji}
+												</div>
+											)}
 										</div>
 										<div className="detail-actions">
 											<SpeakButton
@@ -1283,7 +1311,88 @@ const DictionaryPage = () => {
 													<div className="contribution-meta">
 														<small>{item.author}</small>
 														<small>{new Date(item.createdAt).toLocaleString("vi-VN")}</small>
+														<button
+															className="reply-btn"
+															onClick={() => setReplyingTo(replyingTo === item.id ? null : item.id)}
+															style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", fontSize: "0.85em", marginLeft: "12px", textDecoration: "underline" }}
+														>
+															Trả lời
+														</button>
 													</div>
+													
+													{replyingTo === item.id && (
+														<div className="contribution-form" style={{ marginTop: "12px", borderLeft: "2px solid #e2e8f0", paddingLeft: "12px" }}>
+															<textarea
+																autoFocus
+																value={replyContent}
+																onChange={(e) => setReplyContent(e.target.value)}
+																onKeyDown={(e) => handleReplyKeyDown(e, item.id)}
+																placeholder="Viết trả lời..."
+																style={{ minHeight: "60px" }}
+															/>
+															<div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+																<button type="button" onClick={() => handleAddContribution(item.id, replyContent)} disabled={submittingContribution} style={{ padding: "6px 12px", fontSize: "0.9em" }}>
+																	{submittingContribution ? "Đang gửi..." : "Gửi"}
+																</button>
+																<button type="button" onClick={() => setReplyingTo(null)} style={{ background: "transparent", color: "#64748b", padding: "6px 12px", fontSize: "0.9em" }}>
+																	Hủy
+																</button>
+															</div>
+														</div>
+													)}
+
+													{item.replies && item.replies.length > 0 && (
+														<div className="replies-list" style={{ marginLeft: "20px", marginTop: "12px", borderLeft: "2px solid #e2e8f0", paddingLeft: "16px" }}>
+															{!expandedReplies[item.id] ? (
+																<button
+																	type="button"
+																	onClick={() => setExpandedReplies(prev => ({ ...prev, [item.id]: true }))}
+																	style={{ background: "transparent", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.9em", fontWeight: "bold" }}
+																>
+																	Xem {item.replies.length} câu trả lời
+																</button>
+															) : (
+																<>
+																	<button
+																		type="button"
+																		onClick={() => setExpandedReplies(prev => ({ ...prev, [item.id]: false }))}
+																		style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", fontSize: "0.9em", marginBottom: "8px" }}
+																	>
+																		Thu gọn
+																	</button>
+																	{item.replies.map(reply => (
+																		<div className="contribution-item reply-item" key={reply.id} style={{ borderBottom: "none", paddingBottom: "0", marginBottom: "12px" }}>
+																			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+																				<p style={{ fontSize: "0.95em", margin: 0 }}>{reply.content}</p>
+																				<button
+																					type="button"
+																					onClick={() => handleReportContribution(reply.id)}
+																					title="Báo cáo bình luận"
+																					style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}
+																				>
+																					<AlertTriangle size={14} />
+																				</button>
+																			</div>
+																			<div className="contribution-meta">
+																				<small>{reply.author}</small>
+																				<small>{new Date(reply.createdAt).toLocaleString("vi-VN")}</small>
+																				<button
+																					className="reply-btn"
+																					onClick={() => {
+																						setReplyingTo(item.id);
+																						setReplyContent(`@${reply.author} `);
+																					}}
+																					style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", fontSize: "0.85em", marginLeft: "12px", textDecoration: "underline" }}
+																				>
+																					Trả lời
+																				</button>
+																			</div>
+																		</div>
+																	))}
+																</>
+															)}
+														</div>
+													)}
 												</div>
 											))}
 											{contributions.length === 0 && (
@@ -1302,7 +1411,7 @@ const DictionaryPage = () => {
 											)}
 											<button
 												type="button"
-												onClick={handleAddContribution}
+												onClick={() => handleAddContribution(null, null)}
 												disabled={submittingContribution}
 											>
 												{submittingContribution ? "Đang gửi..." : "Gửi"}

@@ -788,11 +788,11 @@ const Admin = () => {
 						<h3>Sức khỏe hệ thống</h3>
 						<p>
 							DB: <b>{dashboard?.health?.database?.status || "unknown"}</b> • latency:
-							 {dashboard?.health?.database?.latencyMs ?? "-"} ms
+							{dashboard?.health?.database?.latencyMs ?? "-"} ms
 						</p>
 						<p>
 							API: <b>{dashboard?.health?.api?.status || "unknown"}</b> • latency:
-							 {dashboard?.health?.api?.latencyMs ?? "-"} ms
+							{dashboard?.health?.api?.latencyMs ?? "-"} ms
 						</p>
 					</div>
 				</div>
@@ -997,11 +997,11 @@ const Admin = () => {
 								<>
 									<p>
 										Nguồn dữ liệu {bulkSummary.itemType} {bulkSummary.jlptLevel}: tổng {bulkSummary.totalPool} mục,
-										 trong notebook đã có {bulkSummary.alreadyInNotebookPool} mục, còn thêm được {bulkSummary.canAddPool} mục.
+										trong notebook đã có {bulkSummary.alreadyInNotebookPool} mục, còn thêm được {bulkSummary.canAddPool} mục.
 									</p>
 									<p>
 										Theo lựa chọn số lượng hiện tại ({String(bulkSummary.limit)}): duyệt {bulkSummary.selectedPool} mục,
-										 trùng {bulkSummary.selectedAlreadyInNotebook} mục, thêm mới được {bulkSummary.selectedCanAdd} mục.
+										trùng {bulkSummary.selectedAlreadyInNotebook} mục, thêm mới được {bulkSummary.selectedCanAdd} mục.
 									</p>
 								</>
 							) : (
@@ -1186,7 +1186,7 @@ const Admin = () => {
 							</button>
 							<span>
 								Trang {userNotebookPagination.page}/{userNotebookPagination.totalPages} •
-								 {userNotebookPagination.totalItems} notebook
+								{userNotebookPagination.totalItems} notebook
 							</span>
 							<button
 								type="button"
@@ -1391,12 +1391,12 @@ const Admin = () => {
 														<option value="dismissed">Dismissed</option>
 													</select>
 													{r.status === 'pending' && (
-														<button 
+														<button
 															type="button"
 															className="admin2-btn primary"
 															onClick={() => handleUpdateReportStatus(r.id, 'resolved')}
 														>
-															Xử lý
+															Hide
 														</button>
 													)}
 												</div>

@@ -4,6 +4,8 @@ module.exports = (sequelize, DataTypes) => {
 	class Comment extends Model {
 		static associate(models) {
 			Comment.belongsTo(models.User, { foreignKey: "userId", as: "user" });
+			Comment.belongsTo(models.Comment, { foreignKey: "parentId", as: "parentComment" });
+			Comment.hasMany(models.Comment, { foreignKey: "parentId", as: "replies" });
 		}
 	}
 	Comment.init(
@@ -19,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
 			targetId: {
 				type: DataTypes.INTEGER,
 				allowNull: false,
+			},
+			parentId: {
+				type: DataTypes.INTEGER,
+				allowNull: true,
 			},
 			content: {
 				type: DataTypes.TEXT,
