@@ -22,6 +22,18 @@ const nonSecurePaths = [
 	"/api/dictionary/translate",
 	"/api/dictionary/image-recognize",
 	"/api/test-grammar",
+	"/api/dictionary/search",
+	"/api/dictionary/kanji/search",
+	"/api/dictionary/kanji/recognize",
+	"/api/dictionary/correct-ocr",
+	"/api/dictionary/sentence/search",
+	"/api/dictionary/grammar/search",
+	"/api/dictionary/history/top-keywords",
+	"/api/dictionary/contributions",
+	"/api/dictionary/contributions/latest",
+	"/api/notebooks/curated",
+	"/api/reading/passages",
+	"/api/reading/check-grammar",
 ];
 
 const CreateJWT = (payload) => {
@@ -53,7 +65,10 @@ const checkUserJWT = (req, res, next) => {
 	const isNgrokRequest =
 		req.headers["x-forwarded-host"] &&
 		req.headers["x-forwarded-host"].includes("ngrok.io");
-	if (nonSecurePaths.includes(req.path) || isNgrokRequest) {
+		
+	const isPublicReadingPassage = req.method === "GET" && req.path.match(/^\/api\/reading\/passages\/\d+(\/analysis)?$/);
+	
+	if (nonSecurePaths.includes(req.path) || isPublicReadingPassage || isNgrokRequest) {
 		return next();
 	}
 	let cookies = req.cookies;
