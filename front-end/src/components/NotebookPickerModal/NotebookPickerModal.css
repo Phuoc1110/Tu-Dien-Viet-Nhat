@@ -1,60 +1,74 @@
 .notebook-picker-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.52);
+  background: rgba(45, 36, 34, 0.4);
   backdrop-filter: blur(4px);
 }
 
 .notebook-picker-modal {
-  width: min(760px, 100%);
-  max-height: min(82vh, 760px);
+  width: 100%;
+  max-width: 680px;
+  max-height: min(84vh, 760px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border-radius: 24px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+  background: var(--da-surface);
+  border-radius: 20px;
+  border: 1px solid var(--da-border);
+  box-shadow: var(--da-shadow-xl);
 }
 
 .notebook-picker-head,
 .notebook-picker-actions {
-  padding: 18px 20px;
+  padding: 20px 24px;
 }
 
 .notebook-picker-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--da-border);
 }
 
 .notebook-picker-head h3 {
   margin: 0;
-  color: #0f172a;
-  font-size: 1.1rem;
+  color: var(--da-text);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
 }
 
 .notebook-picker-head p {
-  margin: 8px 0 0;
-  color: #64748b;
+  margin: 6px 0 0;
+  color: var(--da-text-muted);
 }
 
 .picker-close-btn {
-  border: 0;
+  border: 1px solid var(--da-border);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   background: transparent;
-  color: #64748b;
+  color: var(--da-text-muted);
   cursor: pointer;
-  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.picker-close-btn:hover {
+  background: var(--da-surface-hover);
+  color: var(--da-text);
 }
 
 .notebook-picker-body {
-  padding: 16px 20px;
+  padding: 14px 16px 16px;
   overflow: auto;
   flex: 1;
 }
@@ -63,7 +77,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #475569;
+  color: var(--da-text-muted);
+  padding: 12px;
 }
 
 .spin {
@@ -77,46 +92,79 @@
 
 .picker-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .picker-notebook-card {
   text-align: left;
-  border: 1px solid #dbe4ef;
-  background: #f8fbff;
-  border-radius: 18px;
-  padding: 14px;
+  border: 1px solid var(--da-border);
+  background: transparent;
+  border-radius: 12px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
 }
 
 .picker-notebook-card.active {
-  border-color: #2563eb;
-  background: #eff6ff;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+  border-color: var(--da-accent-red);
+  background: rgba(139, 0, 0, 0.06);
+  box-shadow: var(--da-shadow-sm);
+}
+
+.picker-notebook-card.disabled {
+  opacity: 0.58;
+  background: var(--da-surface-hover);
+  border-style: dashed;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.picker-notebook-card.just-saved {
+  border-color: var(--da-accent-gold);
+  background: rgba(182, 146, 74, 0.1);
+}
+
+.picker-notebook-card:hover:not(:disabled) {
+  background: var(--da-surface-hover);
+  border-color: var(--da-border-light);
 }
 
 .picker-notebook-top {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #1d4ed8;
+  color: var(--da-text-dark);
   margin-bottom: 8px;
 }
 
 .picker-notebook-card strong {
-  color: #0f172a;
+  color: var(--da-text);
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+}
+
+.picker-badge {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.picker-badge.saved {
+  background: rgba(74, 107, 93, 0.12);
+  color: var(--da-accent-blue);
 }
 
 .picker-notebook-card p {
   margin: 0 0 8px;
-  color: #475569;
+  color: var(--da-text-muted);
   line-height: 1.5;
 }
 
 .picker-notebook-card small {
-  color: #94a3b8;
+  color: var(--da-text-dark);
 }
 
 .picker-create-row {
@@ -131,22 +179,30 @@
 
 .picker-create-form input {
   flex: 1 1 260px;
-  border: 1px solid #dbe4ef;
-  border-radius: 14px;
+  border: 1px solid var(--da-border);
+  border-radius: 12px;
+  background: var(--da-surface);
+  color: var(--da-text);
   padding: 0.9rem 1rem;
   font-size: 0.95rem;
   outline: none;
+}
+
+.picker-create-form input:focus {
+  border-color: var(--da-accent-red);
+  box-shadow: 0 0 0 4px var(--da-glow-red);
 }
 
 .picker-create-form button,
 .picker-toggle-create,
 .picker-cancel,
 .picker-save {
-  border: 0;
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
+  border: 1px solid var(--da-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .picker-create-form button,
@@ -154,51 +210,71 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #2563eb 0%, #0f172a 100%);
+  color: white;
+  background: var(--da-accent-red);
+  border-color: var(--da-accent-red);
+}
+
+.picker-create-form button:hover,
+.picker-save:hover {
+  background: #7b0000;
+  border-color: #7b0000;
 }
 
 .picker-toggle-create {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border: 1px dashed #93c5fd;
+  color: var(--da-accent-blue);
+  background: transparent;
+  border-style: dashed;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
+.picker-toggle-create:hover {
+  background: var(--da-surface-hover);
+}
+
 .picker-message {
   margin-top: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 10px;
   font-size: 0.92rem;
+  border: 1px solid transparent;
 }
 
 .picker-message.error {
-  color: #b91c1c;
-  background: #fef2f2;
+  color: var(--da-accent-red);
+  background: rgba(139, 0, 0, 0.08);
+  border-color: rgba(139, 0, 0, 0.2);
 }
 
 .picker-message.success {
-  color: #166534;
-  background: #f0fdf4;
+  color: var(--da-accent-blue);
+  background: rgba(74, 107, 93, 0.12);
+  border-color: rgba(74, 107, 93, 0.22);
 }
 
 .notebook-picker-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--da-border);
+  background: var(--da-surface);
 }
 
 .picker-cancel {
-  color: #334155;
-  background: #f8fafc;
-  border: 1px solid #dbe4ef;
+  color: var(--da-text-muted);
+  background: transparent;
+}
+
+.picker-cancel:hover {
+  background: var(--da-surface-hover);
+  color: var(--da-text);
 }
 
 .picker-save:disabled,
-.picker-cancel:disabled {
+.picker-cancel:disabled,
+.picker-create-form button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

@@ -57,7 +57,8 @@ const checkGrammar = (text) => {
 		.then((response) => response)
 		.catch((error) => {
 			console.error(error);
-			return { errCode: 1, errMessage: "Loi kiem tra ngu phap", data: [] };
+			const msg = error.response?.data?.errMessage || "Lỗi kết nối máy chủ kiểm tra ngữ pháp.";
+			return { errCode: 1, errMessage: msg, data: [] };
 		});
 };
 

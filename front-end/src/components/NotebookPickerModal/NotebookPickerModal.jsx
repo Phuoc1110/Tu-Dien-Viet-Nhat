@@ -18,6 +18,7 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 	const [newNotebookName, setNewNotebookName] = useState("");
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
+	const [savedNotebookId, setSavedNotebookId] = useState(null);
 
 	const itemLabel = useMemo(() => {
 		if (!item) {
@@ -25,6 +26,13 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 		}
 		return item.label || item.title || item.word || item.characterKanji || item.grammar || "";
 	}, [item]);
+
+	const availableNotebooks = useMemo(
+		() => notebooks.filter((notebook) => !notebook?.containsItem),
+		[notebooks]
+	);
+
+	const allNotebooksAlreadyContainItem = notebooks.length > 0 && availableNotebooks.length === 0;
 
 	useEffect(() => {
 		if (!open) {
@@ -35,11 +43,13 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 			setLoading(true);
 			setError("");
 			setSuccess("");
-			const res = await getNotebookOverview(12);
+			setSavedNotebookId(null);
+			const res = await getNotebookOverview(12, item);
 			if (res && res.errCode === 0) {
 				const list = Array.isArray(res.myNotebooks) ? res.myNotebooks : [];
 				setNotebooks(list);
-				setSelectedNotebookId(list[0]?.id || null);
+				const nextSelectable = list.find((notebook) => !notebook?.containsItem);
+				setSelectedNotebookId(nextSelectable?.id || null);
 				setCreateMode(list.length === 0);
 				setNewNotebookName(list.length === 0 ? "" : "");
 			} else {
@@ -53,7 +63,7 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 		};
 
 		load();
-	}, [history, open]);
+	}, [history, item, open]);
 
 	const handleCreateAndAdd = async () => {
 		const name = newNotebookName.trim();
@@ -82,7 +92,13 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 
 	const handleAddToNotebook = async (notebookId = selectedNotebookId) => {
 		if (!item || !notebookId) {
-			setError("Chọn sổ tay để thêm mục.");
+			setError(allNotebooksAlreadyContainItem ? "Mục này đã có trong tất cả sổ tay của bạn." : "Chọn sổ tay để thêm mục.");
+			return;
+		}
+
+		const selectedNotebook = notebooks.find((notebook) => Number(notebook.id) === Number(notebookId));
+		if (selectedNotebook?.containsItem) {
+			setError("Mục này đã có trong sổ tay đã chọn.");
 			return;
 		}
 
@@ -96,11 +112,24 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 		});
 
 		if (res && res.errCode === 0) {
+			setSavedNotebookId(Number(notebookId));
+			setNotebooks((prev) =>
+				(prev || []).map((notebook) => {
+					if (Number(notebook.id) !== Number(notebookId)) {
+						return notebook;
+					}
+					return {
+						...notebook,
+						containsItem: true,
+						itemsCount: Number(notebook.itemsCount || 0) + 1,
+					};
+				})
+			);
 			setSuccess("Đã thêm vào sổ tay.");
 			setSaving(false);
 			setTimeout(() => {
 				onClose?.();
-			}, 350);
+			}, 450);
 			return;
 		}
 
@@ -110,6 +139,21 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 		}
 
 		if (res?.errCode === 3) {
+			let nextSelectableId = null;
+			setNotebooks((prev) => {
+				const updated = (prev || []).map((notebook) => {
+					if (Number(notebook.id) !== Number(notebookId)) {
+						return notebook;
+					}
+					return {
+						...notebook,
+						containsItem: true,
+					};
+				});
+				nextSelectableId = updated.find((notebook) => !notebook?.containsItem)?.id || null;
+				return updated;
+			});
+			setSelectedNotebookId(nextSelectableId);
 			setError("Mục này đã có trong sổ tay đã chọn.");
 		} else {
 			setError(res?.errMessage || "Không thêm được vào sổ tay");
@@ -144,22 +188,38 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 						<>
 							{notebooks.length > 0 && !createMode && (
 								<div className="picker-list">
-									{notebooks.map((notebook) => (
+									{notebooks.map((notebook) => {
+										const isBlocked = Boolean(notebook?.containsItem);
+										const isSelected = selectedNotebookId === notebook.id;
+										const isSavedNow = savedNotebookId === Number(notebook.id);
+
+										return (
 										<button
 											type="button"
 											key={notebook.id}
-											className={`picker-notebook-card ${selectedNotebookId === notebook.id ? "active" : ""}`}
-											onClick={() => setSelectedNotebookId(notebook.id)}
+											className={`picker-notebook-card ${isSelected ? "active" : ""} ${isBlocked ? "disabled" : ""} ${isSavedNow ? "just-saved" : ""}`}
+											onClick={() => {
+												if (!isBlocked) {
+													setSelectedNotebookId(notebook.id);
+												}
+											}}
+											disabled={isBlocked || saving}
 										>
 											<div className="picker-notebook-top">
 												<NotebookPen size={16} />
 												<strong>{notebook.name}</strong>
+												{isBlocked && <span className="picker-badge saved">Đã lưu</span>}
 											</div>
 											<p>{notebook.description || "Chưa có mô tả"}</p>
 											<small>{notebook.itemsCount || 0} mục</small>
 										</button>
-									))}
+										);
+									})}
 								</div>
+							)}
+
+							{allNotebooksAlreadyContainItem && !createMode && (
+								<div className="picker-message success">Mục này đã có trong tất cả sổ tay hiện tại.</div>
 							)}
 
 							<div className="picker-create-row">
@@ -198,7 +258,7 @@ const NotebookPickerModal = ({ open, onClose, item }) => {
 						type="button"
 						className="picker-save"
 						onClick={() => handleAddToNotebook(selectedNotebookId)}
-						disabled={saving || createMode || !selectedNotebookId}
+						disabled={saving || createMode || !selectedNotebookId || allNotebooksAlreadyContainItem}
 					>
 						{saving ? "Đang lưu..." : "Lưu"}
 					</button>

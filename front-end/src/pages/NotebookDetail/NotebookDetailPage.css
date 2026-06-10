@@ -1217,6 +1217,95 @@
   padding: 0 12px;
 }
 
+.notebook-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(45, 36, 34, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.notebook-confirm-modal {
+  width: min(480px, 100%);
+  border-radius: 16px;
+  border: 1px solid var(--nbd-line);
+  background: var(--nbd-paper);
+  box-shadow: var(--da-shadow-xl);
+  overflow: hidden;
+}
+
+.notebook-confirm-head {
+  padding: 18px 20px 10px;
+  border-bottom: 1px solid var(--nbd-line);
+}
+
+.notebook-confirm-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--nbd-text);
+  font-family: var(--font-heading);
+}
+
+.notebook-confirm-head p {
+  margin: 8px 0 0;
+  color: var(--nbd-muted);
+  line-height: 1.5;
+}
+
+.notebook-confirm-head strong {
+  color: var(--nbd-text);
+}
+
+.notebook-confirm-actions {
+  padding: 14px 20px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.notebook-confirm-cancel,
+.notebook-confirm-delete {
+  min-width: 100px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--nbd-line);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notebook-confirm-cancel {
+  background: transparent;
+  color: var(--nbd-muted);
+}
+
+.notebook-confirm-cancel:hover:not(:disabled) {
+  background: var(--da-surface-hover);
+  color: var(--nbd-text);
+}
+
+.notebook-confirm-delete {
+  background: var(--da-accent-red);
+  color: #fff;
+  border-color: var(--da-accent-red);
+}
+
+.notebook-confirm-delete:hover:not(:disabled) {
+  background: #7b0000;
+  border-color: #7b0000;
+}
+
+.notebook-confirm-cancel:disabled,
+.notebook-confirm-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1100px) {
   .notebook-detail-main,
   .notebook-detail-hero {
@@ -1286,6 +1375,15 @@
   .mini-test-score-ring {
     width: 148px;
     height: 148px;
+  }
+
+  .notebook-confirm-actions {
+    justify-content: stretch;
+  }
+
+  .notebook-confirm-cancel,
+  .notebook-confirm-delete {
+    flex: 1;
   }
 
   .flashcard-face.front h3 {

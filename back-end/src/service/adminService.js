@@ -317,20 +317,33 @@ const updateVocabulary = async ({ adminId, id, payload }) => {
 };
 
 const deleteVocabulary = async ({ adminId, id }) => {
-    const deleted = await db.Word.destroy({ where: { id } });
-    if (!deleted) {
-        throw new Error("Vocabulary not found");
+    const transaction = await db.sequelize.transaction();
+    try {
+        await db.Comment.destroy({ where: { targetType: 'word', targetId: id }, transaction });
+        await db.NotebookItem.destroy({ where: { itemType: 'word', itemId: id }, transaction });
+        await db.UserFlashcardStatus.destroy({ where: { itemType: 'word', itemId: id }, transaction });
+        await db.Report.destroy({ where: { targetType: 'word', targetId: id }, transaction });
+
+        const deleted = await db.Word.destroy({ where: { id }, transaction });
+        if (!deleted) {
+            throw new Error("Vocabulary not found");
+        }
+
+        await transaction.commit();
+
+        await writeAuditLog({
+            adminId,
+            actionType: "DELETE_VOCABULARY",
+            targetType: "Word",
+            targetId: Number(id),
+            details: null,
+        });
+
+        return true;
+    } catch (e) {
+        await transaction.rollback();
+        throw e;
     }
-
-    await writeAuditLog({
-        adminId,
-        actionType: "DELETE_VOCABULARY",
-        targetType: "Word",
-        targetId: Number(id),
-        details: null,
-    });
-
-    return true;
 };
 
 const updateVocabularyJlpt = async ({ adminId, id, jlptLevel }) => {
@@ -1159,20 +1172,30 @@ const hideComment = async ({ adminId, commentId, isHidden }) => {
 };
 
 const deleteComment = async ({ adminId, commentId }) => {
-    const deleted = await db.Comment.destroy({ where: { id: commentId } });
-    if (!deleted) {
-        throw new Error("Comment not found");
+    const transaction = await db.sequelize.transaction();
+    try {
+        await db.Report.destroy({ where: { targetType: 'comment', targetId: commentId }, transaction });
+
+        const deleted = await db.Comment.destroy({ where: { id: commentId }, transaction });
+        if (!deleted) {
+            throw new Error("Comment not found");
+        }
+
+        await transaction.commit();
+
+        await writeAuditLog({
+            adminId,
+            actionType: "DELETE_COMMENT",
+            targetType: "Comment",
+            targetId: Number(commentId),
+            details: null,
+        });
+
+        return true;
+    } catch (e) {
+        await transaction.rollback();
+        throw e;
     }
-
-    await writeAuditLog({
-        adminId,
-        actionType: "DELETE_COMMENT",
-        targetType: "Comment",
-        targetId: Number(commentId),
-        details: null,
-    });
-
-    return true;
 };
 
 module.exports = {

@@ -370,7 +370,6 @@
   padding: 16px;
 }
 
-.notebook-item-card:hover,
 .create-notebook-card:hover {
   transform: translateY(-2px);
   border-color: var(--da-border-light);

@@ -16,6 +16,7 @@ function ReadingDetailViewPage() {
   const [analysis, setAnalysis] = useState(null);
   const [grammarCheckLoading, setGrammarCheckLoading] = useState(false);
   const [grammarErrors, setGrammarErrors] = useState(null);
+  const [grammarApiError, setGrammarApiError] = useState("");
 
   const actorId = user?.account?.id ?? admin?.account?.id;
   const canEditPassage = Boolean(
@@ -68,11 +69,12 @@ function ReadingDetailViewPage() {
     if (!passage?.content) return;
     setGrammarCheckLoading(true);
     setGrammarErrors(null);
+    setGrammarApiError("");
     const res = await checkGrammar(passage.content);
     if (res && res.errCode === 0) {
       setGrammarErrors(res.data || []);
     } else {
-      setGrammarErrors([]); // Handle API errors gracefully
+      setGrammarApiError(res?.errMessage || "Không thể kết nối đến máy chủ kiểm tra ngữ pháp.");
     }
     setGrammarCheckLoading(false);
   };
@@ -158,7 +160,15 @@ function ReadingDetailViewPage() {
                 </button>
               </div>
 
-              {grammarErrors !== null && (
+              {grammarApiError && (
+                <div className="grammar-feedback-container" style={{ marginBottom: "20px", padding: "16px", backgroundColor: "rgba(244,67,54,0.1)", borderRadius: "8px", border: "1px solid rgba(244,67,54,0.2)" }}>
+                  <h4 style={{ margin: "0", fontSize: "1rem", color: "#f44336" }}>
+                    {grammarApiError}
+                  </h4>
+                </div>
+              )}
+
+              {grammarErrors !== null && !grammarApiError && (
                 <div className="grammar-feedback-container" style={{ marginBottom: "20px", padding: "16px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
                   <h4 style={{ margin: "0 0 12px 0", fontSize: "1rem", color: grammarErrors.length > 0 ? "#ff9800" : "#4caf50" }}>
                     {grammarErrors.length > 0 ? `Phát hiện ${grammarErrors.length} vấn đề ngữ pháp/văn phong:` : "Tuyệt vời! Không phát hiện lỗi ngữ pháp nào."}

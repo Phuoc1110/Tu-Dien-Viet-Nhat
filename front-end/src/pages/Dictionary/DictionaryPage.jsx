@@ -759,6 +759,7 @@ const DictionaryPage = () => {
 				setWordDetail(null);
 				setRelatedWords([]);
 				setError((res && res.errMessage) || "Word not found");
+				history.push(`/analysis?text=${encodeURIComponent(keyword.trim())}`);
 			}
 
 			setLoading(false);

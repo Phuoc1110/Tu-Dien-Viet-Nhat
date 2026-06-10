@@ -67,6 +67,16 @@ const analyzeJapaneseParagraph = (text, limit = 100) => {
 		});
 };
 
+const correctOcrText = (text) => {
+	return axios
+		.post(`/api/dictionary/correct-ocr`, { text })
+		.then((res) => res)
+		.catch((err) => {
+			console.error("Correct OCR text error:", err);
+			return { errCode: 1, errMessage: "Correction failed", correctedText: "" };
+		});
+};
+
 const translateText = (text, source = "ja", target = "vi") => {
 	const cleanedText = stripTilde(text);
 	return axios
@@ -109,4 +119,5 @@ export {
 	translateText,
 	searchSentences,
 	searchGrammars,
+	correctOcrText,
 };

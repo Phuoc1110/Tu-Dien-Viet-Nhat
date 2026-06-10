@@ -2,6 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import dictionaryService from "../service/dictionaryService";
+import textlintService from "../service/textlintService";
 import fetch from "node-fetch";
 import FormData from "form-data";
 
@@ -623,6 +624,26 @@ let HandleGetLatestWordContributions = async (req, res) => {
 	}
 };
 
+let HandleCorrectOcrText = async (req, res) => {
+	try {
+		const text = req.body?.text || "";
+		if (!String(text).trim()) {
+			return res.status(200).json({ errCode: 1, errMessage: "Missing text", correctedText: "" });
+		}
+		
+		const corrected = await textlintService.fixOcrText(text);
+		
+		return res.status(200).json({
+			errCode: 0,
+			errMessage: "OK",
+			correctedText: corrected
+		});
+	} catch (e) {
+		console.error("HandleCorrectOcrText error:", e);
+		return res.status(500).json({ errCode: -1, errMessage: e.message, correctedText: "" });
+	}
+};
+
 module.exports = {
 	HandleSearchWords,
 	HandleSearchKanjis,
@@ -639,4 +660,5 @@ module.exports = {
 	HandleGetWordContributions,
 	HandleAddWordContribution,
 	HandleGetLatestWordContributions,
+	HandleCorrectOcrText,
 };

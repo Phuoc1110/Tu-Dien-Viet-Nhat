@@ -20,6 +20,7 @@ import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import {
 	deleteNotebook,
 	getNotebookDetail,
+	removeNotebookItem,
 	updateNotebook,
 } from "../../services/notebookService";
 import { evaluateQuizAnswer, generateQuiz, reviewFlashcard } from "../../services/quizService";
@@ -82,6 +83,8 @@ const NotebookDetailPage = () => {
 	const [isPlayingList, setIsPlayingList] = useState(false);
 	const [flashcardReviewLoading, setFlashcardReviewLoading] = useState(false);
 	const [flashcardFilter, setFlashcardFilter] = useState("unremembered");
+	const [removingItemId, setRemovingItemId] = useState(null);
+	const [pendingRemoveItem, setPendingRemoveItem] = useState(null);
 	const playSessionRef = useRef({ active: false, token: 0 });
 	const cameFromExplore = Boolean(location.state?.fromExplore);
 
@@ -300,6 +303,49 @@ const NotebookDetailPage = () => {
 			return;
 		}
 		setMessage(res?.errMessage || "Không thể xóa sổ tay");
+	};
+
+	const handleRemoveNotebookItem = async (entry) => {
+		if (!isOwner || !entry?.id) {
+			return;
+		}
+		setPendingRemoveItem(entry);
+	};
+
+	const confirmRemoveNotebookItem = async () => {
+		if (!pendingRemoveItem?.id) {
+			return;
+		}
+
+		setRemovingItemId(pendingRemoveItem.id);
+		setMessage("");
+		const res = await removeNotebookItem(id, pendingRemoveItem.id);
+
+		if (res?.errCode === 0) {
+			setOrderedItems((prev) =>
+				(prev || []).filter((item) => Number(item.id) !== Number(pendingRemoveItem.id))
+			);
+			setNotebook((prev) => {
+				if (!prev) {
+					return prev;
+				}
+
+				const nextItems = (prev.items || []).filter(
+					(item) => Number(item.id) !== Number(pendingRemoveItem.id)
+				);
+				return {
+					...prev,
+					items: nextItems,
+					itemsCount: Math.max(0, Number(prev.itemsCount || 0) - 1),
+				};
+			});
+			setMessage("Đã xóa mục khỏi sổ tay.");
+		} else {
+			setMessage(res?.errMessage || "Không thể xóa mục khỏi sổ tay");
+		}
+
+		setPendingRemoveItem(null);
+		setRemovingItemId(null);
 	};
 
 	const handlePrevFlash = () => {
@@ -1482,6 +1528,17 @@ const NotebookDetailPage = () => {
 																/>
 																<strong>{entry.item?.title || "-"}</strong>
 															</div>
+															{isOwner && (
+																<button
+																	type="button"
+																	className="tiny-btn danger"
+																	title="Xóa khỏi sổ tay"
+																	onClick={() => handleRemoveNotebookItem(entry)}
+																	disabled={removingItemId === entry.id}
+																>
+																	<Trash2 size={14} />
+																</button>
+															)}
 														</div>
 													)}
 													{fieldVisibility.reading && (
@@ -1611,6 +1668,44 @@ const NotebookDetailPage = () => {
 					</div>
 				</div>
 			</div>
+
+			{pendingRemoveItem && (
+				<div
+					className="notebook-confirm-overlay"
+					onMouseDown={() => {
+						if (!removingItemId) {
+							setPendingRemoveItem(null);
+						}
+					}}
+				>
+					<div className="notebook-confirm-modal" onMouseDown={(event) => event.stopPropagation()}>
+						<div className="notebook-confirm-head">
+							<h3>Xóa từ vựng khỏi sổ tay?</h3>
+							<p>
+								Mục <strong>{pendingRemoveItem?.item?.title || pendingRemoveItem?.item?.subtitle || "này"}</strong> sẽ bị xóa khỏi sổ tay hiện tại.
+							</p>
+						</div>
+						<div className="notebook-confirm-actions">
+							<button
+								type="button"
+								className="notebook-confirm-cancel"
+								onClick={() => setPendingRemoveItem(null)}
+								disabled={Boolean(removingItemId)}
+							>
+								Hủy
+							</button>
+							<button
+								type="button"
+								className="notebook-confirm-delete"
+								onClick={confirmRemoveNotebookItem}
+								disabled={Boolean(removingItemId)}
+							>
+								{removingItemId ? "Đang xóa..." : "Xóa"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

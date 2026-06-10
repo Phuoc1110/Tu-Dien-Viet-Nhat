@@ -11,7 +11,7 @@
 .notebook-hero {
   position: relative;
   width: 100%;
-  padding: 60px 40px;
+  padding: 60px 300px;
   background: linear-gradient(135deg, #FAF9F6 0%, #E8E4D9 100%);
   border-bottom: 1px solid var(--da-border);
   overflow: hidden;
@@ -259,7 +259,7 @@
 .premium-item-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--da-shadow-lg);
-  border-color: var(--card-accent, var(--da-accent-gold));
+  /* border-color: var(--card-accent, var(--da-accent-gold)); */
 }
 
 .premium-item-card {

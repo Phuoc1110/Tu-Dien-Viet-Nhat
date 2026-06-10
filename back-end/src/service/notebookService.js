@@ -318,10 +318,11 @@ const getNotebookProgressMap = async (userId, notebookIds) => {
 	return progressMap;
 };
 
-const buildNotebookOverviewItem = (notebook, progressMap) => {
+const buildNotebookOverviewItem = (notebook, progressMap, options = {}) => {
 	const plain = notebook.get({ plain: true });
 	const notebookId = Number(plain.id);
 	const progress = progressMap.get(notebookId) || { itemsCount: 0, rememberedCount: null };
+	const containsItem = Boolean(options?.containsItem);
 	return {
 		id: plain.id,
 		userId: plain.userId,
@@ -339,12 +340,15 @@ const buildNotebookOverviewItem = (notebook, progressMap) => {
 		itemsCount: progress.itemsCount || 0,
 		rememberedCount:
 			typeof progress.rememberedCount === "number" ? progress.rememberedCount : null,
+		containsItem,
 		items: [],
 	};
 };
 
-const getNotebookOverview = async (userId, limit = 6) => {
+const getNotebookOverview = async (userId, limit = 6, options = {}) => {
 	const normalizedLimit = Math.min(Math.max(Number(limit) || 6, 1), 200);
+	const itemType = String(options?.itemType || "").trim();
+	const itemId = Number(options?.itemId);
 
 	const [mineRaw, discoverRaw] = await Promise.all([
 		db.Notebook.findAll({
@@ -378,8 +382,30 @@ const getNotebookOverview = async (userId, limit = 6) => {
 		...shuffledDiscover.map((item) => item.id),
 	];
 	const progressMap = await getNotebookProgressMap(userId, overviewIds);
+	const mineIds = mineRaw.map((item) => Number(item.id)).filter((id) => Number.isFinite(id));
+	const containsItemMap = new Map();
 
-	const myNotebooks = mineRaw.map((notebook) => buildNotebookOverviewItem(notebook, progressMap));
+	if (["word", "kanji", "grammar"].includes(itemType) && itemId > 0 && mineIds.length) {
+		const rows = await db.NotebookItem.findAll({
+			where: {
+				notebookId: { [Op.in]: mineIds },
+				itemType,
+				itemId,
+			},
+			attributes: ["notebookId"],
+		});
+
+		for (const row of rows) {
+			const plain = row.get({ plain: true });
+			containsItemMap.set(Number(plain.notebookId), true);
+		}
+	}
+
+	const myNotebooks = mineRaw.map((notebook) =>
+		buildNotebookOverviewItem(notebook, progressMap, {
+			containsItem: containsItemMap.get(Number(notebook.id)) || false,
+		})
+	);
 	const discoverNotebooks = shuffledDiscover.map((notebook) =>
 		buildNotebookOverviewItem(notebook, progressMap)
 	);
@@ -494,6 +520,37 @@ const addItemToNotebook = async (userId, notebookId, data) => {
 	return { errCode: 0, item: createdItem.get({ plain: true }) };
 };
 
+const removeItemFromNotebook = async (userId, notebookId, notebookItemId) => {
+	const parsedNotebookId = Number(notebookId);
+	const parsedNotebookItemId = Number(notebookItemId);
+
+	if (!parsedNotebookId || !parsedNotebookItemId) {
+		return { errCode: 1, errMessage: "Invalid notebook item" };
+	}
+
+	const notebook = await db.Notebook.findOne({
+		where: { id: parsedNotebookId, userId },
+	});
+
+	if (!notebook) {
+		return { errCode: 2, errMessage: "Notebook not found" };
+	}
+
+	const notebookItem = await db.NotebookItem.findOne({
+		where: { id: parsedNotebookItemId, notebookId: parsedNotebookId },
+	});
+
+	if (!notebookItem) {
+		return { errCode: 3, errMessage: "Notebook item not found" };
+	}
+
+	await db.NotebookItem.destroy({
+		where: { id: parsedNotebookItemId, notebookId: parsedNotebookId },
+	});
+
+	return { errCode: 0, itemId: parsedNotebookItemId };
+};
+
 const updateNotebook = async (userId, notebookId, data) => {
 	const name = String(data?.name || "").trim();
 	if (!name) {
@@ -540,6 +597,7 @@ module.exports = {
 	getNotebookDetail,
 	createNotebook,
 	addItemToNotebook,
+	removeItemFromNotebook,
 	updateNotebook,
 	deleteNotebook,
 };

@@ -134,7 +134,7 @@ const HandleCheckGrammar = async (req, res) => {
 		return res.status(200).json({ errCode: 0, errMessage: "OK", data });
 	} catch (error) {
 		console.error("HandleCheckGrammar error:", error);
-		return res.status(500).json({ errCode: -1, errMessage: "Internal server error", data: [] });
+		return res.status(500).json({ errCode: -1, errMessage: error.message || "Internal server error", data: [] });
 	}
 };
 

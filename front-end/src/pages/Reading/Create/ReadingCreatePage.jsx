@@ -38,6 +38,7 @@ const ReadingCreatePage = () => {
 	const [pageError, setPageError] = useState("");
 	const [grammarCheckLoading, setGrammarCheckLoading] = useState(false);
 	const [grammarErrors, setGrammarErrors] = useState(null);
+	const [grammarApiError, setGrammarApiError] = useState("");
 	const [translateLoading, setTranslateLoading] = useState(false);
 
 	const exitRoute = useMemo(() => (isEditing ? `/reading/${id}` : "/reading"), [id, isEditing]);
@@ -107,17 +108,19 @@ const ReadingCreatePage = () => {
 		setForm(isEditing ? initialForm : DEFAULT_FORM);
 		setError("");
 		setGrammarErrors(null);
+		setGrammarApiError("");
 	};
 
 	const handleCheckGrammar = async () => {
 		if (!form.content) return;
 		setGrammarCheckLoading(true);
 		setGrammarErrors(null);
+		setGrammarApiError("");
 		const res = await checkGrammar(form.content);
 		if (res && res.errCode === 0) {
 			setGrammarErrors(res.data || []);
 		} else {
-			setGrammarErrors([]); // Handle API errors gracefully
+			setGrammarApiError(res?.errMessage || "Không thể kết nối đến máy chủ kiểm tra ngữ pháp.");
 		}
 		setGrammarCheckLoading(false);
 	};
@@ -277,7 +280,14 @@ const ReadingCreatePage = () => {
 									value={form.content}
 									onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
 								/>
-								{grammarErrors !== null && (
+								{grammarApiError && (
+									<div className="grammar-feedback-container" style={{ marginTop: "12px", padding: "12px", backgroundColor: "rgba(244,67,54,0.1)", borderRadius: "6px", border: "1px solid rgba(244,67,54,0.2)", fontSize: "0.85rem" }}>
+										<h4 style={{ margin: "0", color: "#f44336" }}>
+											{grammarApiError}
+										</h4>
+									</div>
+								)}
+								{grammarErrors !== null && !grammarApiError && (
 									<div className="grammar-feedback-container" style={{ marginTop: "12px", padding: "12px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "0.85rem" }}>
 										<h4 style={{ margin: "0 0 8px 0", color: grammarErrors.length > 0 ? "#ff9800" : "#4caf50" }}>
 											{grammarErrors.length > 0 ? `Phát hiện ${grammarErrors.length} vấn đề:` : "Tuyệt vời! Không phát hiện lỗi ngữ pháp."}

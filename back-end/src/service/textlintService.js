@@ -39,10 +39,36 @@ ${text}`;
         return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
         console.error("Gemini API Error in Grammar Check:", error);
-        return [];
+        throw new Error("Không thể kết nối đến máy chủ AI (Lỗi mạng hoặc Timeout).");
+    }
+};
+
+let fixOcrText = async (text) => {
+    if (!text || text.trim() === "") {
+        return "";
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+        
+        const prompt = `Bạn là một hệ thống AI chuyên tự động sửa lỗi nhận dạng ký tự quang học (OCR) cho văn bản tiếng Nhật.
+Nhiệm vụ của bạn là nhận một đoạn văn bản tiếng Nhật được trích xuất từ ảnh (có thể chứa nhiều lỗi sai chữ Hán do máy nhận diện nhầm nét).
+Hãy phân tích ngữ cảnh, đoán xem từ gốc thực sự là gì, và trả về DUY NHẤT một đoạn văn bản tiếng Nhật đã được sửa lỗi hoàn chỉnh.
+
+TUYỆT ĐỐI KHÔNG giải thích, KHÔNG thêm câu chào hỏi, KHÔNG sử dụng ký tự markdown. CHỈ TRẢ VỀ CÂU ĐÃ SỬA.
+
+Văn bản gốc (lỗi OCR):
+${text}`;
+
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+    } catch (error) {
+        console.error("Gemini API Error in OCR Fix:", error);
+        throw new Error("Không thể kết nối đến máy chủ AI (Lỗi mạng hoặc Timeout).");
     }
 };
 
 module.exports = {
-    checkTextGrammar
+    checkTextGrammar,
+    fixOcrText
 };

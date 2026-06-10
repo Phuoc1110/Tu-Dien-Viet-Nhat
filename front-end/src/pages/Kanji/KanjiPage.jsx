@@ -31,6 +31,7 @@ const KanjiPage = () => {
 	const [activeKanji, setActiveKanji] = useState(null);
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
 	const [replayKey, setReplayKey] = useState(0);
+	const [isStrokePlaying, setIsStrokePlaying] = useState(false);
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
@@ -90,29 +91,27 @@ const KanjiPage = () => {
 	);
 
 	useEffect(() => {
-		setCurrentStrokeIndex(0);
+		setCurrentStrokeIndex(strokePaths.length ? strokePaths.length - 1 : 0);
 		setReplayKey((prev) => prev + 1);
+		setIsStrokePlaying(false);
 	}, [kanjiDetail?.id, strokePaths.length]);
 
 	useEffect(() => {
-		if (!strokePaths.length) {
+		if (!isStrokePlaying || !strokePaths.length) {
 			return undefined;
 		}
 
-		const isLastStroke = currentStrokeIndex >= strokePaths.length - 1;
-		const delay = isLastStroke ? 2500 : 900;
+		if (currentStrokeIndex >= strokePaths.length - 1) {
+			setIsStrokePlaying(false);
+			return undefined;
+		}
 
 		const timer = setTimeout(() => {
-			if (isLastStroke) {
-				setCurrentStrokeIndex(0);
-				setReplayKey((prev) => prev + 1);
-			} else {
-				setCurrentStrokeIndex((prev) => prev + 1);
-			}
-		}, delay);
+			setCurrentStrokeIndex((prev) => prev + 1);
+		}, 900);
 
 		return () => clearTimeout(timer);
-	}, [strokePaths, currentStrokeIndex, replayKey]);
+	}, [isStrokePlaying, strokePaths.length, currentStrokeIndex]);
 
 	const kanjiWords = useMemo(() => {
 		if (!kanjiDetail?.words || !Array.isArray(kanjiDetail.words)) {
@@ -542,7 +541,10 @@ const KanjiPage = () => {
 			);
 		}
 
-		const maxStrokeIndex = Math.min(currentStrokeIndex, strokePaths.length - 1);
+		const maxStrokeIndex = Math.min(
+			isStrokePlaying ? currentStrokeIndex : strokePaths.length - 1,
+			strokePaths.length - 1
+		);
 		const displayedStrokes = strokePaths.slice(0, maxStrokeIndex + 1);
 
 		return (
@@ -557,6 +559,7 @@ const KanjiPage = () => {
 						onClick={() => {
 							setCurrentStrokeIndex(0);
 							setReplayKey((prev) => prev + 1);
+							setIsStrokePlaying(true);
 						}}
 					>
 						Vẽ lại
@@ -567,7 +570,7 @@ const KanjiPage = () => {
 					<path d="M54.5 0V109" stroke="var(--da-border)" strokeWidth="1" />
 					<path d="M0 54.5H109" stroke="var(--da-border)" strokeWidth="1" />
 					{displayedStrokes.map((item, index) => {
-						const isCurrentStroke = index === maxStrokeIndex;
+						const isCurrentStroke = isStrokePlaying && index === maxStrokeIndex;
 						return (
 							<path
 								key={`stroke-guide-${index}`}

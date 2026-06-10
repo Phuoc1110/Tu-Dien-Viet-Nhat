@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
-import { analyzeJapaneseParagraph, translateText } from "../../services/dictionaryService";
+import { analyzeJapaneseParagraph, translateText, correctOcrText } from "../../services/dictionaryService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import { Search, SearchX, PenTool } from "lucide-react";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
@@ -20,6 +20,8 @@ const AnalysisPage = () => {
 	const [translationLoading, setTranslationLoading] = useState(false);
 	const [translationError, setTranslationError] = useState("");
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [ocrCorrecting, setOcrCorrecting] = useState(false);
+	const [correctedText, setCorrectedText] = useState("");
 
 	const keyword = useMemo(() => {
 		const params = new URLSearchParams(search);
@@ -60,6 +62,19 @@ const AnalysisPage = () => {
 
 		runAnalysis();
 	}, [keyword]);
+
+	const handleCorrectOcrText = async () => {
+		if (!keyword.trim()) return;
+		setOcrCorrecting(true);
+		setCorrectedText("");
+		const res = await correctOcrText(keyword.trim());
+		if (res && res.errCode === 0 && res.correctedText) {
+			setCorrectedText(res.correctedText);
+		} else {
+			setCorrectedText("Không tìm thấy lỗi hoặc sửa thất bại.");
+		}
+		setOcrCorrecting(false);
+	};
 
 	useEffect(() => {
 		let cancelled = false;
@@ -211,6 +226,39 @@ const AnalysisPage = () => {
 					) : (
 						<>
 							<div className="detail-left">
+								<div className="detail-card" style={{ marginBottom: '20px' }}>
+									<div className="detail-head-row">
+										<h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+											<span style={{ fontSize: '18px' }}>🪄</span> Sửa lỗi Từ
+										</h3>
+									</div>
+									<button
+										onClick={handleCorrectOcrText}
+										disabled={ocrCorrecting}
+										style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: ocrCorrecting ? 'wait' : 'pointer', fontWeight: '500' }}
+									>
+										{ocrCorrecting ? "Đang xử lý..." : "Tự động sửa lỗi"}
+									</button>
+
+									{correctedText && (
+										<div style={{ marginTop: '16px', padding: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
+											<strong style={{ color: '#166534', display: 'block', marginBottom: '8px' }}>Câu đã sửa:</strong>
+											<p style={{ fontSize: '16px', color: '#1f2937', marginBottom: '12px' }}>{correctedText}</p>
+											{correctedText !== "Không tìm thấy lỗi hoặc sửa thất bại." && correctedText !== keyword && (
+												<button
+													onClick={() => {
+														setSearchInput(correctedText);
+														history.push(`/analysis?text=${encodeURIComponent(correctedText)}`);
+													}}
+													style={{ padding: '6px 12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
+												>
+													Phân tích lại câu này
+												</button>
+											)}
+										</div>
+									)}
+								</div>
+
 								<div className="detail-card">
 									<div className="detail-head-row">
 										<h3>Kết quả phân tích</h3>

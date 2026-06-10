@@ -965,6 +965,28 @@ let searchGrammars = (query, limit = 20) => {
 	});
 };
 
+const POS_TRANSLATION_MAP = {
+	"名詞": "Danh từ",
+	"動詞": "Động từ",
+	"形容詞": "Tính từ",
+	"形容動詞": "Tính từ đuôi na",
+	"助詞": "Trợ từ",
+	"助動詞": "Trợ động từ",
+	"副詞": "Phó từ",
+	"連体詞": "Liên thể từ",
+	"接続詞": "Liên từ",
+	"感動詞": "Thán từ",
+	"接頭詞": "Tiền tố",
+	"接頭語": "Tiền tố",
+	"接尾詞": "Hậu tố",
+	"接尾語": "Hậu tố",
+	"記号": "Ký hiệu",
+	"フィラー": "Từ đệm",
+	"その他": "Khác",
+	"未知語": "Từ chưa biết",
+	"代名詞": "Đại từ",
+};
+
 let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
 	const text = String(paragraph || "").trim();
 	if (!text) {
@@ -1002,7 +1024,7 @@ let analyzeJapaneseParagraph = async (paragraph, limit = 100) => {
 			surface,
 			baseForm: baseForm && baseForm !== "*" ? baseForm : "",
 			reading: reading && reading !== "*" ? reading : "",
-			partOfSpeech: pos,
+			partOfSpeech: POS_TRANSLATION_MAP[pos] || pos,
 		});
 
 		// Skip dictionary matching for particles and auxiliary verbs to avoid false positives

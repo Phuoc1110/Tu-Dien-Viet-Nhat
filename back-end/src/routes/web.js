@@ -75,6 +75,10 @@ let initWebRoutes = (app) => {
 		uploadImage.single("image"),
 		dictionaryController.HandleRecognizeTextFromImage
 	);
+	router.post(
+		"/api/dictionary/correct-ocr",
+		dictionaryController.HandleCorrectOcrText
+	);
 	router.get(
 		"/api/dictionary/sentence/search",
 		dictionaryController.HandleSearchSentences
@@ -117,6 +121,7 @@ let initWebRoutes = (app) => {
 	router.get("/api/notebooks/:id", notebookController.HandleGetNotebookDetail);
 	router.post("/api/notebooks", notebookController.HandleCreateNotebook);
 	router.post("/api/notebooks/:id/items", notebookController.HandleAddNotebookItem);
+	router.delete("/api/notebooks/:id/items/:itemEntryId", notebookController.HandleDeleteNotebookItem);
 	router.put("/api/notebooks/:id", notebookController.HandleUpdateNotebook);
 	router.delete("/api/notebooks/:id", notebookController.HandleDeleteNotebook);
 	router.get("/api/reading/passages", readingController.HandleGetReadingPassages);
