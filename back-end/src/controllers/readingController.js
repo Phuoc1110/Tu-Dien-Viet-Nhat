@@ -11,9 +11,6 @@ const resolveActor = (req) => {
 const HandleGetReadingPassages = async (req, res) => {
 	try {
 		const actor = resolveActor(req);
-		if (!actor.id) {
-			return res.status(401).json({ errCode: -2, errMessage: "Not Authenticated the user", items: [] });
-		}
 
 		const data = await readingService.getReadingPassages({
 			userId: actor.id,
@@ -34,9 +31,6 @@ const HandleGetReadingPassages = async (req, res) => {
 const HandleGetReadingPassageDetail = async (req, res) => {
 	try {
 		const actor = resolveActor(req);
-		if (!actor.id) {
-			return res.status(401).json({ errCode: -2, errMessage: "Not Authenticated the user", passage: null });
-		}
 
 		const id = Number(req.params.id);
 		const passage = await readingService.getReadingPassageDetail({ id, userId: actor.id });
@@ -105,9 +99,6 @@ const HandleUpdateReadingPassage = async (req, res) => {
 const HandleGetPassageAnalysis = async (req, res) => {
 	try {
 		const actor = resolveActor(req);
-		if (!actor.id) {
-			return res.status(401).json({ errCode: -2, errMessage: "Not Authenticated the user", analysis: null });
-		}
 
 		const passageId = Number(req.params.id);
 		const analysis = await readingService.getPassageAnalysis(passageId);

@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
-import { searchKanjis, searchSentences, searchWords } from "../../services/dictionaryService";
+import { searchKanjis, searchSentences, searchWords, recognizeImageText } from "../../services/dictionaryService";
 import {
 	addWordSearchHistory,
 	getTopSearchKeywordsToday,
@@ -17,7 +17,7 @@ import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
 import SpeakButton from "../../components/SpeakButton/SpeakButton";
 import { normalizeSearchKeyword } from "../../utils/searchKeywordNormalizer";
-import { Search, PenTool, SearchX, ChevronDown, AlertTriangle } from "lucide-react";
+import { Search, PenTool, SearchX, ChevronDown, AlertTriangle, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 import { createReport } from "../../services/userService";
 import "./DictionaryPage.css"; // Using the new CSS file
@@ -391,7 +391,6 @@ const DictionaryPage = () => {
 	const [replyContent, setReplyContent] = useState("");
 	const [expandedReplies, setExpandedReplies] = useState({});
 	const [fallbackExamples, setFallbackExamples] = useState([]);
-	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
 	const [kanjiDrawMode, setKanjiDrawMode] = useState("search");
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
 	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
@@ -402,8 +401,12 @@ const DictionaryPage = () => {
 	const [kanjiStrokeMap, setKanjiStrokeMap] = useState({});
 	const [kanjiStrokeLoadingMap, setKanjiStrokeLoadingMap] = useState({});
 	const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
+	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [isImageUploading, setIsImageUploading] = useState(false);
 	const [replayKey, setReplayKey] = useState(0);
 	const searchWrapRef = useRef(null);
+	const imageInputRef = useRef(null);
+	const listRef = useRef(null);
 	const detailGridRef = useRef(null);
 
 	const keyword = useMemo(() => {
@@ -759,7 +762,10 @@ const DictionaryPage = () => {
 				setWordDetail(null);
 				setRelatedWords([]);
 				setError((res && res.errMessage) || "Word not found");
-				history.push(`/analysis?text=${encodeURIComponent(keyword.trim())}`);
+				const params = new URLSearchParams(search);
+				if (params.get("from") === "home") {
+					history.push(`/analysis?text=${encodeURIComponent(keyword.trim())}`);
+				}
 			}
 
 			setLoading(false);
@@ -819,6 +825,40 @@ const DictionaryPage = () => {
 			setErrorDropdown((res && res.errMessage) || "Search failed");
 		}
 		setLoadingDropdown(false);
+	};
+
+	const openImagePicker = () => {
+		if (isImageUploading) return;
+		imageInputRef.current?.click();
+	};
+
+	const handleImagePick = async (event) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+
+		const formData = new FormData();
+		formData.append("image", file);
+
+		setIsImageUploading(true);
+
+		try {
+			const response = await recognizeImageText(formData);
+			if (response && response.errCode === 0) {
+				const recognizedText = String(response.text || response.words?.join(" ") || "").trim();
+				if (recognizedText) {
+					setSearchInput(recognizedText);
+					history.push(`/dictionary?q=${encodeURIComponent(recognizedText)}`);
+					return;
+				}
+			}
+			alert("Không nhận được chữ nào từ ảnh này.");
+		} catch (error) {
+			console.error("Image OCR error:", error);
+			alert("Không thể đọc ảnh lúc này.");
+		} finally {
+			setIsImageUploading(false);
+		}
 	};
 
 	const handleSearch = (e) => {
@@ -1115,6 +1155,10 @@ const DictionaryPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
+							<button type="button" title="Chụp ảnh để tra cứu" onClick={openImagePicker} disabled={isImageUploading}>
+								<Camera size={15} />
+								<span>{isImageUploading ? "..." : "Ảnh"}</span>
+							</button>
 							<button type="button" title="Tìm kiếm" onClick={() => {
 								if (searchInput.trim()) {
 									if (searchInput.trim().length > 25 || /[。、！？\n]/.test(searchInput.trim())) {
@@ -1134,6 +1178,15 @@ const DictionaryPage = () => {
 								<span>Write</span>
 							</button>
 						</div>
+
+						<input
+							ref={imageInputRef}
+							type="file"
+							accept="image/*"
+							capture="environment"
+							onChange={handleImagePick}
+							style={{ display: "none" }}
+						/>
 
 						<button className="lang-switch">Nhật - Việt</button>
 					</div>

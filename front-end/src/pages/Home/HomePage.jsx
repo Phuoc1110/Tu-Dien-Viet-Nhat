@@ -258,7 +258,7 @@ const HomePage = () => {
 			}
 			const convertedKeyword = normalizeSearchKeyword(text);
 			setSearchInput(convertedKeyword);
-			history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}`);
+			history.push(`/dictionary?q=${encodeURIComponent(convertedKeyword)}&from=home`);
 			setIsDropdownOpen(false);
 			setHighlightedDropdownIndex(-1);
 		}

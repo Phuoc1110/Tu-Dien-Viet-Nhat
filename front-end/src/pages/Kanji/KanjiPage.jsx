@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, useContext } from "react";
 import { useLocation, useHistory } from "react-router-dom";
-import { searchKanjis, searchSentences } from "../../services/dictionaryService";
+import { searchKanjis, searchSentences, recognizeImageText } from "../../services/dictionaryService";
 import {
 	getTopSearchKeywordsToday,
 	getWordSearchHistoryPage,
@@ -9,7 +9,7 @@ import { getLatestWordContributions, getWordContributions, addWordContribution }
 import { createReport } from "../../services/userService";
 import KanjiDrawModal from "../../components/KanjiDrawModal/KanjiDrawModal";
 import NotebookPickerModal from "../../components/NotebookPickerModal/NotebookPickerModal";
-import { Search, PenTool, SearchX, AlertTriangle } from "lucide-react";
+import { Search, PenTool, SearchX, AlertTriangle, Camera } from "lucide-react";
 import { UserContext } from "../../Context/UserProvider";
 import { toast } from "react-toastify";
 import "./KanjiPage.css";
@@ -34,6 +34,8 @@ const KanjiPage = () => {
 	const [isStrokePlaying, setIsStrokePlaying] = useState(false);
 	const [fallbackExamples, setFallbackExamples] = useState([]);
 	const [isKanjiDrawOpen, setIsKanjiDrawOpen] = useState(false);
+	const [isImageUploading, setIsImageUploading] = useState(false);
+	const imageInputRef = useRef(null);
 	const [isNotebookPickerOpen, setIsNotebookPickerOpen] = useState(false);
 	const [notebookPickerItem, setNotebookPickerItem] = useState(null);
 	const [recentHistory, setRecentHistory] = useState([]);
@@ -384,6 +386,40 @@ const KanjiPage = () => {
 		}
 	};
 
+	const openImagePicker = () => {
+		if (isImageUploading) return;
+		imageInputRef.current?.click();
+	};
+
+	const handleImagePick = async (event) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+
+		const formData = new FormData();
+		formData.append("image", file);
+
+		setIsImageUploading(true);
+
+		try {
+			const response = await recognizeImageText(formData);
+			if (response && response.errCode === 0) {
+				const recognizedText = String(response.text || response.words?.join(" ") || "").trim();
+				if (recognizedText) {
+					setSearchInput(recognizedText);
+					history.push(`/kanji?q=${encodeURIComponent(recognizedText)}`);
+					return;
+				}
+			}
+			alert("Không nhận được chữ nào từ ảnh này.");
+		} catch (error) {
+			console.error("Image OCR error:", error);
+			alert("Không thể đọc ảnh lúc này.");
+		} finally {
+			setIsImageUploading(false);
+		}
+	};
+
 	const handleAddContribution = async (parentId = null, contentOverride = null) => {
 		const contentToSubmit = parentId ? contentOverride : newContribution;
 		if (!kanjiDetail?.characterKanji || !contentToSubmit?.trim()) {
@@ -610,6 +646,10 @@ const KanjiPage = () => {
 							onKeyDown={handleSearch}
 						/>
 						<div className="search-actions">
+							<button type="button" title="Chụp ảnh để tra cứu" onClick={openImagePicker} disabled={isImageUploading}>
+								<Camera size={15} />
+								<span>{isImageUploading ? "..." : "Ảnh"}</span>
+							</button>
 							<button
 								type="button"
 								title="Tìm kiếm"
@@ -633,6 +673,15 @@ const KanjiPage = () => {
 								<span>Write</span>
 							</button>
 						</div>
+
+						<input
+							ref={imageInputRef}
+							type="file"
+							accept="image/*"
+							capture="environment"
+							onChange={handleImagePick}
+							style={{ display: "none" }}
+						/>
 						<button className="lang-switch">Nhật - Việt</button>
 					</div>
 					<div className="mazii-mode-tabs">

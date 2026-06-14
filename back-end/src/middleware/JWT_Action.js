@@ -7,10 +7,6 @@ const nonSecurePaths = [
 	"/api/logout",
 	"/api/admin_login",
 	"/api/createTime",
-	"/payment",
-	"/payment/ZaloPay",
-	"/payment/ZaloPay/check",
-	"/payment/ZaloPay/callback",
 	"/api/updateSlot",
 	"/api/checkTime",
 	"/google/redirect",
@@ -65,9 +61,9 @@ const checkUserJWT = (req, res, next) => {
 	const isNgrokRequest =
 		req.headers["x-forwarded-host"] &&
 		req.headers["x-forwarded-host"].includes("ngrok.io");
-		
+
 	const isPublicReadingPassage = req.method === "GET" && req.path.match(/^\/api\/reading\/passages\/\d+(\/analysis)?$/);
-	
+
 	if (nonSecurePaths.includes(req.path) || isPublicReadingPassage || isNgrokRequest) {
 		return next();
 	}

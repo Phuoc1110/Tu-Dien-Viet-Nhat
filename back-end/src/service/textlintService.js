@@ -52,16 +52,32 @@ let fixOcrText = async (text) => {
         const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
         
         const prompt = `Bạn là một hệ thống AI chuyên tự động sửa lỗi nhận dạng ký tự quang học (OCR) cho văn bản tiếng Nhật.
-Nhiệm vụ của bạn là nhận một đoạn văn bản tiếng Nhật được trích xuất từ ảnh (có thể chứa nhiều lỗi sai chữ Hán do máy nhận diện nhầm nét).
-Hãy phân tích ngữ cảnh, đoán xem từ gốc thực sự là gì, và trả về DUY NHẤT một đoạn văn bản tiếng Nhật đã được sửa lỗi hoàn chỉnh.
+Nhiệm vụ của bạn là nhận một đoạn văn bản tiếng Nhật bị lỗi OCR, phân tích ngữ cảnh, và trả về DUY NHẤT đoạn văn bản tiếng Nhật đã được sửa lỗi.
 
-TUYỆT ĐỐI KHÔNG giải thích, KHÔNG thêm câu chào hỏi, KHÔNG sử dụng ký tự markdown. CHỈ TRẢ VỀ CÂU ĐÃ SỬA.
+CÁC QUY TẮC NGHIÊM NGẶT (NẾU VI PHẠM SẼ LÀM HỎNG HỆ THỐNG):
+1. TUYỆT ĐỐI CHỈ TRẢ VỀ CHUỖI TIẾNG NHẬT (Kanji, Hiragana, Katakana, và dấu câu tiếng Nhật).
+2. KHÔNG BAO GIỜ bao gồm chữ Rōmaji (romaji), phiên âm, hay cách đọc trong ngoặc đơn.
+3. KHÔNG BAO GIỜ bao gồm văn bản tiếng Việt hay bất kỳ lời giải thích, câu chào hỏi nào (như "Câu đã sửa là:").
+4. GIỮ NGUYÊN các từ tiếng Anh (như AI, IT) hoặc chữ số nếu chúng có sẵn trong câu gốc.
+5. Nếu câu gốc không có lỗi, hãy trả lại y nguyên câu đó.
 
 Văn bản gốc (lỗi OCR):
 ${text}`;
 
         const result = await model.generateContent(prompt);
-        return result.response.text().trim();
+        let responseText = result.response.text().trim();
+        
+        // Post-processing: Loại bỏ các tiền tố giải thích thừa (nếu AI vẫn lỡ vi phạm)
+        responseText = responseText.replace(/^(câu đã sửa|kết quả|sửa lỗi|văn bản|bản sửa)[^:]*:?\s*/i, "");
+        responseText = responseText.replace(/^(đây là câu)[^:]*:?\s*/i, "");
+        
+        // Post-processing: Loại bỏ romaji nằm trong ngoặc đơn (nếu AI vẫn lỡ vi phạm)
+        responseText = responseText.replace(/\([A-Za-z\s-]+\)/g, "");
+        
+        // Post-processing: Loại bỏ markdown (bold, italic)
+        responseText = responseText.replace(/[*_]/g, "");
+        
+        return responseText.trim();
     } catch (error) {
         console.error("Gemini API Error in OCR Fix:", error);
         throw new Error("Không thể kết nối đến máy chủ AI (Lỗi mạng hoặc Timeout).");
