@@ -147,10 +147,10 @@ const CuratedNotebookPage = () => {
 										: false;
 									const reviewed = Number(
 										notebook.rememberedCount ??
-											notebook.reviewedCount ??
-											Math.floor((notebook.itemsCount || 0) * 0.3)
+										notebook.reviewedCount ??
+										0
 									);
-									const total = notebook.itemsCount || 30;
+									const total = notebook.itemsCount || 0;
 									const views = Number(notebook.views ?? total);
 									return (
 										<button
@@ -172,9 +172,6 @@ const CuratedNotebookPage = () => {
 											</div>
 											<div className="card-meta-row compact">
 												<span>{notebook.owner || "Ban quan tri"}</span>
-												<span className="views">
-													<Eye size={14} /> {views}
-												</span>
 											</div>
 											<div className="card-progress">
 												<div className="progress-bar">

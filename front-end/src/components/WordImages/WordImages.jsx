@@ -27,9 +27,9 @@ const WordImages = ({ word }) => {
 
 			try {
 				const endpoint =
-					"https://commons.wikimedia.org/w/api.php?action=query&generator=search" +
+					"https://ja.wikipedia.org/w/api.php?action=query&generator=search" +
 					`&gsrsearch=${encodeURIComponent(normalizedWord)}` +
-					"&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=640&format=json&origin=*";
+					"&gsrlimit=5&prop=pageimages&pithumbsize=640&format=json&origin=*";
 
 				const response = await fetch(endpoint);
 				if (!response.ok) {
@@ -39,7 +39,7 @@ const WordImages = ({ word }) => {
 				const data = await response.json();
 				const pages = data?.query?.pages ? Object.values(data.query.pages) : [];
 				const nextImages = pages
-					.map((page) => page?.imageinfo?.[0]?.thumburl || page?.imageinfo?.[0]?.url)
+					.map((page) => page?.thumbnail?.source)
 					.filter(Boolean)
 					.slice(0, 3);
 

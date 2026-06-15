@@ -215,8 +215,8 @@ const NotebookPage = () => {
 							const accent = colorPalette[idx % colorPalette.length];
 							const createdAt = item.createdAt ? new Date(item.createdAt) : null;
 							const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
-							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((item.itemsCount || 0) * 0.2));
-							const total = item.itemsCount || 20;
+							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? 0);
+							const total = item.itemsCount || 0;
 							return (
 								<button
 									type="button"
@@ -261,8 +261,8 @@ const NotebookPage = () => {
 							const accent = colorPalette[idx % colorPalette.length];
 							const createdAt = item.createdAt ? new Date(item.createdAt) : null;
 							const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
-							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((item.itemsCount || 0) * 0.15));
-							const total = item.itemsCount || 20;
+							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? 0);
+							const total = item.itemsCount || 0;
 							return (
 								<button
 									type="button"
@@ -315,8 +315,8 @@ const NotebookPage = () => {
 							const accent = colorPalette[idx % colorPalette.length];
 							const createdAt = item.createdAt ? new Date(item.createdAt) : null;
 							const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
-							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? Math.floor((item.itemsCount || 0) * 0.3));
-							const total = item.itemsCount || 30;
+							const reviewed = Number(item.rememberedCount ?? item.reviewedCount ?? 0);
+							const total = item.itemsCount || 0;
 							return (
 								<button
 									type="button"
@@ -335,7 +335,6 @@ const NotebookPage = () => {
 									</div>
 									<div className="card-meta-row compact" style={{ marginBottom: "auto" }}>
 										<span>{item.owner}</span>
-										<span className="views"><Eye size={14} /> {item.views}</span>
 									</div>
 									<div className="card-progress">
 										<div className="progress-bar">

@@ -64,24 +64,24 @@ const checkUserJWT = (req, res, next) => {
 
 	const isPublicReadingPassage = req.method === "GET" && req.path.match(/^\/api\/reading\/passages\/\d+(\/analysis)?$/);
 
-	if (nonSecurePaths.includes(req.path) || isPublicReadingPassage || isNgrokRequest) {
-		return next();
-	}
+	const isNonSecure = nonSecurePaths.includes(req.path) || isPublicReadingPassage || isNgrokRequest;
+
 	let cookies = req.cookies;
 	if (cookies && (cookies.jwt || cookies.jwt2)) {
 		if (cookies.jwt) {
 			let token = cookies.jwt;
 			let decoded = verifyToken(token);
-			if (decoded.error === "TokenExpiredError") {
+			if (decoded && decoded.error === "TokenExpiredError") {
+				if (isNonSecure) return next();
 				return res.status(401).json({
 					errCode: -2,
 					errMessage: "Token has expired. Please log in again.",
 				});
 			}
-			if (decoded) {
+			if (decoded && !decoded.error) {
 				req.user = decoded;
 				req.token = token;
-			} else {
+			} else if (!isNonSecure) {
 				return res.status(401).json({
 					errCode: -2,
 					errMessage: "Not Authenticated the user",
@@ -91,16 +91,17 @@ const checkUserJWT = (req, res, next) => {
 		if (cookies.jwt2) {
 			let token = cookies.jwt2;
 			let decoded = verifyToken(token);
-			if (decoded.error === "TokenExpiredError") {
+			if (decoded && decoded.error === "TokenExpiredError") {
+				if (isNonSecure) return next();
 				return res.status(401).json({
 					errCode: -1,
 					errMessage: "Token has expired. Please log in again.",
 				});
 			}
-			if (decoded) {
+			if (decoded && !decoded.error) {
 				req.admin = decoded;
 				req.adminToken = token;
-			} else {
+			} else if (!isNonSecure) {
 				return res.status(401).json({
 					errCode: -1,
 					errMessage: "Not Authenticated the user",
@@ -109,6 +110,7 @@ const checkUserJWT = (req, res, next) => {
 		}
 		next();
 	} else {
+		if (isNonSecure) return next();
 		return res.status(401).json({
 			errCode: -2,
 			errMessage: "Not Authenticated the user",

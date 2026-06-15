@@ -559,10 +559,7 @@ const DictionaryPage = () => {
 		const delay = isLastStroke ? 2500 : 900;
 
 		const timer = setTimeout(() => {
-			if (isLastStroke) {
-				setCurrentStrokeIndex(0);
-				setReplayKey((prev) => prev + 1);
-			} else {
+			if (!isLastStroke) {
 				setCurrentStrokeIndex((prev) => prev + 1);
 			}
 		}, delay);
