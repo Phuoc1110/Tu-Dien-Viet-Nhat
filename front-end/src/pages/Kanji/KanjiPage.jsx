@@ -48,7 +48,7 @@ const KanjiPage = () => {
 	const [replyingTo, setReplyingTo] = useState(null);
 	const [replyContent, setReplyContent] = useState("");
 	const [expandedReplies, setExpandedReplies] = useState({});
-	
+
 	const { user } = useContext(UserContext);
 	const isLoggedIn = !!(user?.isAuthenticated && user?.account?.id);
 
@@ -444,7 +444,7 @@ const KanjiPage = () => {
 
 		if (created) {
 			if (parentId) {
-				setContributions((prev) => prev.map(c => 
+				setContributions((prev) => prev.map(c =>
 					c.id === parentId ? { ...c, replies: [...(c.replies || []), created] } : c
 				));
 				setReplyingTo(null);
@@ -598,7 +598,7 @@ const KanjiPage = () => {
 							setIsStrokePlaying(true);
 						}}
 					>
-						Vẽ lại
+						Vẽ
 					</button>
 				</div>
 				<svg key={`stroke-svg-${kanjiDetail.id}-${replayKey}`} viewBox="0 0 109 109" className="stroke-guide-svg" aria-label="Kanji stroke guide">
@@ -895,7 +895,7 @@ const KanjiPage = () => {
 															Trả lời
 														</button>
 													</div>
-													
+
 													{replyingTo === item.id && (
 														<div className="contribution-form" style={{ marginTop: "12px", borderLeft: "2px solid #e2e8f0", paddingLeft: "12px" }}>
 															<textarea

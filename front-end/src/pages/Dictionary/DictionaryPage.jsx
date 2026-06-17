@@ -555,14 +555,13 @@ const DictionaryPage = () => {
 			return undefined;
 		}
 
-		const isLastStroke = currentStrokeIndex >= strokePaths.length - 1;
-		const delay = isLastStroke ? 2500 : 900;
+		if (currentStrokeIndex >= strokePaths.length) {
+			return undefined;
+		}
 
 		const timer = setTimeout(() => {
-			if (!isLastStroke) {
-				setCurrentStrokeIndex((prev) => prev + 1);
-			}
-		}, delay);
+			setCurrentStrokeIndex((prev) => prev + 1);
+		}, 900);
 
 		return () => clearTimeout(timer);
 	}, [expandedKanjiId, currentStrokeIndex, kanjiStrokeMap, wordDetail?.kanjis, replayKey]);
@@ -1537,7 +1536,7 @@ const DictionaryPage = () => {
 																						<path d="M54.5 0V109" stroke="var(--da-border)" strokeWidth="1" />
 																						<path d="M0 54.5H109" stroke="var(--da-border)" strokeWidth="1" />
 																						{displayedStrokes.map((item, index) => {
-																							const isCurrentStroke = index === maxStrokeIndex;
+																							const isCurrentStroke = index === currentStrokeIndex;
 																							return (
 																								<path
 																									key={`stroke-guide-${kanjiId}-${index}`}
