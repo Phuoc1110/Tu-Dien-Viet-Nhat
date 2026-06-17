@@ -1363,6 +1363,7 @@ const Admin = () => {
 										<th>Người báo cáo</th>
 										<th>Loại</th>
 										<th>Target ID</th>
+										<th>Nội dung bị báo cáo</th>
 										<th>Lý do</th>
 										<th>Trạng thái</th>
 										<th>Thao tác</th>
@@ -1375,6 +1376,14 @@ const Admin = () => {
 											<td>{r.reporter?.username || r.reporter?.email || "Unknown"}</td>
 											<td>{r.targetType}</td>
 											<td>{r.targetId}</td>
+											<td style={{ maxWidth: "250px", wordBreak: "break-word" }}>
+												{r.targetContent ? (
+													<>
+														{r.targetContent}
+														{r.isTargetHidden && <span className="status-badge suspended" style={{ marginLeft: '4px' }}>Đã ẩn</span>}
+													</>
+												) : "-"}
+											</td>
 											<td>{r.reason}</td>
 											<td>
 												<span className={`status-badge ${r.status}`}>{r.status}</span>

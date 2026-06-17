@@ -1064,8 +1064,26 @@ const getReports = async ({ page = 1, limit = 20, status = "" }) => {
         offset,
     });
 
+    const plainRows = rows.map(r => r.get({ plain: true }));
+    const targetIds = plainRows.map(r => r.targetId);
+
+    let commentsMap = {};
+    if (targetIds.length > 0) {
+        const comments = await db.Comment.findAll({
+            where: { id: { [Op.in]: targetIds } },
+            raw: true
+        });
+        commentsMap = comments.reduce((acc, c) => ({ ...acc, [c.id]: c }), {});
+    }
+
+    const items = plainRows.map(plain => {
+        plain.targetContent = commentsMap[plain.targetId]?.content || '(Bình luận đã bị xóa hoặc không tồn tại)';
+        plain.isTargetHidden = commentsMap[plain.targetId]?.isHidden || false;
+        return plain;
+    });
+
     return {
-        items: rows,
+        items,
         pagination: {
             page: safePage,
             limit: safeLimit,
