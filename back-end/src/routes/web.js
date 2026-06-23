@@ -133,7 +133,7 @@ let initWebRoutes = (app) => {
 	router.post("/api/test-grammar", readingController.HandleCheckGrammar);
 
 
-	// Quiz & SRS
+	// Quiz
 	router.post("/api/quiz/generate", quizController.HandleGenerateQuiz);
 	router.post("/api/quiz/evaluate", quizController.HandleEvaluateAnswer);
 	router.post("/api/quiz/flashcard-review", quizController.HandleFlashcardReview);

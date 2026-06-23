@@ -1124,6 +1124,7 @@ const Admin = () => {
 								placeholder="Tìm theo username/email"
 								value={userNotebookOwnerQuery}
 								onChange={(e) => setUserNotebookOwnerQuery(e.target.value)}
+								autoComplete="off"
 							/>
 							<select
 								value={userNotebookOwnerStatus}
@@ -1216,6 +1217,7 @@ const Admin = () => {
 								placeholder="Tìm theo username/email"
 								value={userQuery}
 								onChange={(e) => setUserQuery(e.target.value)}
+								autoComplete="off"
 							/>
 						</div>
 						<div className="admin2-table-wrap">
@@ -1241,7 +1243,7 @@ const Admin = () => {
 													onChange={(e) => handleUpdateRole(user.id, e.target.value)}
 												>
 													<option value="admin">Admin</option>
-													<option value="editor">Editor</option>
+													{/* <option value="editor">Editor</option> */}
 													<option value="user">User</option>
 												</select>
 											</td>
@@ -1259,6 +1261,7 @@ const Admin = () => {
 															[user.id]: e.target.value,
 														}))
 													}
+													autoComplete="new-password"
 												/>
 											</td>
 											<td>

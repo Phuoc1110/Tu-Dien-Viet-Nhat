@@ -61,7 +61,8 @@ const Navbar = () => {
 		location.pathname === "/login_admin" ||
 		location.pathname === "/login" ||
 		location.pathname === "/register" ||
-		location.pathname === "/admin"
+		location.pathname === "/admin" ||
+		location.pathname === "/admin_login"
 	) {
 		return null;
 	}

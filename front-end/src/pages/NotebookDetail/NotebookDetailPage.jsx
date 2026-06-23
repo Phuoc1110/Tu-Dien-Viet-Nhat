@@ -600,7 +600,7 @@ const NotebookDetailPage = () => {
 	};
 
 	const buildMiniTestQuestions = (entries, requestedCount) => {
-		const count = Math.max(1, Math.min(Number(requestedCount) || 5, 20));
+		const count = Math.max(1, Number(requestedCount) || 5);
 		const pool = [];
 
 		entries.forEach((entry) => {
@@ -608,8 +608,8 @@ const NotebookDetailPage = () => {
 			const modes = quizQuestionMode === "auto"
 				? supportedModes
 				: supportedModes.includes(quizQuestionMode)
-				? [quizQuestionMode]
-				: [supportedModes[0]];
+					? [quizQuestionMode]
+					: [supportedModes[0]];
 
 			modes.forEach((mode) => {
 				pool.push({ entry, preferredMode: mode });
@@ -1039,10 +1039,10 @@ const NotebookDetailPage = () => {
 									{activeMode === "flashcard"
 										? "FlashCard"
 										: activeMode === "quiz"
-										? "Quiz"
-										: activeMode === "mini-test"
-										? "Mini Test"
-										: "Danh sách"}
+											? "Quiz"
+											: activeMode === "mini-test"
+												? "Mini Test"
+												: "Danh sách"}
 								</strong>
 							</div>
 							<p>Giữ các công cụ học tập ở ngay trong cùng một không gian để chuyển chế độ nhanh hơn.</p>
@@ -1194,7 +1194,7 @@ const NotebookDetailPage = () => {
 											onChange={(event) => setQuizAnswerMode(event.target.value)}
 										>
 											<option value="Multiple_Choice">Trắc nghiệm</option>
-											<option value="Typing">Gõ đáp án</option>
+											{/* <option value="Typing">Gõ đáp án</option> */}
 										</select>
 									</div>
 									<div className="quiz-word-nav">
@@ -1328,16 +1328,40 @@ const NotebookDetailPage = () => {
 											onChange={(event) => setQuizAnswerMode(event.target.value)}
 										>
 											<option value="Multiple_Choice">Trắc nghiệm</option>
-											<option value="Typing">Gõ đáp án</option>
+											{/* <option value="Typing">Gõ đáp án</option> */}
 										</select>
 										<select
-											value={miniTestCount}
-											onChange={(event) => setMiniTestCount(Number(event.target.value))}
+											value={[5, 10, 15].includes(miniTestCount) ? miniTestCount : "custom"}
+											onChange={(event) => {
+												if (event.target.value === "custom") {
+													setMiniTestCount(20);
+												} else {
+													setMiniTestCount(Number(event.target.value));
+												}
+											}}
 										>
 											<option value={5}>5 câu</option>
 											<option value={10}>10 câu</option>
 											<option value={15}>15 câu</option>
+											<option value="custom">Tùy chỉnh...</option>
 										</select>
+										{![5, 10, 15].includes(miniTestCount) && (
+											<input
+												type="number"
+												min="1"
+												value={miniTestCount}
+												onChange={(e) => setMiniTestCount(Math.max(1, Number(e.target.value)))}
+												style={{
+													width: "60px",
+													marginLeft: "10px",
+													padding: "8px",
+													borderRadius: "8px",
+													border: "1px solid #e2e8f0",
+													fontSize: "0.9rem",
+													outline: "none"
+												}}
+											/>
+										)}
 									</div>
 									<button type="button" className="quiz-main-btn" onClick={handleStartMiniTest}>
 										Bắt đầu Mini Test
@@ -1440,9 +1464,9 @@ const NotebookDetailPage = () => {
 											{miniTestFeedback && (
 												<div className={`quiz-result-box ${miniTestFeedback.isCorrect ? "ok" : "wrong"}`}>
 													<p>{miniTestFeedback.skipped ? "Đã bỏ qua" : miniTestFeedback.isCorrect ? "Đúng" : "Sai"}</p>
-														{!miniTestFeedback.isCorrect && !miniTestFeedback.skipped && (
-															<p>Đáp án đúng: {miniTestFeedback.correctAnswer}</p>
-														)}
+													{!miniTestFeedback.isCorrect && !miniTestFeedback.skipped && (
+														<p>Đáp án đúng: {miniTestFeedback.correctAnswer}</p>
+													)}
 												</div>
 											)}
 										</div>

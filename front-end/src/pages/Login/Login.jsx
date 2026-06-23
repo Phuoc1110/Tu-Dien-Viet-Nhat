@@ -106,9 +106,8 @@ const Login = () => {
 								value={formData.email}
 								onChange={handleInputChange}
 								placeholder="Enter your email"
-								className={`login-form-input ${
-									errors.email ? "login-error" : ""
-								}`}
+								className={`login-form-input ${errors.email ? "login-error" : ""
+									}`}
 							/>
 						</div>
 						{errors.email && (
@@ -127,9 +126,8 @@ const Login = () => {
 								value={formData.password}
 								onChange={handleInputChange}
 								placeholder="Enter your password"
-								className={`login-form-input ${
-									errors.password ? "login-error" : ""
-								}`}
+								className={`login-form-input ${errors.password ? "login-error" : ""
+									}`}
 							/>
 							<button
 								type="button"
@@ -146,13 +144,13 @@ const Login = () => {
 
 					{/* Remember Me & Forgot Password */}
 					<div className="login-form-options">
-						<label className="login-checkbox-label">
+						{/* <label className="login-checkbox-label">
 							<input type="checkbox" className="login-checkbox" />
 							<span className="login-checkbox-text">Remember me</span>
-						</label>
-						<Link to="/forgot-password" className="login-forgot-link">
+						</label> */}
+						{/* <Link to="/forgot-password" className="login-forgot-link">
 							Forgot Password?
-						</Link>
+						</Link> */}
 					</div>
 
 					{/* Submit Error */}
