@@ -19,8 +19,9 @@ function ReadingDetailViewPage() {
   const [grammarApiError, setGrammarApiError] = useState("");
 
   const actorId = user?.account?.id ?? admin?.account?.id;
+  const isAdmin = user?.account?.role === "admin" || admin?.account?.role === "admin" || admin?.isAuthenticated;
   const canEditPassage = Boolean(
-    passage?.author?.id && (admin?.isAuthenticated || Number(passage.author.id) === Number(actorId))
+    isAdmin || (passage?.author?.id && Number(passage.author.id) === Number(actorId))
   );
 
   useEffect(() => {
