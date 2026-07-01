@@ -210,7 +210,31 @@ let HandleTranslateText = async (req, res) => {
 			});
 		}
 
-		// Try Google Translate API first (free, no API key required)
+		let lastError = "Translate failed";
+
+		// 1. Try Google Translate API (Free, robust extension API)
+		try {
+			const gtExtUrl = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${source}&tl=${target}&q=${encodeURIComponent(String(text).trim())}`;
+			const response = await fetch(gtExtUrl, { timeout: 15000 });
+			if (response.ok) {
+				const data = await response.json();
+				if (Array.isArray(data) && data.length > 0) {
+					let translation = "";
+					if (typeof data[0] === "string") {
+						translation = data.join("").trim();
+					} else if (data[0] && typeof data[0][0] === "string") {
+						translation = data.map((item) => item[0]).join("").trim();
+					}
+					if (translation) {
+						return res.status(200).json({ errCode: 0, errMessage: "OK", translation });
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Google Translate Ext request error:", error.message);
+		}
+
+		// 2. Try Google Translate API (GTX)
 		try {
 			const gtUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURIComponent(String(text).trim())}`;
 			const response = await fetch(gtUrl, { timeout: 15000 });
@@ -219,18 +243,32 @@ let HandleTranslateText = async (req, res) => {
 				if (data && Array.isArray(data[0])) {
 					const translation = data[0].map(item => item[0]).join("").trim();
 					if (translation) {
-						return res.status(200).json({
-							errCode: 0,
-							errMessage: "OK",
-							translation,
-						});
+						return res.status(200).json({ errCode: 0, errMessage: "OK", translation });
 					}
 				}
 			}
 		} catch (error) {
-			console.error("Google Translate request error:", error);
+			console.error("Google Translate request error:", error.message);
 		}
 
+		// 3. Try MyMemory API (Free)
+		try {
+			const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(String(text).trim())}&langpair=${source}|${target}`;
+			const response = await fetch(myMemoryUrl, { timeout: 15000 });
+			if (response.ok) {
+				const data = await response.json();
+				if (data?.responseData?.translatedText) {
+					const translation = String(data.responseData.translatedText).trim();
+					if (translation && !translation.includes("MYMEMORY WARNING")) {
+						return res.status(200).json({ errCode: 0, errMessage: "OK", translation });
+					}
+				}
+			}
+		} catch (error) {
+			console.error("MyMemory request error:", error.message);
+		}
+
+		// 4. Fallback to LibreTranslate endpoints
 		const payload = {
 			q: String(text).trim(),
 			source,
@@ -242,8 +280,6 @@ let HandleTranslateText = async (req, res) => {
 			payload.api_key = TRANSLATE_API_KEY;
 		}
 
-		let lastError = "Translate failed";
-
 		for (const endpoint of TRANSLATE_API_URLS) {
 			try {
 				const response = await fetch(endpoint, {
@@ -253,7 +289,7 @@ let HandleTranslateText = async (req, res) => {
 						Accept: "application/json",
 					},
 					body: JSON.stringify(payload),
-					timeout: 30000,
+					timeout: 15000,
 				});
 
 				const rawText = await response.text();
@@ -261,15 +297,14 @@ let HandleTranslateText = async (req, res) => {
 				try {
 					data = rawText ? JSON.parse(rawText) : null;
 				} catch (parseError) {
-					console.error("Translate response parse error:", parseError);
-					console.error("Translate response body:", rawText.slice(0, 200));
+					console.error("Translate response parse error for endpoint", endpoint, ":", parseError.message);
 					lastError = "Translate server returned invalid response";
 					continue;
 				}
 
 				if (!response.ok) {
 					console.error(
-						`Translate server error: ${response.status} ${response.statusText}`
+						`Translate server error for ${endpoint}: ${response.status} ${response.statusText}`
 					);
 					lastError = data?.error || data?.message || "Translate server error";
 					continue;
@@ -277,8 +312,7 @@ let HandleTranslateText = async (req, res) => {
 
 				const translation = String(
 					data?.translatedText || data?.translation || data?.text || ""
-				)
-					.trim();
+				).trim();
 
 				if (!translation) {
 					lastError = "Translate server returned empty translation";
@@ -291,7 +325,7 @@ let HandleTranslateText = async (req, res) => {
 					translation,
 				});
 			} catch (error) {
-				console.error("Translate request error:", error);
+				console.error("Translate request error for", endpoint, ":", error.message);
 				lastError = error?.message || "Translate request failed";
 			}
 		}
