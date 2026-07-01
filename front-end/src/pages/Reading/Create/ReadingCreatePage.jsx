@@ -296,7 +296,7 @@ const ReadingCreatePage = () => {
 											<ul style={{ margin: 0, paddingLeft: "20px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
 												{grammarErrors.map((err, idx) => (
 													<li key={idx} style={{ marginBottom: "4px" }}>
-														<strong>Dòng {err.line}, chữ thứ {err.column}:</strong> {err.message}
+														<strong>Câu {err.line}, chữ thứ {err.column}:</strong> {err.message}
 													</li>
 												))}
 											</ul>
